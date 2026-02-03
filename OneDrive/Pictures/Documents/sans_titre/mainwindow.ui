@@ -1,0 +1,1193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1400</width>
+    <height>850</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>CUIREA - Employee Management</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">
+/* Main Window Background */
+QMainWindow {
+    background-color: #FAF5F0;
+}
+
+/* Sidebar Styling */
+#sidebar {
+    background-color: #8D6E63;
+    border-right: none;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+#sidebarTitle {
+    color: #FFFFFF;
+    font-family: 'Times New Roman', serif;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px;
+}
+
+#sidebarIcon {
+    color: #FFFFFF;
+    font-size: 32px;
+    background-color: transparent;
+    border: none;
+}
+
+/* Main Content Area */
+#contentArea {
+    background-color: #FAF5F0;
+}
+
+#moduleTitle {
+    color: #291C0E;
+    font-family: 'Times New Roman', serif;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+/* Table Styling */
+#employeeTable {
+    background-color: #FFFFFF;
+    alternate-background-color: #FFF8F0;
+    border: none;
+    border-radius: 12px;
+    gridline-color: #F0E6DA;
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    selection-background-color: #8D6E63;
+    selection-color: white;
+}
+
+#employeeTable::item {
+    padding: 12px 8px;
+    border: none;
+    border-bottom: 1px solid #F0E6DA;
+    color: #291C0E;
+    background-color: transparent;
+}
+
+#employeeTable::item:alternate {
+    background-color: #FFF8F0;
+}
+
+#employeeTable::item:selected {
+    background-color: #8D6E63;
+    color: white;
+}
+
+#employeeTable::item:hover {
+    background-color: #F5EDE3;
+}
+
+QHeaderView::section {
+    background-color: #8D6E63;
+    color: white;
+    padding: 14px 10px;
+    border: none;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+QHeaderView::section:last {
+    border-right: none;
+}
+
+QHeaderView {
+    background-color: transparent;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+
+QHeaderView::section:horizontal:first {
+    border-top-left-radius: 12px;
+}
+
+QHeaderView::section:horizontal:last {
+    border-top-right-radius: 12px;
+}
+
+QScrollBar:vertical {
+    border: none;
+    background-color: #F5F5F5;
+    width: 10px;
+    border-radius: 5px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #BCAAA4;
+    border-radius: 5px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #A78D78;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    border: none;
+    background-color: #F5F5F5;
+    height: 10px;
+    border-radius: 5px;
+    margin: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #BCAAA4;
+    border-radius: 5px;
+    min-width: 20px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background-color: #A78D78;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
+/* Profile Panel */
+#profilePanel {
+    background-color: #E7DDD1;
+    border: 2px solid #BCAAA4;
+    border-radius: 10px;
+}
+
+#profileTitle {
+    color: #291C0E;
+    font-family: 'Times New Roman', serif;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#profileLabel, #profileLabel_2, #profileLabel_3, #profileLabel_4, #profileLabel_5, 
+#profileLabel_6, #profileLabel_7, #profileLabel_8, #profileLabel_9, #profileLabel_10,
+#profileLabel_11, #profileLabel_12, #profileLabel_13 {
+    color: #291C0E;
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+#profileValue, #profileValue_2, #profileValue_3, #profileValue_4, #profileValue_5,
+#profileValue_6, #profileValue_7, #profileValue_8, #profileValue_9, #profileValue_10,
+#profileValue_11, #profileValue_12, #profileValue_13 {
+    color: #291C0E;
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+/* Photo Placeholder */
+#photoPlaceholder {
+    background-color: #FFF8F0;
+    border: 2px solid #BCAAA4;
+    border-radius: 8px;
+}
+
+/* Primary Action Buttons */
+QPushButton#btnAdd, QPushButton#btnEdit, QPushButton#btnDelete, QPushButton#btnExport {
+    background-color: #8D6E63;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+}
+
+QPushButton#btnAdd:hover, QPushButton#btnEdit:hover, QPushButton#btnDelete:hover, QPushButton#btnExport:hover {
+    background-color: #A0826D;
+    border: none;
+}
+
+QPushButton#btnAdd:pressed, QPushButton#btnEdit:pressed, QPushButton#btnDelete:pressed, QPushButton#btnExport:pressed {
+    background-color: #6E473B;
+    border: none;
+    padding: 11px 20px 9px 20px;
+}
+
+/* Search Box */
+#searchBox {
+    background-color: white;
+    color: #291C0E;
+    border: 2px solid #A78D78;
+    border-radius: 6px;
+    padding: 8px;
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+}
+
+#searchBox::placeholder {
+    color: #A78D78;
+}
+
+/* Separator Lines */
+QFrame#separator {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+}
+
+/* Navigation Buttons */
+QPushButton#btnEmployees, QPushButton#btnClients, QPushButton#btnProducts, 
+QPushButton#btnOrders, QPushButton#btnRawMaterials, QPushButton#btnSuppliers {
+    background-color: transparent;
+    color: #FFFFFF;
+    border: none;
+    border-left: 3px solid transparent;
+    border-radius: 8px;
+    text-align: left;
+    padding-left: 15px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    margin: 2px 8px;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+QPushButton#btnEmployees:hover, QPushButton#btnClients:hover, QPushButton#btnProducts:hover,
+QPushButton#btnOrders:hover, QPushButton#btnRawMaterials:hover, QPushButton#btnSuppliers:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #FFFFFF;
+    border-left: 3px solid #FFFFFF;
+}
+
+QPushButton#btnEmployees:pressed, QPushButton#btnClients:pressed, QPushButton#btnProducts:pressed,
+QPushButton#btnOrders:pressed, QPushButton#btnRawMaterials:pressed, QPushButton#btnSuppliers:pressed {
+    background-color: #6E473B;
+    color: #FFFFFF;
+}
+
+/* Active navigation button */
+QPushButton#btnEmployees {
+    background-color: #6E473B;
+    color: #FFFFFF;
+    border-left: 3px solid #FFFFFF;
+}
+
+/* Statistics Cards */
+#statsCard, #statsCard_2, #statsCard_3 {
+    background-color: #FFF8F0;
+    border: 1px solid #BCAAA4;
+    border-radius: 8px;
+}
+
+#statsLabel, #statsLabel_2, #statsLabel_3 {
+    color: #291C0E;
+    font-family: Arial, sans-serif;
+    font-size: 10px;
+}
+
+#statsValue, #statsValue_2, #statsValue_3 {
+    color: #8D6E63;
+    font-family: 'Times New Roman', serif;
+    font-size: 24px;
+    font-weight: bold;
+}
+   </string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout" stretch="0,1">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QFrame" name="sidebar">
+      <property name="minimumSize">
+       <size>
+        <width>180</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>180</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Shape::StyledPanel</enum>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <property name="spacing">
+        <number>20</number>
+       </property>
+       <property name="leftMargin">
+        <number>15</number>
+       </property>
+       <property name="topMargin">
+        <number>30</number>
+       </property>
+       <property name="rightMargin">
+        <number>15</number>
+       </property>
+       <property name="bottomMargin">
+        <number>30</number>
+       </property>
+       <item alignment="Qt::AlignmentFlag::AlignHCenter">
+        <widget class="QLabel" name="sidebarIcon">
+         <property name="minimumSize">
+          <size>
+           <width>120</width>
+           <height>120</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>120</width>
+           <height>120</height>
+          </size>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="pixmap">
+          <pixmap resource="resources.qrc">:/logo.png</pixmap>
+         </property>
+         <property name="scaledContents">
+          <bool>true</bool>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="sidebarTitle">
+         <property name="text">
+          <string>CUIREA
+Management</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignCenter</set>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="Line" name="separator">
+         <property name="frameShadow">
+          <enum>QFrame::Shadow::Plain</enum>
+         </property>
+         <property name="lineWidth">
+          <number>2</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnClients">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>45</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>⬡ Clients</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnEmployees">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>45</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>⬡ Employés</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnSuppliers">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>45</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>⬡ Fournisseurs</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnRawMaterials">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>45</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>⬡ Matières Premières</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnProducts">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>45</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>⬡ Produits</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnOrders">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>45</height>
+          </size>
+         </property>
+         <property name="text">
+          <string>⬡ Commandes</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QWidget" name="mainContent" native="true">
+      <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QWidget" name="contentArea" native="true">
+         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,0">
+          <property name="spacing">
+           <number>20</number>
+          </property>
+          <property name="leftMargin">
+           <number>30</number>
+          </property>
+          <property name="topMargin">
+           <number>30</number>
+          </property>
+          <property name="rightMargin">
+           <number>30</number>
+          </property>
+          <property name="bottomMargin">
+           <number>30</number>
+          </property>
+          <item>
+           <widget class="QWidget" name="tableSection" native="true">
+            <layout class="QVBoxLayout" name="verticalLayout_3">
+             <property name="spacing">
+              <number>20</number>
+             </property>
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item alignment="Qt::AlignmentFlag::AlignHCenter">
+              <widget class="QLabel" name="moduleTitle">
+               <property name="text">
+                <string>Employee Directory</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QWidget" name="statsContainer" native="true">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>65</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>65</height>
+                </size>
+               </property>
+               <layout class="QHBoxLayout" name="horizontalLayout_4">
+                <property name="spacing">
+                 <number>15</number>
+                </property>
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QFrame" name="statsCard">
+                  <property name="frameShape">
+                   <enum>QFrame::Shape::StyledPanel</enum>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_4">
+                   <item>
+                    <widget class="QLabel" name="statsLabel">
+                     <property name="text">
+                      <string>Total Employees</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignCenter</set>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="statsValue">
+                     <property name="text">
+                      <string>247</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignCenter</set>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QFrame" name="statsCard_2">
+                  <property name="frameShape">
+                   <enum>QFrame::Shape::StyledPanel</enum>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_5">
+                   <item>
+                    <widget class="QLabel" name="statsLabel_2">
+                     <property name="text">
+                      <string>Active</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignCenter</set>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="statsValue_2">
+                     <property name="text">
+                      <string>238</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignCenter</set>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QFrame" name="statsCard_3">
+                  <property name="frameShape">
+                   <enum>QFrame::Shape::StyledPanel</enum>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_6">
+                   <item>
+                    <widget class="QLabel" name="statsLabel_3">
+                     <property name="text">
+                      <string>Departments</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignCenter</set>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="statsValue_3">
+                     <property name="text">
+                      <string>12</string>
+                     </property>
+                     <property name="alignment">
+                      <set>Qt::AlignmentFlag::AlignCenter</set>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="horizontalSpacer_2">
+                  <property name="orientation">
+                   <enum>Qt::Orientation::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QWidget" name="toolbarWidget" native="true">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>42</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>42</height>
+                </size>
+               </property>
+               <layout class="QHBoxLayout" name="horizontalLayout_5">
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLineEdit" name="searchBox">
+                  <property name="minimumSize">
+                   <size>
+                    <width>200</width>
+                    <height>0</height>
+                   </size>
+                  </property>
+                  <property name="placeholderText">
+                   <string>⌕ Search employees...</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="horizontalSpacer_3">
+                  <property name="orientation">
+                   <enum>Qt::Orientation::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnAdd">
+                  <property name="minimumSize">
+                   <size>
+                    <width>85</width>
+                    <height>32</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>+ Add</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnEdit">
+                  <property name="minimumSize">
+                   <size>
+                    <width>85</width>
+                    <height>32</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>✎ Edit</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnDelete">
+                  <property name="minimumSize">
+                   <size>
+                    <width>85</width>
+                    <height>32</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>✕ Delete</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnExport">
+                  <property name="minimumSize">
+                   <size>
+                    <width>85</width>
+                    <height>32</height>
+                   </size>
+                  </property>
+                  <property name="text">
+                   <string>⇩ Export</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QTableWidget" name="employeeTable">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="editTriggers">
+                <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+               </property>
+               <property name="alternatingRowColors">
+                <bool>true</bool>
+               </property>
+               <property name="selectionBehavior">
+                <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+               </property>
+               <property name="showGrid">
+                <bool>true</bool>
+               </property>
+               <property name="sortingEnabled">
+                <bool>true</bool>
+               </property>
+               <attribute name="horizontalHeaderStretchLastSection">
+                <bool>true</bool>
+               </attribute>
+               <column>
+                <property name="text">
+                 <string>ID</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Matricule</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Nom</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Prenom</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>CIN</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Date Naissance</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Departement</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Poste</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Telephone</string>
+                </property>
+               </column>
+               <column>
+                <property name="text">
+                 <string>Email</string>
+                </property>
+               </column>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <item>
+           <widget class="QFrame" name="profilePanel">
+            <property name="minimumSize">
+             <size>
+              <width>260</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>260</width>
+              <height>16777215</height>
+             </size>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::Shape::StyledPanel</enum>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_7">
+             <property name="spacing">
+              <number>15</number>
+             </property>
+             <property name="leftMargin">
+              <number>20</number>
+             </property>
+             <property name="topMargin">
+              <number>20</number>
+             </property>
+             <property name="rightMargin">
+              <number>20</number>
+             </property>
+             <property name="bottomMargin">
+              <number>20</number>
+             </property>
+             <item>
+              <widget class="QLabel" name="profileTitle">
+               <property name="text">
+                <string>Employee Profile</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item alignment="Qt::AlignmentFlag::AlignHCenter">
+              <widget class="QLabel" name="photoPlaceholder">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>120</width>
+                 <height>120</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>120</width>
+                 <height>120</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>●</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="Line" name="line">
+               <property name="frameShadow">
+                <enum>QFrame::Shadow::Plain</enum>
+               </property>
+               <property name="lineWidth">
+                <number>2</number>
+               </property>
+               <property name="orientation">
+                <enum>Qt::Orientation::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QWidget" name="infoSection" native="true">
+               <layout class="QFormLayout" name="formLayout">
+                <property name="horizontalSpacing">
+                 <number>10</number>
+                </property>
+                <property name="verticalSpacing">
+                 <number>10</number>
+                </property>
+                <item row="0" column="0">
+                 <widget class="QLabel" name="profileLabel">
+                  <property name="text">
+                   <string>Matricule:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="0" column="1">
+                 <widget class="QLabel" name="profileValue">
+                  <property name="text">
+                   <string>EMP-2024-001</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="0">
+                 <widget class="QLabel" name="profileLabel_2">
+                  <property name="text">
+                   <string>Nom:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="1" column="1">
+                 <widget class="QLabel" name="profileValue_2">
+                  <property name="text">
+                   <string>Benali</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="0">
+                 <widget class="QLabel" name="profileLabel_3">
+                  <property name="text">
+                   <string>Prenom:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="1">
+                 <widget class="QLabel" name="profileValue_3">
+                  <property name="text">
+                   <string>Ahmed</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QLabel" name="profileLabel_4">
+                  <property name="text">
+                   <string>CIN:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <widget class="QLabel" name="profileValue_4">
+                  <property name="text">
+                   <string>AB123456</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="0">
+                 <widget class="QLabel" name="profileLabel_5">
+                  <property name="text">
+                   <string>Date Naissance:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="1">
+                 <widget class="QLabel" name="profileValue_5">
+                  <property name="text">
+                   <string>15/03/1985</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="0">
+                 <widget class="QLabel" name="profileLabel_6">
+                  <property name="text">
+                   <string>Sexe:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="1">
+                 <widget class="QLabel" name="profileValue_6">
+                  <property name="text">
+                   <string>M</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="6" column="0">
+                 <widget class="QLabel" name="profileLabel_7">
+                  <property name="text">
+                   <string>Adresse:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="6" column="1">
+                 <widget class="QLabel" name="profileValue_7">
+                  <property name="text">
+                   <string>Casablanca</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="7" column="0">
+                 <widget class="QLabel" name="profileLabel_8">
+                  <property name="text">
+                   <string>Telephone:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="7" column="1">
+                 <widget class="QLabel" name="profileValue_8">
+                  <property name="text">
+                   <string>0612345678</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="8" column="0">
+                 <widget class="QLabel" name="profileLabel_9">
+                  <property name="text">
+                   <string>Email:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="8" column="1">
+                 <widget class="QLabel" name="profileValue_9">
+                  <property name="text">
+                   <string>a.benali@cuirea.com</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="9" column="0">
+                 <widget class="QLabel" name="profileLabel_10">
+                  <property name="text">
+                   <string>Poste:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="9" column="1">
+                 <widget class="QLabel" name="profileValue_10">
+                  <property name="text">
+                   <string>Supervisor</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="10" column="0">
+                 <widget class="QLabel" name="profileLabel_11">
+                  <property name="text">
+                   <string>Specialite:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="10" column="1">
+                 <widget class="QLabel" name="profileValue_11">
+                  <property name="text">
+                   <string>Production</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="11" column="0">
+                 <widget class="QLabel" name="profileLabel_12">
+                  <property name="text">
+                   <string>Departement:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="11" column="1">
+                 <widget class="QLabel" name="profileValue_12">
+                  <property name="text">
+                   <string>Production</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="12" column="0">
+                 <widget class="QLabel" name="profileLabel_13">
+                  <property name="text">
+                   <string>Date Embauche:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="12" column="1">
+                 <widget class="QLabel" name="profileValue_13">
+                  <property name="text">
+                   <string>01/01/2024</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <spacer name="verticalSpacer_2">
+               <property name="orientation">
+                <enum>Qt::Orientation::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>40</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources>
+  <include location="resources.qrc"/>
+ </resources>
+ <connections/>
+</ui>
