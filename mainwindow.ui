@@ -1,0 +1,1578 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1400</width>
+    <height>900</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>ERP Manufacture Pro - Gestion des Produits</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="horizontalLayout_Main">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QFrame" name="sidebarFrame">
+      <property name="minimumSize">
+       <size>
+        <width>260</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>260</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">background-color: #291C0E;</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_Sidebar">
+       <item>
+        <widget class="QLabel" name="labelLogo">
+         <property name="styleSheet">
+          <string notr="true">color: #E1D4C2; font-size: 16px; font-weight: 700; padding: 20px;</string>
+         </property>
+         <property name="text">
+          <string>⚙️ ERP MANUFACTURE</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnTableauBord">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {background-color: transparent;border: none;color: #BEB5A9;text-align: left;padding: 14px 20px;font-size: 14px;}QPushButton:hover {background-color: #6E473B;color: #FFFFFF;}</string>
+         </property>
+         <property name="text">
+          <string>📊 Tableau de bord</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnProduits">
+         <property name="styleSheet">
+          <string notr="true">QPushButton {background-color: transparent;border: none;color: #BEB5A9;text-align: left;padding: 14px 20px;font-size: 14px;}QPushButton:hover {background-color: #6E473B;color: #FFFFFF;}</string>
+         </property>
+         <property name="text">
+          <string>📦 Produits</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QFrame" name="contentFrame">
+      <property name="styleSheet">
+       <string notr="true">background-color: #E8E3DC;</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_Content">
+       <property name="spacing">
+        <number>20</number>
+       </property>
+       <property name="leftMargin">
+        <number>25</number>
+       </property>
+       <property name="topMargin">
+        <number>25</number>
+       </property>
+       <property name="rightMargin">
+        <number>25</number>
+       </property>
+       <property name="bottomMargin">
+        <number>25</number>
+       </property>
+       <item>
+        <widget class="QStackedWidget" name="stackedWidget">
+         <property name="currentIndex">
+          <number>1</number>
+         </property>
+         <widget class="QWidget" name="pageDashboard">
+          <layout class="QVBoxLayout" name="verticalLayout_Dashboard">
+           <item>
+            <widget class="QFrame" name="frameDashboard">
+             <property name="styleSheet">
+              <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 12px; padding: 20px;</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_DashContent">
+              <item>
+               <widget class="QLabel" name="labelDashboardTitre">
+                <property name="styleSheet">
+                 <string notr="true">background: transparent; border: none; color: #291C0E; font-size: 28px; font-weight: 700;</string>
+                </property>
+                <property name="text">
+                 <string>📊 Tableau de Bord</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_Stats">
+                <item>
+                 <widget class="QFrame" name="frameStatProduits">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: #6E473B; border-radius: 8px; padding: 15px;</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_StatProduits">
+                   <item>
+                    <widget class="QLabel" name="labelStatProduitsText">
+                     <property name="styleSheet">
+                      <string notr="true">color: #E1D4C2; font-size: 14px; background: transparent; border: none;</string>
+                     </property>
+                     <property name="text">
+                      <string>Total Produits</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="labelNombreProduits">
+                     <property name="styleSheet">
+                      <string notr="true">color: #FFFFFF; font-size: 36px; font-weight: 700; background: transparent; border: none;</string>
+                     </property>
+                     <property name="text">
+                      <string>0</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QFrame" name="frameStatDisponible">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: #6E473B; border-radius: 8px; padding: 15px;</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_StatDisponible">
+                   <item>
+                    <widget class="QLabel" name="labelStatDisponibleText">
+                     <property name="styleSheet">
+                      <string notr="true">color: #E1D4C2; font-size: 14px; background: transparent; border: none;</string>
+                     </property>
+                     <property name="text">
+                      <string>Disponibles</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="labelNombreDisponible">
+                     <property name="styleSheet">
+                      <string notr="true">color: #FFFFFF; font-size: 36px; font-weight: 700; background: transparent; border: none;</string>
+                     </property>
+                     <property name="text">
+                      <string>0</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QFrame" name="frameStatEnProduction">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: #6E473B; border-radius: 8px; padding: 15px;</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_StatEnProduction">
+                   <item>
+                    <widget class="QLabel" name="labelStatEnProductionText">
+                     <property name="styleSheet">
+                      <string notr="true">color: #E1D4C2; font-size: 14px; background: transparent; border: none;</string>
+                     </property>
+                     <property name="text">
+                      <string>En Production</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="labelNombreEnProduction">
+                     <property name="styleSheet">
+                      <string notr="true">color: #FFFFFF; font-size: 36px; font-weight: 700; background: transparent; border: none;</string>
+                     </property>
+                     <property name="text">
+                      <string>0</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QFrame" name="frameStatObsolete">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: #6E473B; border-radius: 8px; padding: 15px;</string>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_StatObsolete">
+                   <item>
+                    <widget class="QLabel" name="labelStatObsoleteText">
+                     <property name="styleSheet">
+                      <string notr="true">color: #E1D4C2; font-size: 14px; background: transparent; border: none;</string>
+                     </property>
+                     <property name="text">
+                      <string>Obsolètes</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="labelNombreObsolete">
+                     <property name="styleSheet">
+                      <string notr="true">color: #FFFFFF; font-size: 36px; font-weight: 700; background: transparent; border: none;</string>
+                     </property>
+                     <property name="text">
+                      <string>0</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="verticalSpacer_Dashboard">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="pageListeProduits">
+          <layout class="QVBoxLayout" name="verticalLayout_Liste">
+           <item>
+            <widget class="QFrame" name="frameHeader">
+             <property name="styleSheet">
+              <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 12px; padding: 20px;</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_HeaderList">
+              <item>
+               <widget class="QLabel" name="labelTitre">
+                <property name="styleSheet">
+                 <string notr="true">background: transparent; border: none; color: #291C0E; font-size: 28px; font-weight: 700;</string>
+                </property>
+                <property name="text">
+                 <string>Gestion des Produits</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_SearchFilter">
+                <item>
+                 <widget class="QLineEdit" name="lineEditRecherche">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 8px; padding: 10px; font-size: 13px;</string>
+                  </property>
+                  <property name="placeholderText">
+                   <string>🔍 Rechercher par référence, nom ou catégorie...</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QComboBox" name="comboBoxFiltreStatut">
+                  <property name="styleSheet">
+                   <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 8px; padding: 10px; font-size: 13px;</string>
+                  </property>
+                  <item>
+                   <property name="text">
+                    <string>Tous les statuts</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>disponible</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>en_production</string>
+                   </property>
+                  </item>
+                  <item>
+                   <property name="text">
+                    <string>obsolete</string>
+                   </property>
+                  </item>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_Buttons">
+                <item>
+                 <widget class="QPushButton" name="btnCreer">
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #6E473B, stop:1 #5A3A2F); color: #FFFFFF; border: 2px solid #6E473B; border-radius: 8px; padding: 12px 24px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A78D78, stop:1 #8B7566); border-color: #A78D78; color: #291C0E;}</string>
+                  </property>
+                  <property name="text">
+                   <string>➕ Créer</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnModifier">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #6E473B, stop:1 #5A3A2F); color: #FFFFFF; border: 2px solid #6E473B; border-radius: 8px; padding: 12px 24px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A78D78, stop:1 #8B7566); border-color: #A78D78; color: #291C0E;} QPushButton:disabled {background: #BEB5A9; border-color: #BEB5A9; color: #8B8680;}</string>
+                  </property>
+                  <property name="text">
+                   <string>✏️ Modifier</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnSupprimer">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #C62828, stop:1 #B71C1C); color: #FFFFFF; border: 2px solid #C62828; border-radius: 8px; padding: 12px 24px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #E53935, stop:1 #C62828); border-color: #E53935;} QPushButton:disabled {background: #BEB5A9; border-color: #BEB5A9; color: #8B8680;}</string>
+                  </property>
+                  <property name="text">
+                   <string>🗑️ Supprimer</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnConsulter">
+                  <property name="enabled">
+                   <bool>false</bool>
+                  </property>
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #6E473B, stop:1 #5A3A2F); color: #FFFFFF; border: 2px solid #6E473B; border-radius: 8px; padding: 12px 24px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A78D78, stop:1 #8B7566); border-color: #A78D78; color: #291C0E;} QPushButton:disabled {background: #BEB5A9; border-color: #BEB5A9; color: #8B8680;}</string>
+                  </property>
+                  <property name="text">
+                   <string>👁️ Consulter</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <spacer name="horizontalSpacer_Buttons">
+                  <property name="orientation">
+                   <enum>Qt::Orientation::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QTableWidget" name="tableWidgetProduits">
+             <property name="styleSheet">
+              <string notr="true">QTableWidget {background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 8px; gridline-color: #E8E3DC; color: #291C0E; font-size: 13px;} QTableWidget::item {color: #291C0E; padding: 5px;} QTableWidget::item:selected {background-color: #A78D78; color: #FFFFFF;} QHeaderView::section {background-color: #6E473B; color: #FFFFFF; padding: 8px; border: none; font-weight: 600;}</string>
+             </property>
+             <property name="selectionMode">
+              <enum>QAbstractItemView::SelectionMode::SingleSelection</enum>
+             </property>
+             <property name="selectionBehavior">
+              <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+             </property>
+             <column>
+              <property name="text">
+               <string>ID</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Référence</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Nom</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Catégorie</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Type</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Couleur</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Dimensions</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Prix Unitaire</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Coût Fabrication</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Statut</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
+               <string>Date Création</string>
+              </property>
+             </column>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="pageCreer">
+          <layout class="QVBoxLayout" name="verticalLayout_Creer">
+           <item>
+            <widget class="QFrame" name="frameCreer">
+             <property name="styleSheet">
+              <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 12px; padding: 20px;</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_CreerContent">
+              <item>
+               <widget class="QLabel" name="labelCreerTitre">
+                <property name="styleSheet">
+                 <string notr="true">background: transparent; border: none; color: #291C0E; font-size: 24px; font-weight: 700;</string>
+                </property>
+                <property name="text">
+                 <string>➕ Créer un Nouveau Produit</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QScrollArea" name="scrollAreaCreer">
+                <property name="widgetResizable">
+                 <bool>true</bool>
+                </property>
+                <widget class="QWidget" name="scrollAreaWidgetContentsCreer">
+                 <property name="geometry">
+                  <rect>
+                   <x>0</x>
+                   <y>0</y>
+                   <width>363</width>
+                   <height>682</height>
+                  </rect>
+                 </property>
+                 <layout class="QFormLayout" name="formLayout_Creer">
+                  <property name="horizontalSpacing">
+                   <number>20</number>
+                  </property>
+                  <property name="verticalSpacing">
+                   <number>15</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="labelCreerReference">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Référence :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLineEdit" name="lineEditCreerReference">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="labelCreerNom">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Nom * :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QLineEdit" name="lineEditCreerNom">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="labelCreerCategorie">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Catégorie :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QComboBox" name="comboBoxCreerCategorie">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                    <item>
+                     <property name="text">
+                      <string>Mobilier</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Rangement</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Éclairage</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Informatique</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Décoration</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="labelCreerType">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Type :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QLineEdit" name="lineEditCreerType">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="labelCreerCouleur">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Couleur :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QLineEdit" name="lineEditCreerCouleur">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="0">
+                   <widget class="QLabel" name="labelCreerDimensions">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Dimensions :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QLineEdit" name="lineEditCreerDimensions">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                    <property name="placeholderText">
+                     <string>ex: 120x80x75cm</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="0">
+                   <widget class="QLabel" name="labelCreerPrix">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Prix Unitaire (€) :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="1">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBoxCreerPrix">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.989999999990687</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="0">
+                   <widget class="QLabel" name="labelCreerCout">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Coût Fabrication (€) :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="1">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBoxCreerCout">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.989999999990687</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="8" column="0">
+                   <widget class="QLabel" name="labelCreerStatut">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Statut :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="8" column="1">
+                   <widget class="QComboBox" name="comboBoxCreerStatut">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                    <item>
+                     <property name="text">
+                      <string>disponible</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>en_production</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>obsolete</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_CreerButtons">
+                <item>
+                 <spacer name="horizontalSpacer_Creer">
+                  <property name="orientation">
+                   <enum>Qt::Orientation::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnCreerAnnuler">
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #BEB5A9, stop:1 #A89F93); color: #291C0E; border: 2px solid #BEB5A9; border-radius: 8px; padding: 14px 28px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A78D78, stop:1 #8B7566);}</string>
+                  </property>
+                  <property name="text">
+                   <string>↩️ Annuler</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnCreerSauvegarder">
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #6E473B, stop:1 #5A3A2F); color: #FFFFFF; border: 2px solid #6E473B; border-radius: 8px; padding: 14px 28px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A78D78, stop:1 #8B7566); border-color: #A78D78; color: #291C0E;}</string>
+                  </property>
+                  <property name="text">
+                   <string>💾 Sauvegarder</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="pageModifier">
+          <layout class="QVBoxLayout" name="verticalLayout_Modifier">
+           <item>
+            <widget class="QFrame" name="frameModifier">
+             <property name="styleSheet">
+              <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 12px; padding: 20px;</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_ModifierContent">
+              <item>
+               <widget class="QLabel" name="labelModifierTitre">
+                <property name="styleSheet">
+                 <string notr="true">background: transparent; border: none; color: #291C0E; font-size: 24px; font-weight: 700;</string>
+                </property>
+                <property name="text">
+                 <string>✏️ Modifier le Produit</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QScrollArea" name="scrollAreaModifier">
+                <property name="widgetResizable">
+                 <bool>true</bool>
+                </property>
+                <widget class="QWidget" name="scrollAreaWidgetContentsModifier">
+                 <property name="geometry">
+                  <rect>
+                   <x>0</x>
+                   <y>0</y>
+                   <width>363</width>
+                   <height>757</height>
+                  </rect>
+                 </property>
+                 <layout class="QFormLayout" name="formLayout_Modifier">
+                  <property name="horizontalSpacing">
+                   <number>20</number>
+                  </property>
+                  <property name="verticalSpacing">
+                   <number>15</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="labelModifierId">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>ID :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLabel" name="labelModifierIdValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="labelModifierReference">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Référence :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QLineEdit" name="lineEditModifierReference">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="labelModifierNom">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Nom * :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QLineEdit" name="lineEditModifierNom">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="labelModifierCategorie">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Catégorie :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QComboBox" name="comboBoxModifierCategorie">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                    <item>
+                     <property name="text">
+                      <string>Mobilier</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Rangement</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Éclairage</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Informatique</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Décoration</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="labelModifierType">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Type :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QLineEdit" name="lineEditModifierType">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="0">
+                   <widget class="QLabel" name="labelModifierCouleur">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Couleur :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QLineEdit" name="lineEditModifierCouleur">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="0">
+                   <widget class="QLabel" name="labelModifierDimensions">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Dimensions :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="1">
+                   <widget class="QLineEdit" name="lineEditModifierDimensions">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="0">
+                   <widget class="QLabel" name="labelModifierPrix">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Prix Unitaire (€) :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="1">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBoxModifierPrix">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.989999999990687</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="8" column="0">
+                   <widget class="QLabel" name="labelModifierCout">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Coût Fabrication (€) :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="8" column="1">
+                   <widget class="QDoubleSpinBox" name="doubleSpinBoxModifierCout">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                    <property name="maximum">
+                     <double>999999.989999999990687</double>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="9" column="0">
+                   <widget class="QLabel" name="labelModifierStatut">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Statut :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="9" column="1">
+                   <widget class="QComboBox" name="comboBoxModifierStatut">
+                    <property name="styleSheet">
+                     <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 6px; padding: 8px; color: #291C0E; font-size: 13px;</string>
+                    </property>
+                    <item>
+                     <property name="text">
+                      <string>disponible</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>en_production</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>obsolete</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_ModifierButtons">
+                <item>
+                 <spacer name="horizontalSpacer_Modifier">
+                  <property name="orientation">
+                   <enum>Qt::Orientation::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnModifierAnnuler">
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #BEB5A9, stop:1 #A89F93); color: #291C0E; border: 2px solid #BEB5A9; border-radius: 8px; padding: 14px 28px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A78D78, stop:1 #8B7566);}</string>
+                  </property>
+                  <property name="text">
+                   <string>↩️ Annuler</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnModifierSauvegarder">
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #6E473B, stop:1 #5A3A2F); color: #FFFFFF; border: 2px solid #6E473B; border-radius: 8px; padding: 14px 28px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A78D78, stop:1 #8B7566); border-color: #A78D78; color: #291C0E;}</string>
+                  </property>
+                  <property name="text">
+                   <string>💾 Sauvegarder</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="pageSupprimer">
+          <layout class="QVBoxLayout" name="verticalLayout_Supprimer">
+           <item>
+            <widget class="QFrame" name="frameSupprimer">
+             <property name="styleSheet">
+              <string notr="true">background-color: #FFFFFF; border: 2px solid #C62828; border-radius: 12px; padding: 20px;</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_SupprimerContent">
+              <item>
+               <widget class="QLabel" name="labelSupprimerTitre">
+                <property name="styleSheet">
+                 <string notr="true">background: transparent; border: none; color: #C62828; font-size: 24px; font-weight: 700;</string>
+                </property>
+                <property name="text">
+                 <string>🗑️ Supprimer le Produit</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="labelSupprimerAvertissement">
+                <property name="styleSheet">
+                 <string notr="true">font-size: 14px; color: #C62828; font-weight: 600; padding: 10px; background: transparent; border: none;</string>
+                </property>
+                <property name="text">
+                 <string>⚠️ ATTENTION : Cette action est irréversible !</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QGroupBox" name="groupBoxSupprimerDetails">
+                <property name="styleSheet">
+                 <string notr="true">QGroupBox {background-color: #FFEBEE; border: 2px solid #C62828; border-radius: 10px; padding: 25px 20px 20px 20px; margin-top: 15px; font-weight: 600;} QGroupBox::title {subcontrol-origin: margin; subcontrol-position: top left; left: 20px; top: 10px; padding: 5px 15px; background-color: #C62828; color: #FFFFFF; font-weight: 700; font-size: 14px; border-radius: 5px;}</string>
+                </property>
+                <property name="title">
+                 <string>Détails du Produit à Supprimer</string>
+                </property>
+                <layout class="QFormLayout" name="formLayout_Supprimer">
+                 <property name="horizontalSpacing">
+                  <number>20</number>
+                 </property>
+                 <property name="verticalSpacing">
+                  <number>15</number>
+                 </property>
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="labelSupprimerId">
+                   <property name="styleSheet">
+                    <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                   </property>
+                   <property name="text">
+                    <string>ID :</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLabel" name="labelSupprimerIdValue">
+                   <property name="styleSheet">
+                    <string notr="true">color: #6E473B; background: transparent; border: none;</string>
+                   </property>
+                   <property name="text">
+                    <string>-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="labelSupprimerRef">
+                   <property name="styleSheet">
+                    <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                   </property>
+                   <property name="text">
+                    <string>Référence :</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLabel" name="labelSupprimerRefValue">
+                   <property name="styleSheet">
+                    <string notr="true">color: #6E473B; background: transparent; border: none;</string>
+                   </property>
+                   <property name="text">
+                    <string>-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="labelSupprimerNom">
+                   <property name="styleSheet">
+                    <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                   </property>
+                   <property name="text">
+                    <string>Nom :</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLabel" name="labelSupprimerNomValue">
+                   <property name="styleSheet">
+                    <string notr="true">color: #6E473B; background: transparent; border: none;</string>
+                   </property>
+                   <property name="text">
+                    <string>-</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QLabel" name="labelSupprimerPrix">
+                   <property name="styleSheet">
+                    <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                   </property>
+                   <property name="text">
+                    <string>Prix :</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="1">
+                  <widget class="QLabel" name="labelSupprimerPrixValue">
+                   <property name="styleSheet">
+                    <string notr="true">color: #C62828; font-weight: 700; font-size: 15px; background: transparent; border: none;</string>
+                   </property>
+                   <property name="text">
+                    <string>-</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="labelConfirmSupprimer">
+                <property name="styleSheet">
+                 <string notr="true">font-size: 14px; font-weight: 600; color: #291C0E; padding: 20px; background: transparent; border: none;</string>
+                </property>
+                <property name="text">
+                 <string>Êtes-vous absolument certain de vouloir supprimer ce produit ?</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignmentFlag::AlignCenter</set>
+                </property>
+                <property name="wordWrap">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_SupprimerButtons">
+                <item>
+                 <spacer name="horizontalSpacer_Supprimer">
+                  <property name="orientation">
+                   <enum>Qt::Orientation::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnSupprimerAnnuler">
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #BEB5A9, stop:1 #A89F93); color: #291C0E; border: 2px solid #BEB5A9; border-radius: 8px; padding: 14px 28px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A78D78, stop:1 #8B7566);}</string>
+                  </property>
+                  <property name="text">
+                   <string>↩️ Non, Annuler</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnSupprimerConfirmer">
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #C62828, stop:1 #B71C1C); color: #FFFFFF; border: 2px solid #C62828; border-radius: 8px; padding: 14px 28px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #E53935, stop:1 #C62828); border-color: #E53935;}</string>
+                  </property>
+                  <property name="text">
+                   <string>🗑️ Oui, Supprimer</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="verticalSpacer_Supprimer">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Vertical</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>40</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+         <widget class="QWidget" name="pageConsulter">
+          <layout class="QVBoxLayout" name="verticalLayout_Consulter">
+           <item>
+            <widget class="QFrame" name="frameConsulter">
+             <property name="styleSheet">
+              <string notr="true">background-color: #FFFFFF; border: 2px solid #BEB5A9; border-radius: 12px; padding: 20px;</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_ConsulterContent">
+              <item>
+               <widget class="QLabel" name="labelConsulterTitre">
+                <property name="styleSheet">
+                 <string notr="true">background: transparent; border: none; color: #291C0E; font-size: 24px; font-weight: 700;</string>
+                </property>
+                <property name="text">
+                 <string>👁️ Détails du Produit</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QScrollArea" name="scrollAreaConsulter">
+                <property name="widgetResizable">
+                 <bool>true</bool>
+                </property>
+                <widget class="QWidget" name="scrollAreaWidgetContentsConsulter">
+                 <property name="geometry">
+                  <rect>
+                   <x>0</x>
+                   <y>0</y>
+                   <width>267</width>
+                   <height>832</height>
+                  </rect>
+                 </property>
+                 <layout class="QFormLayout" name="formLayout_Consulter">
+                  <property name="horizontalSpacing">
+                   <number>20</number>
+                  </property>
+                  <property name="verticalSpacing">
+                   <number>15</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="labelConsulterId">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>ID :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLabel" name="labelConsulterIdValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 13px; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="labelConsulterRef">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Référence :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QLabel" name="labelConsulterRefValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 13px; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="labelConsulterNom">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Nom :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QLabel" name="labelConsulterNomValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 13px; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="labelConsulterCategorie">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Catégorie :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QLabel" name="labelConsulterCategorieValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 13px; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="0">
+                   <widget class="QLabel" name="labelConsulterType">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Type :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="4" column="1">
+                   <widget class="QLabel" name="labelConsulterTypeValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 13px; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="0">
+                   <widget class="QLabel" name="labelConsulterCouleur">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Couleur :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="5" column="1">
+                   <widget class="QLabel" name="labelConsulterCouleurValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 13px; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="0">
+                   <widget class="QLabel" name="labelConsulterDimensions">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Dimensions :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="6" column="1">
+                   <widget class="QLabel" name="labelConsulterDimensionsValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 13px; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="0">
+                   <widget class="QLabel" name="labelConsulterPrix">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Prix Unitaire :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="7" column="1">
+                   <widget class="QLabel" name="labelConsulterPrixValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 15px; font-weight: 700; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="8" column="0">
+                   <widget class="QLabel" name="labelConsulterCout">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Coût Fabrication :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="8" column="1">
+                   <widget class="QLabel" name="labelConsulterCoutValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 13px; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="9" column="0">
+                   <widget class="QLabel" name="labelConsulterStatut">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Statut :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="9" column="1">
+                   <widget class="QLabel" name="labelConsulterStatutValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 13px; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="10" column="0">
+                   <widget class="QLabel" name="labelConsulterDate">
+                    <property name="styleSheet">
+                     <string notr="true">font-weight: 600; background: transparent; border: none; color: #291C0E; font-size: 14px;</string>
+                    </property>
+                    <property name="text">
+                     <string>Date de Création :</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="10" column="1">
+                   <widget class="QLabel" name="labelConsulterDateValue">
+                    <property name="styleSheet">
+                     <string notr="true">color: #6E473B; font-size: 13px; background: transparent; border: none;</string>
+                    </property>
+                    <property name="text">
+                     <string>-</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </widget>
+              </item>
+              <item>
+               <layout class="QHBoxLayout" name="horizontalLayout_ConsulterButtons">
+                <item>
+                 <spacer name="horizontalSpacer_Consulter">
+                  <property name="orientation">
+                   <enum>Qt::Orientation::Horizontal</enum>
+                  </property>
+                  <property name="sizeHint" stdset="0">
+                   <size>
+                    <width>40</width>
+                    <height>20</height>
+                   </size>
+                  </property>
+                 </spacer>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnConsulterRetour">
+                  <property name="styleSheet">
+                   <string notr="true">QPushButton {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #6E473B, stop:1 #5A3A2F); color: #FFFFFF; border: 2px solid #6E473B; border-radius: 8px; padding: 14px 28px; font-weight: 600; font-size: 13px;} QPushButton:hover {background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #A78D78, stop:1 #8B7566); border-color: #A78D78; color: #291C0E;}</string>
+                  </property>
+                  <property name="text">
+                   <string>↩️ Retour à la Liste</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources>
+  <include location="ressources.qrc"/>
+ </resources>
+ <connections/>
+</ui>
