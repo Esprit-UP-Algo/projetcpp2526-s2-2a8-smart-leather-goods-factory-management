@@ -3,7 +3,6 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
-#include <QSplitter>
 #include <QTableWidget>
 #include <QHeaderView>
 #include <QPushButton>
@@ -13,6 +12,105 @@
 #include <QMessageBox>
 #include <QDate>
 #include <QPixmap>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QDateEdit>
+
+// ────────────────────────────────────────────────
+//   Dialog d'ajout / modification client (popup)
+// ────────────────────────────────────────────────
+class ClientDialog : public QDialog
+{
+public:
+    ClientDialog(QWidget *parent = nullptr, bool isEdit = false)
+        : QDialog(parent)
+    {
+        setWindowTitle(isEdit ? "Modifier Client" : "Créer Client");
+        setMinimumSize(520, 580);
+
+        QVBoxLayout *mainLay = new QVBoxLayout(this);
+        mainLay->setContentsMargins(28, 24, 28, 24);
+        mainLay->setSpacing(16);
+
+        QLabel *title = new QLabel(isEdit ? "Modifier le client" : "Nouveau client");
+        title->setStyleSheet("font-size: 20px; font-weight: bold; color: #5C4033;");
+        mainLay->addWidget(title);
+
+        QFormLayout *form = new QFormLayout();
+        form->setLabelAlignment(Qt::AlignRight);
+        form->setHorizontalSpacing(14);
+        form->setVerticalSpacing(12);
+
+        nomEdit       = new QLineEdit(); nomEdit->setPlaceholderText("Obligatoire");
+        prenomEdit    = new QLineEdit(); prenomEdit->setPlaceholderText("Obligatoire");
+        sexeCombo     = new QComboBox(); sexeCombo->addItems({"Homme", "Femme"});
+        cinEdit       = new QLineEdit();
+        paysEdit      = new QLineEdit();
+        villeEdit     = new QLineEdit();
+        adresseEdit   = new QLineEdit();
+        emailEdit     = new QLineEdit();
+        dateInscrit   = new QDateEdit(QDate::currentDate());
+        dateInscrit->setCalendarPopup(true);
+        dateInscrit->setDisplayFormat("dd/MM/yyyy");
+
+        form->addRow("Nom :", nomEdit);
+        form->addRow("Prénom :", prenomEdit);
+        form->addRow("Sexe :", sexeCombo);
+        form->addRow("CIN :", cinEdit);
+        form->addRow("Pays :", paysEdit);
+        form->addRow("Ville :", villeEdit);
+        form->addRow("Adresse :", adresseEdit);
+        form->addRow("Email :", emailEdit);
+        form->addRow("Date inscription :", dateInscrit);
+
+        mainLay->addLayout(form);
+
+        QDialogButtonBox *btnBox = new QDialogButtonBox(
+            QDialogButtonBox::Save | QDialogButtonBox::Cancel);
+        QPushButton *saveBtn = btnBox->button(QDialogButtonBox::Save);
+        saveBtn->setText("Enregistrer");
+        saveBtn->setObjectName("btnAdd");   // pour réutiliser le style QSS
+
+        mainLay->addWidget(btnBox);
+
+        connect(btnBox, &QDialogButtonBox::accepted, this, &ClientDialog::accept);
+        connect(btnBox, &QDialogButtonBox::rejected, this, &ClientDialog::reject);
+    }
+
+    // Récupérer les valeurs saisies
+    void fillFromClient(const Client &c) {
+        nomEdit->setText(c.getNom());
+        prenomEdit->setText(c.getPrenom());
+        sexeCombo->setCurrentText(c.getSexe());
+        cinEdit->setText(c.getCin());
+        paysEdit->setText(c.getPays());
+        villeEdit->setText(c.getVille());
+        adresseEdit->setText(c.getAdresse());
+        emailEdit->setText(c.getEmail());
+        dateInscrit->setDate(c.getDateInscrit());
+    }
+
+    Client getClient() const {
+        Client c;
+        c.setNom(nomEdit->text().trimmed());
+        c.setPrenom(prenomEdit->text().trimmed());
+        c.setSexe(sexeCombo->currentText());
+        c.setCin(cinEdit->text().trimmed());
+        c.setPays(paysEdit->text().trimmed());
+        c.setVille(villeEdit->text().trimmed());
+        c.setAdresse(adresseEdit->text().trimmed());
+        c.setEmail(emailEdit->text().trimmed());
+        c.setDateInscrit(dateInscrit->date());
+        return c;
+    }
+
+private:
+    QLineEdit *nomEdit, *prenomEdit, *cinEdit, *paysEdit,
+        *villeEdit, *adresseEdit, *emailEdit;
+    QComboBox *sexeCombo;
+    QDateEdit *dateInscrit;
+};
+
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
@@ -27,89 +125,35 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     mainLayout->setSpacing(0);
 
     // ────────────────────── TOP BAR ───────────────────────────────
-    QWidget *topBar = new QWidget();
-    topBar->setFixedHeight(90);
-    topBar->setStyleSheet("background-color: #A3835F;");  // ← plus clair que #8C6642
 
-    QHBoxLayout *topLayout = new QHBoxLayout(topBar);
-    topLayout->setContentsMargins(25, 12, 25, 12);
-    topLayout->setSpacing(16);
-
-    // Title + date
-    QVBoxLayout *titleBox = new QVBoxLayout();
-    titleBox->setSpacing(2);
-
-    QLabel *titleLabel = new QLabel("Gestion des Clients");
-    titleLabel->setStyleSheet("color: white; font-size: 22px; font-weight: bold;");
-    titleBox->addWidget(titleLabel);
-
-    QLabel *dateLabel = new QLabel(QDate::currentDate().toString("dddd dd MMMM yyyy"));
-    dateLabel->setStyleSheet("color: #F8F1E5; font-size: 13px;");  // ← plus clair que #F0E4D2
-    titleBox->addWidget(dateLabel);
-
-    topLayout->addLayout(titleBox);
-    topLayout->addStretch();
-
-    // Action buttons – palette plus claire
-    QString btnStyle = R"(
-        QPushButton {
-            background-color: #C0A070;          // plus clair que #A57F50
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 0 18px;
-            font-weight: bold;
-            min-height: 46px;
-            font-size: 14px;
-        }
-        QPushButton:hover {
-            background-color: #D0B080;          // plus clair que #B89467
-        }
-        QPushButton:pressed {
-            background-color: #A3835F;          // même que top bar
-        }
-    )";
-
-    QPushButton *btnNew     = new QPushButton(" + Créer");
-    QPushButton *btnDelete  = new QPushButton(" 🗑 Supprimer");
-    QPushButton *btnExport  = new QPushButton(" 📄 Exporter PDF");
-    QPushButton *btnPrint   = new QPushButton(" 🖨 Imprimer");
-    QPushButton *btnRefresh = new QPushButton(" 🔄 Actualiser");
-
-    for (auto btn : {btnNew, btnDelete, btnExport, btnPrint, btnRefresh}) {
-        btn->setStyleSheet(btnStyle);
-        topLayout->addWidget(btn);
-    }
-
-    mainLayout->addWidget(topBar);
 
     // ────────────────────── MAIN CONTENT ──────────────────────────
     QWidget *contentArea = new QWidget();
+    contentArea->setObjectName("contentArea");
+
     QHBoxLayout *contentLayout = new QHBoxLayout(contentArea);
     contentLayout->setContentsMargins(0, 0, 0, 0);
     contentLayout->setSpacing(0);
 
     // ────────────────────── LEFT NAVIGATION SIDEBAR ───────────────
-    QWidget *navSidebar = new QWidget();
-    navSidebar->setFixedWidth(280);
-    navSidebar->setStyleSheet("background-color: #8A6A4A;");  // ← plus clair que #6B4C2F
+    QWidget *Sidebar = new QWidget();
+    Sidebar->setObjectName("sidebar");
+    Sidebar->setFixedWidth(280);
 
-    QVBoxLayout *navLay = new QVBoxLayout(navSidebar);
+    QVBoxLayout *navLay = new QVBoxLayout(Sidebar);
     navLay->setContentsMargins(20, 20, 20, 30);
     navLay->setSpacing(12);
 
-    // ────────────────────── LOGO ──────────────────────
+    // Logo
     QLabel *logoLabel = new QLabel();
+    logoLabel->setObjectName("sidebarLogo");
     logoLabel->setAlignment(Qt::AlignCenter);
     logoLabel->setFixedHeight(140);
     logoLabel->setMinimumWidth(140);
 
     QPixmap logoPix("C:/Users/USER/Desktop/cpp/test2/logo.PNG");
-
     if (!logoPix.isNull()) {
-        logoLabel->setPixmap(
-            logoPix.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation)
-            );
+        logoLabel->setPixmap(logoPix.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     } else {
         logoLabel->setText("LOGO\nnon trouvé\nVérifiez le chemin");
         logoLabel->setStyleSheet(
@@ -121,16 +165,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
             "padding: 20px;"
             );
     }
-
     navLay->addWidget(logoLabel);
     navLay->addSpacing(25);
 
-    // ────────────────────── User info ──────────────────────
+    // User role
     QLabel *role = new QLabel("Manager de Clients");
-    role->setStyleSheet("color: #F8F1E5; font-size: 18px; font-weight: 700;");  // ← plus clair
+    role->setObjectName("sidebarRole");
     role->setAlignment(Qt::AlignCenter);
     navLay->addWidget(role);
-
     navLay->addSpacing(30);
 
     // Navigation items
@@ -138,13 +180,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     for (const QString &text : menuItems) {
         QPushButton *item = new QPushButton(text);
         item->setProperty("navItem", true);
-        item->setProperty("active", text == "Clients");
-        item->setStyleSheet(
-            text == "Clients"
-                ? "background: #A3835F; color: white; text-align: left; padding: 14px 20px; border: none; border-radius: 6px;"
-                : "color: #F8F1E5; text-align: left; padding: 14px 20px; border: none;"
-                  "QPushButton:hover { background: rgba(255,255,255,0.18); border-radius: 6px; }"
-            );
+        if (text == "Clients") {
+            item->setObjectName("btnClients");
+        }
         navLay->addWidget(item);
     }
 
@@ -154,14 +192,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     logout->setObjectName("logout");
     navLay->addWidget(logout);
 
-    contentLayout->addWidget(navSidebar);
+    contentLayout->addWidget(Sidebar);
 
-    // ────────────────────── SPLIT VIEW ────────────────────────────
-    QSplitter *splitter = new QSplitter(Qt::Horizontal);
-    splitter->setHandleWidth(3);
-    splitter->setStyleSheet("QSplitter::handle { background: #C9A875; }");  // ← handle plus clair
-
-    // Left: Clients list
+    // ────────────────────── TABLEAU CENTRAL (seul maintenant) ────────────────
     QWidget *listPanel = new QWidget();
     QVBoxLayout *listLay = new QVBoxLayout(listPanel);
     listLay->setContentsMargins(24, 24, 24, 24);
@@ -169,186 +202,81 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 
     QLabel *listTitle = new QLabel("HISTORIQUE DES CLIENTS");
     listTitle->setObjectName("listTitle");
-    listLay->addWidget(listTitle);
+
+    // Add to layout **with center alignment**
+    listLay->addWidget(listTitle, 0, Qt::AlignHCenter);
 
     QLineEdit *searchEdit = new QLineEdit();
     searchEdit->setPlaceholderText("Rechercher un client...");
-    searchEdit->setObjectName("search");
+    searchEdit->setObjectName("searchBox");
     listLay->addWidget(searchEdit);
+    searchEdit->setFixedWidth(400);
+
+
+
+    // Ligne de boutons au-dessus du tableau
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->setSpacing(10);
+
+    QPushButton *btnNew     = new QPushButton(" + Créer");
+    QPushButton *btnDelete  = new QPushButton(" 🗑 Supprimer");
+    QPushButton *btnExport  = new QPushButton(" 📄 Exporter PDF");
+    QPushButton *btnPrint   = new QPushButton(" 🖨 Imprimer");
+    QPushButton *btnRefresh = new QPushButton(" 🔄 Actualiser");
+
+    btnNew->setObjectName("btnAdd");
+    btnDelete->setObjectName("btnDelete");
+    btnExport->setObjectName("btnExport");
+    btnPrint->setObjectName("btnPrint");
+    btnRefresh->setObjectName("btnRefresh");
+
+    for (auto btn : {btnNew, btnDelete, btnExport, btnPrint, btnRefresh})
+        btnLayout->addWidget(btn);
+
+    listLay->addLayout(btnLayout); // ← ajoute au-dessus du tableau
+
+
+
+
+
+
 
     tableClients = new QTableWidget(0, 8);
+    tableClients->setObjectName("employeeTable");
     tableClients->setHorizontalHeaderLabels({"Nom", "Prénom", "Sexe", "CIN", "Pays", "Ville", "Adresse", "Email"});
     tableClients->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tableClients->setAlternatingRowColors(true);
     listLay->addWidget(tableClients, 1);
 
-    splitter->addWidget(listPanel);
+    contentLayout->addWidget(listPanel, 1);   // ← prend tout l'espace restant
 
-    // Right: Details form
-    QWidget *detailsPanel = new QWidget();
-    detailsPanel->setObjectName("detailsPanel");
-
-    QVBoxLayout *detailsLay = new QVBoxLayout(detailsPanel);
-    detailsLay->setContentsMargins(28, 28, 28, 28);
-    detailsLay->setSpacing(20);
-
-    QLabel *detailsTitle = new QLabel("Détails Client");
-    detailsTitle->setObjectName("detailsTitle");
-    detailsLay->addWidget(detailsTitle);
-
-    QFormLayout *formLay = new QFormLayout();
-    formLay->setLabelAlignment(Qt::AlignRight);
-    formLay->setHorizontalSpacing(16);
-    formLay->setVerticalSpacing(14);
-
-    editNom     = new QLineEdit(); editNom->setPlaceholderText("Obligatoire");
-    editPrenom  = new QLineEdit(); editPrenom->setPlaceholderText("Obligatoire");
-    comboSexe   = new QComboBox(); comboSexe->addItems({"Homme", "Femme"});
-    editCin     = new QLineEdit();
-    editPays    = new QLineEdit();
-    editVille   = new QLineEdit();
-    editAdresse = new QLineEdit();
-    editEmail   = new QLineEdit();
-
-    formLay->addRow("Nom :", editNom);
-    formLay->addRow("Prénom :", editPrenom);
-    formLay->addRow("Sexe :", comboSexe);
-    formLay->addRow("CIN :", editCin);
-    formLay->addRow("Pays :", editPays);
-    formLay->addRow("Ville :", editVille);
-    formLay->addRow("Adresse :", editAdresse);
-    formLay->addRow("Email :", editEmail);
-
-    detailsLay->addLayout(formLay);
-
-    // ── SAVE BUTTON ────────────────────────────────────────────────
-    QPushButton *btnSave = new QPushButton("Enregistrer Client");
-    btnSave->setStyleSheet(R"(
-        QPushButton {
-            background-color: #C0A070;          // plus clair que #8C6642
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 14px 40px;
-            font-size: 15px;
-            font-weight: bold;
-            min-height: 52px;
-        }
-        QPushButton:hover { background-color: #D0B080; }
-        QPushButton:pressed { background-color: #A3835F; }
-    )");
-    detailsLay->addWidget(btnSave);
-    detailsLay->addStretch();
-
-    splitter->addWidget(detailsPanel);
-    splitter->setSizes({860, 560});
-
-    contentLayout->addWidget(splitter);
     mainLayout->addWidget(contentArea);
 
     // ────────────────────── CONNECTIONS ───────────────────────────
-    connect(btnRefresh, &QPushButton::clicked, this, &MainWindow::refreshTable);
-    connect(btnNew, &QPushButton::clicked, this, [=](){
-        currentClientIndex = -1;
-        clearForm();
-        tableClients->clearSelection();
-    });
-    connect(tableClients, &QTableWidget::itemSelectionChanged, this, [=](){
-        int row = tableClients->currentRow();
-        if (row >= 0 && row < clients.size()) {
-            currentClientIndex = row;
-            fillFormFromCurrent();
-        }
-    });
-    connect(btnDelete, &QPushButton::clicked, this, [=](){
-        if (currentClientIndex < 0) {
-            QMessageBox::warning(this, "Sélection requise", "Veuillez sélectionner un client dans la liste.");
-            return;
-        }
-        if (QMessageBox::question(this, "Confirmer suppression",
-                                  "Voulez-vous vraiment supprimer ce client ?") == QMessageBox::Yes) {
-            clients.removeAt(currentClientIndex);
-            currentClientIndex = -1;
-            clearForm();
-            refreshTable();
-        }
-    });
-    // SAVE BUTTON ACTION
-    connect(btnSave, &QPushButton::clicked, this, [=](){
-        QString nom = editNom->text().trimmed();
-        QString prenom = editPrenom->text().trimmed();
-        if (nom.isEmpty() || prenom.isEmpty()) {
-            QMessageBox::warning(this, "Champs obligatoires",
-                                 "Le Nom et le Prénom sont obligatoires.");
-            return;
-        }
-        Client client;
-        client.setNom(nom);
-        client.setPrenom(prenom);
-        client.setSexe(comboSexe->currentText());
-        client.setCin(editCin->text().trimmed());
-        client.setPays(editPays->text().trimmed());
-        client.setVille(editVille->text().trimmed());
-        client.setAdresse(editAdresse->text().trimmed());
-        client.setEmail(editEmail->text().trimmed());
-        if (currentClientIndex >= 0 && currentClientIndex < clients.size()) {
-            clients[currentClientIndex] = client;
-            QMessageBox::information(this, "Succès", "Client mis à jour avec succès.");
-        } else {
+
+    connect(btnNew, &QPushButton::clicked, this, [this](){
+        // Ouvre le popup pour créer un nouveau client
+        ClientDialog dlg(this); // isEdit = false par défaut
+        if (dlg.exec() == QDialog::Accepted) {
+            Client client = dlg.getClient();
+
+            // Vérifie les champs obligatoires
+            if (client.getNom().isEmpty() || client.getPrenom().isEmpty()) {
+                QMessageBox::warning(this, "Champs obligatoires",
+                                     "Le Nom et le Prénom sont obligatoires.");
+                return;
+            }
+
+            // Ajoute le client à la liste
             clients.append(client);
-            currentClientIndex = clients.size() - 1;
-            tableClients->selectRow(currentClientIndex);
-            QMessageBox::information(this, "Succès", "Nouveau client ajouté avec succès.");
+
+            // Optionnel : rafraîchir le tableau si tu as une fonction refreshTable()
+
         }
-        refreshTable();
     });
 
-    // Initial load
-    refreshTable();
+
+    // ... ajoute ici les autres connexions (delete, edit, etc.) quand tu les implémenteras ...
 }
 
-// ────────────────────── HELPER METHODS ────────────────────────────
-void MainWindow::refreshTable()
-{
-    tableClients->setRowCount(clients.size());
-    for (int i = 0; i < clients.size(); ++i) {
-        const Client &c = clients.at(i);
-        tableClients->setItem(i, 0, new QTableWidgetItem(c.getNom()));
-        tableClients->setItem(i, 1, new QTableWidgetItem(c.getPrenom()));
-        tableClients->setItem(i, 2, new QTableWidgetItem(c.getSexe()));
-        tableClients->setItem(i, 3, new QTableWidgetItem(c.getCin()));
-        tableClients->setItem(i, 4, new QTableWidgetItem(c.getPays()));
-        tableClients->setItem(i, 5, new QTableWidgetItem(c.getVille()));
-        tableClients->setItem(i, 6, new QTableWidgetItem(c.getAdresse()));
-        tableClients->setItem(i, 7, new QTableWidgetItem(c.getEmail()));
-    }
-    if (currentClientIndex >= 0 && currentClientIndex < clients.size()) {
-        tableClients->selectRow(currentClientIndex);
-    }
-}
-
-void MainWindow::clearForm()
-{
-    editNom->clear();
-    editPrenom->clear();
-    comboSexe->setCurrentIndex(0);
-    editCin->clear();
-    editPays->clear();
-    editVille->clear();
-    editAdresse->clear();
-    editEmail->clear();
-}
-
-void MainWindow::fillFormFromCurrent()
-{
-    if (currentClientIndex < 0 || currentClientIndex >= clients.size()) return;
-    const Client &c = clients.at(currentClientIndex);
-    editNom->setText(c.getNom());
-    editPrenom->setText(c.getPrenom());
-    comboSexe->setCurrentText(c.getSexe());
-    editCin->setText(c.getCin());
-    editPays->setText(c.getPays());
-    editVille->setText(c.getVille());
-    editAdresse->setText(c.getAdresse());
-    editEmail->setText(c.getEmail());
-}
+// (tu gardes tes fonctions refreshTable(), clearForm(), fillFormFromCurrent() si tu les avais déjà)
