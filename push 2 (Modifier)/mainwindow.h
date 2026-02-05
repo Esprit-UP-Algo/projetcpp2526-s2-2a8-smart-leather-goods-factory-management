@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QVector>
+#include <QPushButton>  // Needed for QPushButton
 #include "client.h"
 #include "matiere.h"
 #include "fournisseur.h"
@@ -27,14 +28,19 @@ private slots:
     void on_btnEdit_clicked();
     void on_btnDelete_clicked();
     void on_btnExport_clicked();
-    
+
     // Auto-generated slots for Client buttons
     void on_btnAddClient_clicked();
     void on_btnEditClient_clicked();
     void on_btnDeleteClient_clicked();
     void on_btnExportClient_clicked();
     void on_btnRefreshClient_clicked();
-    
+
+    // New Client section buttons
+    void on_btnStatsByRegion_clicked();
+    void on_btnFidelityClassification_clicked();
+    void on_btnAIAgent_clicked();
+
     // Auto-generated slots for Navigation buttons
     void on_btnEmployees_clicked();
     void on_btnClients_clicked();
@@ -42,10 +48,10 @@ private slots:
     void on_btnOrders_clicked();
     void on_btnRawMaterials_clicked();
     void on_btnSuppliers_clicked();
-    
+
     // Table selection
     void onEmployeeSelected();
-    
+
     // Raw Materials Management slots
     void onAddMatiere();
     void onEditMatiere();
@@ -68,7 +74,7 @@ private slots:
     void onDeleteFournisseur();
     void onCloseFournisseurs();
     void onExportMatiere();
-    
+
     // Suppliers Management slots
     void on_btnAddFournisseur_clicked();
     void on_btnEditFournisseur_clicked();
@@ -84,10 +90,15 @@ private:
     QList<MouvementStock> historiqueMouvements;
     bool isEditMode;
     int editingRow;
-    
+
+    // New Client section buttons
+    QPushButton* btnStatsByRegion;
+    QPushButton* btnFidelityClassification;
+    QPushButton* btnAIAgent;
+
     void populateEmployeeTable();
     void refreshClientTable();
-    
+
     // Raw Materials Management methods
     void setupMatiereTable();
     void setupSuggestionTable();
@@ -96,8 +107,8 @@ private:
     void hideForm();
     void clearForm();
     void hideAllPanels();
-    void addMatiereToTable(const QString &module, const QString &reference, const QString &type, 
-                          const QString &quantite, const QString &seuil, const QString &dateExp);
+    void addMatiereToTable(const QString &module, const QString &reference, const QString &type,
+                           const QString &quantite, const QString &seuil, const QString &dateExp);
     void loadFournisseurs();
     void saveFournisseurs();
     void updateFournisseursList();
@@ -107,10 +118,11 @@ private:
     QString getStockLevel(int currentStock, int threshold);
     int calculateSuggestedQuantity(const QString &matiere);
     void updateMatiereStatistics();
-    
+
     // Suppliers Management methods
     void setupFournisseurTable();
     void refreshFournisseurTable();
     void updateFournisseurStatistics();
 };
+
 #endif // MAINWINDOW_H

@@ -87,6 +87,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnRecherche, &QPushButton::clicked, this, &MainWindow::onRechercheTriMatiere);
     connect(ui->btnFournisseurs, &QPushButton::clicked, this, &MainWindow::onGestionFournisseurs);
     connect(ui->btnExportMatiere, &QPushButton::clicked, this, &MainWindow::onExportMatiere);
+    // --- New Client Section Buttons ---
+    connect(ui->btnAIAgent, &QPushButton::clicked, this, &MainWindow::on_btnAIAgent_clicked);
+    connect(ui->btnStatsRegion, &QPushButton::clicked, this, &MainWindow::on_btnStatsByRegion_clicked);
+    connect(ui->btnFidelityClass, &QPushButton::clicked, this, &MainWindow::on_btnFidelityClassification_clicked);
+
     
     // Start with employee module (page 0)
     ui->stackedWidget->setCurrentIndex(0);
@@ -1177,3 +1182,76 @@ void MainWindow::on_searchBoxFournisseur_textChanged(const QString &text)
         ui->fournisseurTable->setRowHidden(row, !match);
     }
 }
+void MainWindow::on_btnAIAgent_clicked()
+{
+    QMessageBox::information(this, "Agent IA",
+                             "🔍 Permet de rechercher rapidement un client dans la base de données.");
+
+    QString buttonStyle =
+        "QPushButton {"
+        "  background-color: #8D6E63;"
+        "  color: white;"
+        "  border: none;"
+        "  border-radius: 10px;"
+        "  padding: 10px 20px;"
+        "  font-family: Arial, sans-serif;"
+        "  font-size: 12px;"
+        "  font-weight: bold;"
+        "  text-align: center;"
+        "}"
+        "QPushButton:hover {"
+        "  background-color: #A98273;" // slightly lighter on hover
+        "}";
+
+    ui->btnAIAgent->setStyleSheet(buttonStyle);
+}
+
+void MainWindow::on_btnStatsByRegion_clicked()
+{
+    QMessageBox::information(this, "Statistiques par Région",
+                             "📊 Affiche le nombre de clients par région (statistiques simples).");
+
+    QString buttonStyle =
+        "QPushButton {"
+        "  background-color: #8D6E63;"
+        "  color: white;"
+        "  border: none;"
+        "  border-radius: 10px;"
+        "  padding: 10px 20px;"
+        "  font-family: Arial, sans-serif;"
+        "  font-size: 12px;"
+        "  font-weight: bold;"
+        "  text-align: center;"
+        "}"
+        "QPushButton:hover {"
+        "  background-color: #A98273;" // slightly lighter on hover
+        "}";
+
+    ui->btnStatsRegion->setStyleSheet(buttonStyle);
+}
+
+void MainWindow::on_btnFidelityClassification_clicked()
+{
+    QMessageBox::information(this, "Classification Fidélité",
+                             "🏆 Classe les clients selon leur fidélité (nombre de commandes).");
+
+    QString buttonStyle =
+        "QPushButton {"
+        "  background-color: #8D6E63;"
+        "  color: white;"
+        "  border: none;"
+        "  border-radius: 10px;"
+        "  padding: 10px 20px;"
+        "  font-family: Arial, sans-serif;"
+        "  font-size: 12px;"
+        "  font-weight: bold;"
+        "  text-align: center;"
+        "}"
+        "QPushButton:hover {"
+        "  background-color: #A98273;" // slightly lighter on hover
+        "}";
+
+    ui->btnFidelityClass->setStyleSheet(buttonStyle);
+}
+
+

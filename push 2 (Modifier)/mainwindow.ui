@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1400</width>
+    <width>1580</width>
     <height>850</height>
    </rect>
   </property>
@@ -631,9 +631,8 @@ Management</string>
           <item>
            <widget class="QStackedWidget" name="stackedWidget">
             <property name="currentIndex">
-             <number>0</number>
+             <number>1</number>
             </property>
-            <!-- PAGE 0: MODULE EMPLOYÉS -->
             <widget class="QWidget" name="employeePage">
              <layout class="QVBoxLayout" name="verticalLayout_3">
               <property name="spacing">
@@ -976,7 +975,6 @@ Management</string>
               </item>
              </layout>
             </widget>
-            <!-- PAGE 1: MODULE CLIENTS -->
             <widget class="QWidget" name="clientPage">
              <layout class="QVBoxLayout" name="verticalLayout_8">
               <property name="spacing">
@@ -1062,6 +1060,27 @@ Management</string>
                     </size>
                    </property>
                   </spacer>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnFidelityClass">
+                   <property name="text">
+                    <string>Fidelité</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnStatsRegion">
+                   <property name="text">
+                    <string>StatsReigon</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnAIAgent">
+                   <property name="text">
+                    <string>Agent IA</string>
+                   </property>
+                  </widget>
                  </item>
                  <item>
                   <widget class="QPushButton" name="btnAddClient">
@@ -1198,7 +1217,6 @@ Management</string>
               </item>
              </layout>
             </widget>
-            <!-- PAGE 2: MODULE MATIÈRES PREMIÈRES -->
             <widget class="QWidget" name="rawMaterialsPage">
              <layout class="QVBoxLayout" name="verticalLayout_9">
               <property name="spacing">
@@ -1603,11 +1621,11 @@ Management</string>
                  </property>
                  <item>
                   <widget class="QLabel" name="alertTitleMatiere">
-                   <property name="text">
-                    <string>⚠ Alertes Intelligentes de Stock</string>
-                   </property>
                    <property name="styleSheet">
                     <string notr="true">font-weight: bold; font-size: 13px; color: #8D6E63;</string>
+                   </property>
+                   <property name="text">
+                    <string>⚠ Alertes Intelligentes de Stock</string>
                    </property>
                   </widget>
                  </item>
@@ -1631,31 +1649,31 @@ Management</string>
                     </property>
                     <item>
                      <widget class="QLabel" name="alert1">
-                      <property name="text">
-                       <string>🔴 Cuir Pleine Fleur : Stock critique - Réapprovisionnement urgent</string>
-                      </property>
                       <property name="styleSheet">
                        <string notr="true">background-color: #f7d9d9; padding: 8px; border-radius: 6px; color: #8B0000;</string>
+                      </property>
+                      <property name="text">
+                       <string>🔴 Cuir Pleine Fleur : Stock critique - Réapprovisionnement urgent</string>
                       </property>
                      </widget>
                     </item>
                     <item>
                      <widget class="QLabel" name="alert2">
-                      <property name="text">
-                       <string>🟡 Ficelinée : Niveau d'alerte - Commande recommandée sous 7 jours</string>
-                      </property>
                       <property name="styleSheet">
                        <string notr="true">background-color: #f9e7c6; padding: 8px; border-radius: 6px; color: #8B6914;</string>
+                      </property>
+                      <property name="text">
+                       <string>🟡 Ficelinée : Niveau d'alerte - Commande recommandée sous 7 jours</string>
                       </property>
                      </widget>
                     </item>
                     <item>
                      <widget class="QLabel" name="alert3">
-                      <property name="text">
-                       <string>🟢 LR-004 : Expire dans 30 jours - Planifier utilisation prioritaire</string>
-                      </property>
                       <property name="styleSheet">
                        <string notr="true">background-color: #e7f0d6; padding: 8px; border-radius: 6px; color: #2F5233;</string>
+                      </property>
+                      <property name="text">
+                       <string>🟢 LR-004 : Expire dans 30 jours - Planifier utilisation prioritaire</string>
                       </property>
                      </widget>
                     </item>
@@ -1667,7 +1685,6 @@ Management</string>
               </item>
              </layout>
             </widget>
-            <!-- PAGE 3: MODULE FOURNISSEURS -->
             <widget class="QWidget" name="suppliersPage">
              <layout class="QVBoxLayout" name="verticalLayout_15">
               <property name="spacing">
@@ -1687,11 +1704,11 @@ Management</string>
               </property>
               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                <widget class="QLabel" name="fournisseursTitle">
-                <property name="text">
-                 <string>GESTION DES FOURNISSEURS</string>
-                </property>
                 <property name="styleSheet">
                  <string notr="true">color: #291C0E; font-family: 'Times New Roman', serif; font-size: 22px; font-weight: bold;</string>
+                </property>
+                <property name="text">
+                 <string>GESTION DES FOURNISSEURS</string>
                 </property>
                </widget>
               </item>
