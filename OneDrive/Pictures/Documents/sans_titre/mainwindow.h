@@ -5,6 +5,7 @@
 #include <QVector>
 #include "client.h"
 #include "matiere.h"
+#include "fournisseur.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -67,11 +68,19 @@ private slots:
     void onDeleteFournisseur();
     void onCloseFournisseurs();
     void onExportMatiere();
+    
+    // Suppliers Management slots
+    void on_btnAddFournisseur_clicked();
+    void on_btnEditFournisseur_clicked();
+    void on_btnDeleteFournisseur_clicked();
+    void on_btnExportFournisseur_clicked();
+    void on_searchBoxFournisseur_textChanged(const QString &text);
 
 private:
     Ui::MainWindow *ui;
     QVector<Client> clients;
     QList<Fournisseur> fournisseurs;
+    QList<FournisseurData> fournisseursData;  // Liste des fournisseurs pour la page
     QList<MouvementStock> historiqueMouvements;
     bool isEditMode;
     int editingRow;
@@ -98,5 +107,10 @@ private:
     QString getStockLevel(int currentStock, int threshold);
     int calculateSuggestedQuantity(const QString &matiere);
     void updateMatiereStatistics();
+    
+    // Suppliers Management methods
+    void setupFournisseurTable();
+    void refreshFournisseurTable();
+    void updateFournisseurStatistics();
 };
 #endif // MAINWINDOW_H

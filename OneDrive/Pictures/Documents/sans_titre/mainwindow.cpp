@@ -3,6 +3,7 @@
 #include "employeedialog.h"
 #include "clientmanagerdialog.h"
 #include "matieredialog.h"
+#include "fournisseurdialog.h"
 #include <QTableWidgetItem>
 #include <QDebug>
 #include <QMessageBox>
@@ -98,6 +99,10 @@ MainWindow::MainWindow(QWidget *parent)
     
     // Connect table selection to profile panel update
     connect(ui->employeeTable, &QTableWidget::currentCellChanged, this, &MainWindow::onEmployeeSelected);
+    
+    // Setup fournisseur table
+    ui->fournisseurTable->verticalHeader()->setVisible(false);
+    setupFournisseurTable();
 }
 
 MainWindow::~MainWindow()
@@ -232,24 +237,23 @@ void MainWindow::on_btnRawMaterials_clicked()
 
 void MainWindow::on_btnSuppliers_clicked()
 {
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Module en développement");
-    msgBox.setText("Gestion des Fournisseurs");
-    msgBox.setInformativeText("Ce module sera disponible prochainement.\n\n"
-                              "Fonctionnalités prévues :\n"
-                              "• Ajout et modification\n"
-                              "• Recherche et filtrage\n"
-                              "• Export des données\n"
-                              "• Rapports et statistiques");
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setStyleSheet(
-        "QMessageBox { background-color: #FAF5F0; }"
-        "QMessageBox QLabel { color: #291C0E; font-family: Arial, sans-serif; font-size: 12px; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
-        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
-        "QPushButton:hover { background-color: #A0826D; }"
+    // Switch to suppliers page (index 3)
+    ui->stackedWidget->setCurrentIndex(3);
+    
+    // Hide profile panel for suppliers module
+    ui->profilePanel->setVisible(false);
+    
+    // Update button styles
+    ui->btnEmployees->setStyleSheet("");
+    ui->btnClients->setStyleSheet("");
+    ui->btnSuppliers->setStyleSheet(
+        "QPushButton { background-color: #6E473B; color: #FFFFFF; border-left: 3px solid #FFFFFF; }"
     );
-    msgBox.exec();
+    ui->btnRawMaterials->setStyleSheet("");
+    ui->btnProducts->setStyleSheet("");
+    ui->btnOrders->setStyleSheet("");
+    
+    qDebug() << "Switched to Suppliers module";
 }
 
 // ============================================
@@ -987,4 +991,189 @@ void MainWindow::updateMatiereStatistics()
     
     // Fournisseurs count (static for now)
     ui->statsValueMatiere3->setText("2");
+}
+
+
+// ============================================
+// SUPPLIERS MANAGEMENT
+// ============================================
+
+void MainWindow::setupFournisseurTable()
+{
+    // Add sample suppliers data
+    fournisseursData.clear();
+    
+    fournisseursData.append(FournisseurData("F001", "Leather Masters SA", "contact@leathermasters.tn", "+216 71 234 567", "1234567/A/M/000", "Cuir", "Chèque", "Actif"));
+    fournisseursData.append(FournisseurData("F002", "Textile Excellence", "info@textileex.tn", "+216 71 345 678", "2345678/B/M/000", "Tissus", "Virement", "Actif"));
+    fournisseursData.append(FournisseurData("F003", "Fashion Accessories Ltd", "sales@fashionacc.tn", "+216 71 456 789", "3456789/C/M/000", "Accessoires", "Carte Bancaire", "Actif"));
+    fournisseursData.append(FournisseurData("F004", "Premium Bags Co", "contact@premiumbags.tn", "+216 71 567 890", "4567890/D/M/000", "Sacs", "Crédit 30 jours", "Actif"));
+    fournisseursData.append(FournisseurData("F005", "Style Clothing", "info@styleclothing.tn", "+216 71 678 901", "5678901/E/M/000", "Vêtements", "Virement", "Actif"));
+    fournisseursData.append(FournisseurData("F006", "Quality Leather Supply", "sales@qualityleather.tn", "+216 71 789 012", "6789012/F/M/000", "Cuir", "Espèces", "Suspendu"));
+    fournisseursData.append(FournisseurData("F007", "Modern Textiles", "contact@moderntex.tn", "+216 71 890 123", "7890123/G/M/000", "Tissus", "Crédit 60 jours", "Actif"));
+    fournisseursData.append(FournisseurData("F008", "Elite Accessories", "info@eliteacc.tn", "+216 71 901 234", "8901234/H/M/000", "Accessoires", "Chèque", "Actif"));
+    fournisseursData.append(FournisseurData("F009", "Luxury Bags Import", "sales@luxurybags.tn", "+216 71 012 345", "9012345/I/M/000", "Sacs", "Virement", "Actif"));
+    fournisseursData.append(FournisseurData("F010", "Fashion Forward", "contact@fashionforward.tn", "+216 71 123 456", "0123456/J/M/000", "Vêtements", "Carte Bancaire", "Actif"));
+    fournisseursData.append(FournisseurData("F011", "Artisan Leather Works", "info@artisanleather.tn", "+216 71 234 567", "1234568/K/M/000", "Cuir", "Crédit 30 jours", "Actif"));
+    fournisseursData.append(FournisseurData("F012", "Fabric World", "sales@fabricworld.tn", "+216 71 345 679", "2345679/L/M/000", "Tissus", "Chèque", "Actif"));
+    fournisseursData.append(FournisseurData("F013", "Trendy Accessories", "contact@trendyacc.tn", "+216 71 456 790", "3456790/M/M/000", "Accessoires", "Virement", "Suspendu"));
+    fournisseursData.append(FournisseurData("F014", "Designer Bags Plus", "info@designerbags.tn", "+216 71 567 891", "4567891/N/M/000", "Sacs", "Carte Bancaire", "Actif"));
+    fournisseursData.append(FournisseurData("F015", "Urban Clothing Co", "sales@urbanclothing.tn", "+216 71 678 902", "5678902/O/M/000", "Vêtements", "Espèces", "Actif"));
+    
+    refreshFournisseurTable();
+    updateFournisseurStatistics();
+}
+
+void MainWindow::refreshFournisseurTable()
+{
+    ui->fournisseurTable->setRowCount(fournisseursData.size());
+    
+    for (int i = 0; i < fournisseursData.size(); ++i) {
+        const FournisseurData &f = fournisseursData[i];
+        ui->fournisseurTable->setItem(i, 0, new QTableWidgetItem(f.getId()));
+        ui->fournisseurTable->setItem(i, 1, new QTableWidgetItem(f.getNomEntreprise()));
+        ui->fournisseurTable->setItem(i, 2, new QTableWidgetItem(f.getEmail()));
+        ui->fournisseurTable->setItem(i, 3, new QTableWidgetItem(f.getTelephone()));
+        ui->fournisseurTable->setItem(i, 4, new QTableWidgetItem(f.getMatriculeFiscal()));
+        ui->fournisseurTable->setItem(i, 5, new QTableWidgetItem(f.getTypeProduit()));
+        ui->fournisseurTable->setItem(i, 6, new QTableWidgetItem(f.getConditionPaiement()));
+        ui->fournisseurTable->setItem(i, 7, new QTableWidgetItem(f.getStatut()));
+    }
+}
+
+void MainWindow::updateFournisseurStatistics()
+{
+    // Update total count
+    int total = fournisseursData.size();
+    ui->statsValueFournisseur1->setText(QString::number(total));
+    
+    // Count active suppliers
+    int actifs = 0;
+    QSet<QString> typesSet;
+    
+    for (const FournisseurData &f : fournisseursData) {
+        if (f.getStatut() == "Actif") {
+            actifs++;
+        }
+        typesSet.insert(f.getTypeProduit());
+    }
+    
+    ui->statsValueFournisseur2->setText(QString::number(actifs));
+    ui->statsValueFournisseur3->setText(QString::number(typesSet.size()));
+}
+
+
+// ============================================
+// SUPPLIERS CRUD OPERATIONS
+// ============================================
+
+void MainWindow::on_btnAddFournisseur_clicked()
+{
+    FournisseurDialog dialog(this, FournisseurDialog::AddMode);
+    if (dialog.exec() == QDialog::Accepted) {
+        // Non fonctionnel - juste l'interface
+        QMessageBox::information(this, "Information", 
+                                 "Interface de démonstration - Fonctionnalité non implémentée");
+    }
+}
+
+void MainWindow::on_btnEditFournisseur_clicked()
+{
+    // Check if a row is selected
+    int currentRow = ui->fournisseurTable->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, "Aucune sélection", 
+                            "Veuillez sélectionner un fournisseur à modifier.");
+        return;
+    }
+    
+    FournisseurDialog dialog(this, FournisseurDialog::EditMode);
+    
+    // Load selected supplier data
+    FournisseurData fournisseur = fournisseursData[currentRow];
+    dialog.setFournisseurData(
+        fournisseur.getId(),
+        fournisseur.getNomEntreprise(),
+        fournisseur.getEmail(),
+        fournisseur.getTelephone(),
+        fournisseur.getTypeProduit(),
+        fournisseur.getConditionPaiement(),
+        fournisseur.getMatriculeFiscal(),
+        fournisseur.getStatut()
+    );
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        // Non fonctionnel - juste l'interface
+        QMessageBox::information(this, "Information", 
+                                 "Interface de démonstration - Fonctionnalité non implémentée");
+    }
+}
+
+void MainWindow::on_btnDeleteFournisseur_clicked()
+{
+    // Check if a row is selected
+    int currentRow = ui->fournisseurTable->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, "Aucune sélection", 
+                            "Veuillez sélectionner un fournisseur à supprimer.");
+        return;
+    }
+    
+    FournisseurDialog dialog(this, FournisseurDialog::DeleteMode);
+    
+    // Load selected supplier data
+    FournisseurData fournisseur = fournisseursData[currentRow];
+    dialog.setFournisseurData(
+        fournisseur.getId(),
+        fournisseur.getNomEntreprise(),
+        fournisseur.getEmail(),
+        fournisseur.getTelephone(),
+        fournisseur.getTypeProduit(),
+        fournisseur.getConditionPaiement(),
+        fournisseur.getMatriculeFiscal(),
+        fournisseur.getStatut()
+    );
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        // Non fonctionnel - juste l'interface
+        QMessageBox::information(this, "Information", 
+                                 "Interface de démonstration - Fonctionnalité non implémentée");
+    }
+}
+
+void MainWindow::on_btnExportFournisseur_clicked()
+{
+    QMessageBox::information(this, "Exporter", 
+                             "Fonctionnalité d'export des fournisseurs en cours de développement.\n\n"
+                             "Formats prévus:\n"
+                             "• PDF\n"
+                             "• Excel (CSV)\n"
+                             "• JSON");
+}
+
+void MainWindow::on_searchBoxFournisseur_textChanged(const QString &text)
+{
+    QString searchText = text.trimmed().toLower();
+    
+    // If search is empty, show all rows
+    if (searchText.isEmpty()) {
+        for (int row = 0; row < ui->fournisseurTable->rowCount(); ++row) {
+            ui->fournisseurTable->setRowHidden(row, false);
+        }
+        return;
+    }
+    
+    // Search in all columns
+    for (int row = 0; row < ui->fournisseurTable->rowCount(); ++row) {
+        bool match = false;
+        
+        for (int col = 0; col < ui->fournisseurTable->columnCount(); ++col) {
+            QTableWidgetItem* item = ui->fournisseurTable->item(row, col);
+            if (item && item->text().toLower().contains(searchText)) {
+                match = true;
+                break;
+            }
+        }
+        
+        ui->fournisseurTable->setRowHidden(row, !match);
+    }
 }

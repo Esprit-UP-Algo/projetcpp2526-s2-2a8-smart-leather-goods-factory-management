@@ -14,7 +14,9 @@ SOURCES += \
     employeedialog.cpp \
     clientmanagerdialog.cpp \
     matiere.cpp \
-    matieredialog.cpp
+    matieredialog.cpp \
+    fournisseur.cpp \
+    fournisseurdialog.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -22,7 +24,9 @@ HEADERS += \
     client.h \
     clientmanagerdialog.h \
     matiere.h \
-    matieredialog.h
+    matieredialog.h \
+    fournisseur.h \
+    fournisseurdialog.h
 
 FORMS += \
     mainwindow.ui
