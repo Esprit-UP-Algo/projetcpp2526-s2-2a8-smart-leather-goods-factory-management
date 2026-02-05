@@ -2,13 +2,25 @@
 #include "ui_mainwindow.h"
 #include "employeedialog.h"
 #include "clientmanagerdialog.h"
+#include "matieredialog.h"
 #include <QTableWidgetItem>
 #include <QDebug>
 #include <QMessageBox>
+#include <QDate>
+#include <QInputDialog>
+#include <QtCharts/QChartView>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QBarSeries>
+#include <QtCharts/QBarCategoryAxis>
+#include <QtCharts/QValueAxis>
+#include <QtCharts/QChart>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , isEditMode(false)
+    , editingRow(-1)
 {
     ui->setupUi(this);
     
@@ -17,6 +29,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Hide vertical headers (row numbers)
     ui->employeeTable->verticalHeader()->setVisible(false);
     ui->clientTable->verticalHeader()->setVisible(false);
+    ui->matiereTable->verticalHeader()->setVisible(false);
     
     // Populate employee table with sample data
     populateEmployeeTable();
@@ -60,6 +73,19 @@ MainWindow::MainWindow(QWidget *parent)
     
     // Populate client table
     refreshClientTable();
+    
+    // Setup and populate matiere table
+    setupMatiereTable();
+    
+    // Connect raw materials buttons
+    connect(ui->btnAddMatiere, &QPushButton::clicked, this, &MainWindow::onAddMatiere);
+    connect(ui->btnEditMatiere, &QPushButton::clicked, this, &MainWindow::onEditMatiere);
+    connect(ui->btnDeleteMatiere, &QPushButton::clicked, this, &MainWindow::onDeleteMatiere);
+    connect(ui->btnSuggestion, &QPushButton::clicked, this, &MainWindow::onSuggestionCommande);
+    connect(ui->btnOptimisation, &QPushButton::clicked, this, &MainWindow::onOptimisationFIFO);
+    connect(ui->btnRecherche, &QPushButton::clicked, this, &MainWindow::onRechercheTriMatiere);
+    connect(ui->btnFournisseurs, &QPushButton::clicked, this, &MainWindow::onGestionFournisseurs);
+    connect(ui->btnExportMatiere, &QPushButton::clicked, this, &MainWindow::onExportMatiere);
     
     // Start with employee module (page 0)
     ui->stackedWidget->setCurrentIndex(0);
@@ -186,24 +212,22 @@ void MainWindow::on_btnOrders_clicked()
 
 void MainWindow::on_btnRawMaterials_clicked()
 {
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Module en développement");
-    msgBox.setText("Gestion des Matières Premières");
-    msgBox.setInformativeText("Ce module sera disponible prochainement.\n\n"
-                              "Fonctionnalités prévues :\n"
-                              "• Ajout et modification\n"
-                              "• Recherche et filtrage\n"
-                              "• Export des données\n"
-                              "• Rapports et statistiques");
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setStyleSheet(
-        "QMessageBox { background-color: #FAF5F0; }"
-        "QMessageBox QLabel { color: #291C0E; font-family: Arial, sans-serif; font-size: 12px; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
-        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
-        "QPushButton:hover { background-color: #A0826D; }"
+    ui->stackedWidget->setCurrentIndex(2);  // Show raw materials page
+    ui->profilePanel->setVisible(false);    // Hide profile panel
+    setWindowTitle("CUIREA - Gestion des Matières Premières");
+    
+    // Reset all navigation buttons to default style
+    ui->btnEmployees->setStyleSheet("");
+    ui->btnClients->setStyleSheet("");
+    ui->btnProducts->setStyleSheet("");
+    ui->btnOrders->setStyleSheet("");
+    ui->btnRawMaterials->setStyleSheet("");
+    ui->btnSuppliers->setStyleSheet("");
+    
+    // Apply active style to current button
+    ui->btnRawMaterials->setStyleSheet(
+        "QPushButton { background-color: #6E473B; color: #FFFFFF; border-left: 3px solid #FFFFFF; }"
     );
-    msgBox.exec();
 }
 
 void MainWindow::on_btnSuppliers_clicked()
@@ -460,4 +484,507 @@ void MainWindow::onEmployeeSelected()
     
     ui->photoPlaceholder->clear();
     ui->photoPlaceholder->setText("●");
+}
+
+// ============================================
+// RAW MATERIALS MANAGEMENT METHODS
+// ============================================
+
+void MainWindow::setupMatiereTable()
+{
+    ui->matiereTable->setRowCount(3);
+    
+    // Sample data
+    QStringList row1 = {"Cuir Pleine Fleur", "Peau de Veau", "Peau de Veau", "2.5 m²/jour", "80", "2028-05-31"};
+    QStringList row2 = {"Ficelinée", "Peau de Vachette", "Peau de Vachette", "1.8 m²/jour", "60", "2028-05-31"};
+    QStringList row3 = {"LR-004", "D-oci", "Ficelinée", "15 bobines/jour", "50", "2026-05-31"};
+    
+    QList<QStringList> rows = {row1, row2, row3};
+    
+    for (int r = 0; r < rows.size(); ++r) {
+        for (int c = 0; c < rows[r].size(); ++c) {
+            ui->matiereTable->setItem(r, c, new QTableWidgetItem(rows[r][c]));
+        }
+    }
+    
+    ui->matiereTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ui->matiereTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+}
+
+void MainWindow::setupSuggestionTable()
+{
+    // Not needed in current implementation
+}
+
+void MainWindow::setupHistoriqueTable()
+{
+    // Not needed in current implementation
+}
+
+void MainWindow::showForm(bool editMode)
+{
+    Q_UNUSED(editMode)
+    // Not needed - using dialog instead
+}
+
+void MainWindow::hideForm()
+{
+    // Not needed - using dialog instead
+}
+
+void MainWindow::clearForm()
+{
+    // Not needed - using dialog instead
+}
+
+void MainWindow::hideAllPanels()
+{
+    // Not needed in current implementation
+}
+
+void MainWindow::addMatiereToTable(const QString &module, const QString &reference, const QString &type,
+                                   const QString &quantite, const QString &seuil, const QString &dateExp)
+{
+    Q_UNUSED(module)
+    Q_UNUSED(reference)
+    Q_UNUSED(type)
+    Q_UNUSED(quantite)
+    Q_UNUSED(seuil)
+    Q_UNUSED(dateExp)
+    // Not needed - adding directly in onAddMatiere
+}
+
+void MainWindow::onAddMatiere()
+{
+    MatiereDialog dialog(this, MatiereDialog::AddMode);
+    if (dialog.exec() == QDialog::Accepted) {
+        // Add to table
+        int row = ui->matiereTable->rowCount();
+        ui->matiereTable->insertRow(row);
+        
+        ui->matiereTable->setItem(row, 0, new QTableWidgetItem(dialog.getModule()));
+        ui->matiereTable->setItem(row, 1, new QTableWidgetItem(dialog.getReference()));
+        ui->matiereTable->setItem(row, 2, new QTableWidgetItem(dialog.getType()));
+        ui->matiereTable->setItem(row, 3, new QTableWidgetItem(dialog.getQuantite()));
+        ui->matiereTable->setItem(row, 4, new QTableWidgetItem(dialog.getSeuil()));
+        ui->matiereTable->setItem(row, 5, new QTableWidgetItem(dialog.getDateExpiration()));
+        
+        // Update statistics
+        updateMatiereStatistics();
+    }
+}
+
+void MainWindow::onEditMatiere()
+{
+    int currentRow = ui->matiereTable->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, "Aucune sélection", 
+                           "Veuillez sélectionner une matière première à modifier.");
+        return;
+    }
+    
+    MatiereDialog dialog(this, MatiereDialog::EditMode);
+    
+    // Load current data
+    dialog.setMatiereData(
+        ui->matiereTable->item(currentRow, 0)->text(),
+        ui->matiereTable->item(currentRow, 1)->text(),
+        ui->matiereTable->item(currentRow, 2)->text(),
+        ui->matiereTable->item(currentRow, 3)->text(),
+        ui->matiereTable->item(currentRow, 4)->text(),
+        ui->matiereTable->item(currentRow, 5)->text()
+    );
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        // Update table
+        ui->matiereTable->item(currentRow, 0)->setText(dialog.getModule());
+        ui->matiereTable->item(currentRow, 1)->setText(dialog.getReference());
+        ui->matiereTable->item(currentRow, 2)->setText(dialog.getType());
+        ui->matiereTable->item(currentRow, 3)->setText(dialog.getQuantite());
+        ui->matiereTable->item(currentRow, 4)->setText(dialog.getSeuil());
+        ui->matiereTable->item(currentRow, 5)->setText(dialog.getDateExpiration());
+        
+        // Update statistics
+        updateMatiereStatistics();
+    }
+}
+
+void MainWindow::onDeleteMatiere()
+{
+    int currentRow = ui->matiereTable->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, "Aucune sélection", 
+                           "Veuillez sélectionner une matière première à supprimer.");
+        return;
+    }
+    
+    MatiereDialog dialog(this, MatiereDialog::DeleteMode);
+    
+    // Load current data (read-only)
+    dialog.setMatiereData(
+        ui->matiereTable->item(currentRow, 0)->text(),
+        ui->matiereTable->item(currentRow, 1)->text(),
+        ui->matiereTable->item(currentRow, 2)->text(),
+        ui->matiereTable->item(currentRow, 3)->text(),
+        ui->matiereTable->item(currentRow, 4)->text(),
+        ui->matiereTable->item(currentRow, 5)->text()
+    );
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        ui->matiereTable->removeRow(currentRow);
+        
+        // Update statistics
+        updateMatiereStatistics();
+    }
+}
+
+void MainWindow::onSaveMatiere()
+{
+    // Not needed - using dialog instead
+}
+
+void MainWindow::onCancelForm()
+{
+    // Not needed - using dialog instead
+}
+
+void MainWindow::onSuggestionCommande()
+{
+    QString suggestions;
+    suggestions += "📊 SUGGESTIONS DE COMMANDE AUTOMATIQUES\n\n";
+    
+    for (int row = 0; row < ui->matiereTable->rowCount(); ++row) {
+        QString matiere = ui->matiereTable->item(row, 0)->text();
+        QString consommationStr = ui->matiereTable->item(row, 3)->text();
+        QString seuilStr = ui->matiereTable->item(row, 4)->text();
+        
+        double consommation = consommationStr.split(" ").first().toDouble();
+        int seuil = seuilStr.toInt();
+        double stockNecessaire30j = consommation * 30;
+        
+        if (stockNecessaire30j > seuil * 0.5) {
+            QString priorite = (stockNecessaire30j > seuil) ? "🔴 URGENT" : "🟡 NORMAL";
+            int quantiteSuggeree = static_cast<int>(stockNecessaire30j * 1.5);
+            
+            suggestions += QString("%1 - %2\n").arg(priorite, matiere);
+            suggestions += QString("   Consommation: %1/jour\n").arg(consommation);
+            suggestions += QString("   Seuil actuel: %2\n").arg(seuil);
+            suggestions += QString("   Quantité suggérée: %3\n").arg(quantiteSuggeree);
+            suggestions += QString("   Délai recommandé: %4\n\n")
+                .arg((stockNecessaire30j > seuil) ? "3-5 jours" : "7-14 jours");
+        }
+    }
+    
+    if (suggestions.count('\n') <= 2) {
+        suggestions += "✅ Aucune commande urgente nécessaire.\n";
+        suggestions += "Tous les stocks sont à des niveaux acceptables.";
+    }
+    
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Suggestions de Commande");
+    msgBox.setText(suggestions);
+    msgBox.setIcon(QMessageBox::Information);
+    msgBox.setStyleSheet(
+        "QMessageBox { background-color: #FAF5F0; min-width: 500px; }"
+        "QMessageBox QLabel { color: #291C0E; font-family: 'Courier New', monospace; font-size: 11px; }"
+        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
+        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
+        "QPushButton:hover { background-color: #A0826D; }"
+    );
+    msgBox.exec();
+}
+
+void MainWindow::onOptimisationFIFO()
+{
+    QString fifoAnalysis;
+    fifoAnalysis += "🔄 ANALYSE FIFO (First In, First Out)\n\n";
+    
+    QList<QPair<QString, int>> urgentItems;
+    QList<QPair<QString, int>> normalItems;
+    QList<QPair<QString, int>> safeItems;
+    
+    for (int row = 0; row < ui->matiereTable->rowCount(); ++row) {
+        QString matiere = ui->matiereTable->item(row, 0)->text();
+        QString dateExp = ui->matiereTable->item(row, 5)->text();
+        
+        int daysToExpiration = calculateDaysToExpiration(dateExp);
+        
+        if (daysToExpiration <= 30) {
+            urgentItems.append(qMakePair(matiere, daysToExpiration));
+        } else if (daysToExpiration <= 90) {
+            normalItems.append(qMakePair(matiere, daysToExpiration));
+        } else {
+            safeItems.append(qMakePair(matiere, daysToExpiration));
+        }
+    }
+    
+    fifoAnalysis += "🔴 À CONSOMMER EN URGENCE (≤ 30 jours):\n";
+    if (urgentItems.isEmpty()) {
+        fifoAnalysis += "   Aucun\n";
+    } else {
+        for (const auto &item : urgentItems) {
+            fifoAnalysis += QString("   • %1 - Expire dans %2 jours\n")
+                .arg(item.first).arg(item.second);
+        }
+    }
+    
+    fifoAnalysis += "\n🟡 À CONSOMMER NORMALEMENT (31-90 jours):\n";
+    if (normalItems.isEmpty()) {
+        fifoAnalysis += "   Aucun\n";
+    } else {
+        for (const auto &item : normalItems) {
+            fifoAnalysis += QString("   • %1 - Expire dans %2 jours\n")
+                .arg(item.first).arg(item.second);
+        }
+    }
+    
+    fifoAnalysis += "\n🟢 STOCK SÛR (> 90 jours):\n";
+    if (safeItems.isEmpty()) {
+        fifoAnalysis += "   Aucun\n";
+    } else {
+        for (const auto &item : safeItems) {
+            fifoAnalysis += QString("   • %1 - Expire dans %2 jours\n")
+                .arg(item.first).arg(item.second);
+        }
+    }
+    
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Optimisation FIFO");
+    msgBox.setText(fifoAnalysis);
+    msgBox.setIcon(QMessageBox::Information);
+    msgBox.setStyleSheet(
+        "QMessageBox { background-color: #FAF5F0; min-width: 500px; }"
+        "QMessageBox QLabel { color: #291C0E; font-family: 'Courier New', monospace; font-size: 11px; }"
+        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
+        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
+        "QPushButton:hover { background-color: #A0826D; }"
+    );
+    msgBox.exec();
+}
+
+void MainWindow::onExportMatiere()
+{
+    QString exportData;
+    exportData += "═══════════════════════════════════════════════════════\n";
+    exportData += "        CUIREA - RAPPORT DES MATIÈRES PREMIÈRES\n";
+    exportData += "═══════════════════════════════════════════════════════\n\n";
+    exportData += QString("Date d'export: %1\n\n").arg(QDate::currentDate().toString("dd/MM/yyyy"));
+    
+    exportData += "STATISTIQUES GÉNÉRALES:\n";
+    exportData += QString("  • Total matières: %1\n").arg(ui->matiereTable->rowCount());
+    exportData += QString("  • Stock critique: %1\n").arg(ui->statsValueMatiere2->text());
+    exportData += QString("  • Fournisseurs: %1\n\n").arg(ui->statsValueMatiere3->text());
+    
+    exportData += "DÉTAIL DES MATIÈRES:\n";
+    exportData += "───────────────────────────────────────────────────────\n";
+    
+    for (int row = 0; row < ui->matiereTable->rowCount(); ++row) {
+        exportData += QString("\n%1. %2\n").arg(row + 1).arg(ui->matiereTable->item(row, 0)->text());
+        exportData += QString("   Référence: %1\n").arg(ui->matiereTable->item(row, 1)->text());
+        exportData += QString("   Type: %1\n").arg(ui->matiereTable->item(row, 2)->text());
+        exportData += QString("   Consommation: %1\n").arg(ui->matiereTable->item(row, 3)->text());
+        exportData += QString("   Seuil: %1\n").arg(ui->matiereTable->item(row, 4)->text());
+        exportData += QString("   Expiration: %1\n").arg(ui->matiereTable->item(row, 5)->text());
+    }
+    
+    exportData += "\n═══════════════════════════════════════════════════════\n";
+    exportData += "              Fin du rapport\n";
+    exportData += "═══════════════════════════════════════════════════════\n";
+    
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Export PDF - Aperçu");
+    msgBox.setText("Aperçu du rapport à exporter:");
+    msgBox.setDetailedText(exportData);
+    msgBox.setIcon(QMessageBox::Information);
+    msgBox.setStyleSheet(
+        "QMessageBox { background-color: #FAF5F0; min-width: 600px; }"
+        "QMessageBox QLabel { color: #291C0E; font-family: Arial, sans-serif; font-size: 12px; }"
+        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
+        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
+        "QPushButton:hover { background-color: #A0826D; }"
+    );
+    msgBox.exec();
+    
+    QMessageBox::information(this, "Export", 
+        "📄 Le rapport a été généré avec succès!\n\n"
+        "Note: L'export PDF complet sera disponible dans la version finale.");
+}
+
+void MainWindow::onRechercheTriMatiere()
+{
+    QMessageBox::information(this, "Recherche & Tri", 
+        "🔍 Fonctionnalité de recherche avancée\n\n"
+        "Cette fonctionnalité permettra de:\n"
+        "• Rechercher par nom de matière\n"
+        "• Filtrer par type\n"
+        "• Trier par date d'expiration\n"
+        "• Filtrer par niveau de stock\n\n"
+        "Disponible dans la prochaine version.");
+}
+
+void MainWindow::onGestionFournisseurs()
+{
+    QString fournisseurs;
+    fournisseurs += "👥 GESTION DES FOURNISSEURS\n\n";
+    fournisseurs += "📋 Liste des fournisseurs:\n\n";
+    fournisseurs += "1. Tannerie Martin\n";
+    fournisseurs += "   Contact: Jean Martin\n";
+    fournisseurs += "   Tél: 01 23 45 67 89\n";
+    fournisseurs += "   Email: contact@tannerie-martin.fr\n";
+    fournisseurs += "   Matières: Cuir Pleine Fleur, Peau de Veau\n\n";
+    fournisseurs += "2. Quincaillerie Dubois\n";
+    fournisseurs += "   Contact: Marie Dubois\n";
+    fournisseurs += "   Tél: 01 98 76 54 32\n";
+    fournisseurs += "   Email: marie@quincaillerie-dubois.fr\n";
+    fournisseurs += "   Matières: Ficelinée, Accessoires\n\n";
+    fournisseurs += "───────────────────────────────────────\n";
+    fournisseurs += "Fonctionnalités complètes disponibles\n";
+    fournisseurs += "dans la prochaine version.";
+    
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Gestion des Fournisseurs");
+    msgBox.setText(fournisseurs);
+    msgBox.setIcon(QMessageBox::Information);
+    msgBox.setStyleSheet(
+        "QMessageBox { background-color: #FAF5F0; min-width: 450px; }"
+        "QMessageBox QLabel { color: #291C0E; font-family: 'Courier New', monospace; font-size: 11px; }"
+        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
+        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
+        "QPushButton:hover { background-color: #A0826D; }"
+    );
+    msgBox.exec();
+}
+
+void MainWindow::onGenerateSuggestion()
+{
+    // Redirect to main suggestion method
+    onSuggestionCommande();
+}
+
+void MainWindow::onCloseSuggestion()
+{
+    // Close suggestion panel
+}
+
+void MainWindow::onAnalyzeFIFO()
+{
+    // Redirect to main FIFO method
+    onOptimisationFIFO();
+}
+
+void MainWindow::onCloseOptimisation()
+{
+    // Close optimisation panel
+}
+
+void MainWindow::onAppliquerRecherche()
+{
+    // Redirect to main search method
+    onRechercheTriMatiere();
+}
+
+void MainWindow::onResetRecherche()
+{
+    // Reset search filters
+}
+
+void MainWindow::onCloseRecherche()
+{
+    // Close recherche panel
+}
+
+void MainWindow::onAddFournisseur()
+{
+    QMessageBox::information(this, "Ajouter Fournisseur", "Fonctionnalité en développement");
+}
+
+void MainWindow::onEditFournisseur()
+{
+    QMessageBox::information(this, "Modifier Fournisseur", "Fonctionnalité en développement");
+}
+
+void MainWindow::onDeleteFournisseur()
+{
+    QMessageBox::information(this, "Supprimer Fournisseur", "Fonctionnalité en développement");
+}
+
+void MainWindow::onCloseFournisseurs()
+{
+    // Close fournisseurs panel
+}
+
+void MainWindow::loadFournisseurs()
+{
+    // Load fournisseurs data
+}
+
+void MainWindow::saveFournisseurs()
+{
+    // Save fournisseurs data
+}
+
+void MainWindow::updateFournisseursList()
+{
+    // Update fournisseurs list
+}
+
+void MainWindow::updateHistoriqueTable()
+{
+    // Update historique table
+}
+
+void MainWindow::updateConsommationChart()
+{
+    // Update consumption chart
+}
+
+int MainWindow::calculateDaysToExpiration(const QString &dateStr)
+{
+    QDate expirationDate = QDate::fromString(dateStr, "yyyy-MM-dd");
+    QDate currentDate = QDate::currentDate();
+    return currentDate.daysTo(expirationDate);
+}
+
+QString MainWindow::getStockLevel(int currentStock, int threshold)
+{
+    if (currentStock < threshold * 0.5) {
+        return "Critique";
+    } else if (currentStock < threshold) {
+        return "Normal";
+    } else {
+        return "Élevé";
+    }
+}
+
+int MainWindow::calculateSuggestedQuantity(const QString &matiere)
+{
+    Q_UNUSED(matiere)
+    return 100; // Default value
+}
+
+void MainWindow::updateMatiereStatistics()
+{
+    // Update total count
+    int totalMatieres = ui->matiereTable->rowCount();
+    ui->statsValueMatiere1->setText(QString::number(totalMatieres));
+    
+    // Calculate critical stock count
+    int criticalCount = 0;
+    for (int row = 0; row < ui->matiereTable->rowCount(); ++row) {
+        QString consommationStr = ui->matiereTable->item(row, 3)->text();
+        QString seuilStr = ui->matiereTable->item(row, 4)->text();
+        
+        // Extract numeric value
+        double consommation = consommationStr.split(" ").first().toDouble();
+        int seuil = seuilStr.toInt();
+        
+        // Check if critical (consumption * 30 days > threshold)
+        if (consommation * 30 > seuil) {
+            criticalCount++;
+        }
+    }
+    ui->statsValueMatiere2->setText(QString::number(criticalCount));
+    
+    // Fournisseurs count (static for now)
+    ui->statsValueMatiere3->setText("2");
 }

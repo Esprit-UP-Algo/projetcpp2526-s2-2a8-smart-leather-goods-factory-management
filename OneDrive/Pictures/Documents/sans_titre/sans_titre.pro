@@ -1,4 +1,4 @@
-QT       += core gui
+QT       += core gui charts
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -12,13 +12,17 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     employeedialog.cpp \
-    clientmanagerdialog.cpp
+    clientmanagerdialog.cpp \
+    matiere.cpp \
+    matieredialog.cpp
 
 HEADERS += \
     mainwindow.h \
     employeedialog.h \
     client.h \
-    clientmanagerdialog.h
+    clientmanagerdialog.h \
+    matiere.h \
+    matieredialog.h
 
 FORMS += \
     mainwindow.ui

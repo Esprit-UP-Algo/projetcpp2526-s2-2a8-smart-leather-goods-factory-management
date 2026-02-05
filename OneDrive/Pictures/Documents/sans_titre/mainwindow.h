@@ -4,6 +4,7 @@
 #include <QMainWindow>
 #include <QVector>
 #include "client.h"
+#include "matiere.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -43,12 +44,59 @@ private slots:
     
     // Table selection
     void onEmployeeSelected();
+    
+    // Raw Materials Management slots
+    void onAddMatiere();
+    void onEditMatiere();
+    void onDeleteMatiere();
+    void onSaveMatiere();
+    void onCancelForm();
+    void onSuggestionCommande();
+    void onOptimisationFIFO();
+    void onRechercheTriMatiere();
+    void onGestionFournisseurs();
+    void onGenerateSuggestion();
+    void onCloseSuggestion();
+    void onAnalyzeFIFO();
+    void onCloseOptimisation();
+    void onAppliquerRecherche();
+    void onResetRecherche();
+    void onCloseRecherche();
+    void onAddFournisseur();
+    void onEditFournisseur();
+    void onDeleteFournisseur();
+    void onCloseFournisseurs();
+    void onExportMatiere();
 
 private:
     Ui::MainWindow *ui;
     QVector<Client> clients;
+    QList<Fournisseur> fournisseurs;
+    QList<MouvementStock> historiqueMouvements;
+    bool isEditMode;
+    int editingRow;
     
     void populateEmployeeTable();
     void refreshClientTable();
+    
+    // Raw Materials Management methods
+    void setupMatiereTable();
+    void setupSuggestionTable();
+    void setupHistoriqueTable();
+    void showForm(bool editMode = false);
+    void hideForm();
+    void clearForm();
+    void hideAllPanels();
+    void addMatiereToTable(const QString &module, const QString &reference, const QString &type, 
+                          const QString &quantite, const QString &seuil, const QString &dateExp);
+    void loadFournisseurs();
+    void saveFournisseurs();
+    void updateFournisseursList();
+    void updateHistoriqueTable();
+    void updateConsommationChart();
+    int calculateDaysToExpiration(const QString &dateStr);
+    QString getStockLevel(int currentStock, int threshold);
+    int calculateSuggestedQuantity(const QString &matiere);
+    void updateMatiereStatistics();
 };
 #endif // MAINWINDOW_H
