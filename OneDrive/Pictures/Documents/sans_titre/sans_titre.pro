@@ -11,17 +11,14 @@ CONFIG += c++17
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
-    addemployeedialog.cpp \
-    editemployeedialog.cpp \
-    deleteemployeedialog.cpp \
-    exportdialog.cpp
+    employeedialog.cpp \
+    clientmanagerdialog.cpp
 
 HEADERS += \
     mainwindow.h \
-    addemployeedialog.h \
-    editemployeedialog.h \
-    deleteemployeedialog.h \
-    exportdialog.h
+    employeedialog.h \
+    client.h \
+    clientmanagerdialog.h
 
 FORMS += \
     mainwindow.ui
