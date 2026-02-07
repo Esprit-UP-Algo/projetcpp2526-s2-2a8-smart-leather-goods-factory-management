@@ -1,0 +1,57 @@
+╔═══════════════════════════════════════════════════════════════════════╗
+║                                                                       ║
+║              📦 MODULE GESTION DES COMMANDES                          ║
+║                                                                       ║
+╚═══════════════════════════════════════════════════════════════════════╝
+
+
+📁 FICHIERS DU PROJET (5 FICHIERS SEULEMENT)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ production.pro          → Fichier projet Qt
+  ✅ main.cpp                → Point d'entrée
+  ✅ mainwindow.h            → En-tête
+  ✅ mainwindow.cpp          → Code source
+  ✅ mainwindow.ui           → Interface graphique
+
+
+🚀 COMPILATION EN 5 ÉTAPES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  1. Lancez Qt Creator
+
+  2. Fichier → Ouvrir un fichier ou un projet → production.pro
+
+  3. Configure Project (cochez un kit)
+
+  4. Ctrl+B (compiler)
+
+  5. Ctrl+R (exécuter)
+
+
+✨ FONCTIONNALITÉS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ✅ Interface professionnelle avec sidebar
+  ✅ 4 cartes de statistiques
+  ✅ Table avec 8 commandes pré-chargées
+  ✅ Recherche en temps réel
+  ✅ Boutons d'action (Créer, Modifier, Supprimer, PDF, Excel)
+  ✅ Codage couleur pour statuts et priorités
+
+
+❓ PROBLÈMES ?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  "No valid kits found"
+  → Outils → Options → Kits → Auto-detect
+
+  Erreurs de compilation
+  → Build → Clean All, puis Ctrl+B
+
+
+╔═══════════════════════════════════════════════════════════════════════╗
+║                                                                       ║
+║  C'est tout ! Ouvrez production.pro dans Qt Creator et compilez ! 🚀 ║
+║                                                                       ║
+╚═══════════════════════════════════════════════════════════════════════╝
