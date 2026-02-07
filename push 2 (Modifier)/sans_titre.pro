@@ -1,4 +1,4 @@
-QT       += core gui charts
+QT       += core gui charts printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -16,7 +16,9 @@ SOURCES += \
     matiere.cpp \
     matieredialog.cpp \
     fournisseur.cpp \
-    fournisseurdialog.cpp
+    fournisseurdialog.cpp \
+    production.cpp \
+    productiondialog.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -26,7 +28,9 @@ HEADERS += \
     matiere.h \
     matieredialog.h \
     fournisseur.h \
-    fournisseurdialog.h
+    fournisseurdialog.h \
+    production.h \
+    productiondialog.h
 
 FORMS += \
     mainwindow.ui

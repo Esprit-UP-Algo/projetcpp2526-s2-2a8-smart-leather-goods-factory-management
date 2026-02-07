@@ -56,7 +56,7 @@ QMainWindow {
 }
 
 /* Table Styling */
-#employeeTable, #clientTable, #matiereTable, #fournisseurTable {
+#employeeTable, #clientTable, #matiereTable, #fournisseurTable, #productionTable {
     background-color: #FFFFFF;
     alternate-background-color: #FFF8F0;
     border: none;
@@ -68,7 +68,7 @@ QMainWindow {
     selection-color: white;
 }
 
-#employeeTable::item, #clientTable::item, #matiereTable::item, #fournisseurTable::item {
+#employeeTable::item, #clientTable::item, #matiereTable::item, #fournisseurTable::item, #productionTable::item {
     padding: 12px 8px;
     border: none;
     border-bottom: 1px solid #F0E6DA;
@@ -76,16 +76,16 @@ QMainWindow {
     background-color: transparent;
 }
 
-#employeeTable::item:alternate, #clientTable::item:alternate, #matiereTable::item:alternate, #fournisseurTable::item:alternate {
+#employeeTable::item:alternate, #clientTable::item:alternate, #matiereTable::item:alternate, #fournisseurTable::item:alternate, #productionTable::item:alternate {
     background-color: #FFF8F0;
 }
 
-#employeeTable::item:selected, #clientTable::item:selected, #matiereTable::item:selected, #fournisseurTable::item:selected {
+#employeeTable::item:selected, #clientTable::item:selected, #matiereTable::item:selected, #fournisseurTable::item:selected, #productionTable::item:selected {
     background-color: #8D6E63;
     color: white;
 }
 
-#employeeTable::item:hover, #clientTable::item:hover, #matiereTable::item:hover, #fournisseurTable::item:hover {
+#employeeTable::item:hover, #clientTable::item:hover, #matiereTable::item:hover, #fournisseurTable::item:hover, #productionTable::item:hover {
     background-color: #F5EDE3;
 }
 
@@ -299,8 +299,32 @@ QPushButton#btnAddFournisseur:pressed, QPushButton#btnEditFournisseur:pressed, Q
     padding: 11px 20px 9px 20px;
 }
 
+/* Primary Action Buttons - Production Module */
+QPushButton#btnCreerProduction, QPushButton#btnModifierProduction, QPushButton#btnSuiviProduction, QPushButton#btnPlanificationProduction, QPushButton#btnFactureProduction, QPushButton#btnExcelProduction {
+    background-color: #8D6E63;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+}
+
+QPushButton#btnCreerProduction:hover, QPushButton#btnModifierProduction:hover, QPushButton#btnSuiviProduction:hover, QPushButton#btnPlanificationProduction:hover, QPushButton#btnFactureProduction:hover, QPushButton#btnExcelProduction:hover {
+    background-color: #A0826D;
+    border: none;
+}
+
+QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:pressed, QPushButton#btnSuiviProduction:pressed, QPushButton#btnPlanificationProduction:pressed, QPushButton#btnFactureProduction:pressed, QPushButton#btnExcelProduction:pressed {
+    background-color: #6E473B;
+    border: none;
+    padding: 11px 20px 9px 20px;
+}
+
 /* Search Box */
-#searchBox, #searchBoxClient, #searchBoxMatiere, #searchBoxFournisseur {
+#searchBox, #searchBoxClient, #searchBoxMatiere, #searchBoxFournisseur, #searchBoxProduction {
     background-color: white;
     color: #291C0E;
     border: 2px solid #A78D78;
@@ -310,7 +334,7 @@ QPushButton#btnAddFournisseur:pressed, QPushButton#btnEditFournisseur:pressed, Q
     font-size: 11px;
 }
 
-#searchBox::placeholder, #searchBoxClient::placeholder, #searchBoxMatiere::placeholder, #searchBoxFournisseur::placeholder {
+#searchBox::placeholder, #searchBoxClient::placeholder, #searchBoxMatiere::placeholder, #searchBoxFournisseur::placeholder, #searchBoxProduction::placeholder {
     color: #A78D78;
 }
 
@@ -322,7 +346,7 @@ QFrame#separator {
 
 /* Navigation Buttons */
 QPushButton#btnEmployees, QPushButton#btnClients, QPushButton#btnProducts, 
-QPushButton#btnOrders, QPushButton#btnRawMaterials, QPushButton#btnSuppliers {
+QPushButton#btnRawMaterials, QPushButton#btnSuppliers, QPushButton#btnProduction {
     background-color: transparent;
     color: #FFFFFF;
     border: none;
@@ -339,14 +363,14 @@ QPushButton#btnOrders, QPushButton#btnRawMaterials, QPushButton#btnSuppliers {
 }
 
 QPushButton#btnEmployees:hover, QPushButton#btnClients:hover, QPushButton#btnProducts:hover,
-QPushButton#btnOrders:hover, QPushButton#btnRawMaterials:hover, QPushButton#btnSuppliers:hover {
+QPushButton#btnRawMaterials:hover, QPushButton#btnSuppliers:hover, QPushButton#btnProduction:hover {
     background-color: rgba(255, 255, 255, 0.2);
     color: #FFFFFF;
     border-left: 3px solid #FFFFFF;
 }
 
 QPushButton#btnEmployees:pressed, QPushButton#btnClients:pressed, QPushButton#btnProducts:pressed,
-QPushButton#btnOrders:pressed, QPushButton#btnRawMaterials:pressed, QPushButton#btnSuppliers:pressed {
+QPushButton#btnRawMaterials:pressed, QPushButton#btnSuppliers:pressed, QPushButton#btnProduction:pressed {
     background-color: #6E473B;
     color: #FFFFFF;
 }
@@ -386,6 +410,13 @@ QPushButton#btnOrders:pressed, QPushButton#btnRawMaterials:pressed, QPushButton#
 }
 
 #matiereTitle, #fournisseursTitle {
+    color: #291C0E;
+    font-family: 'Times New Roman', serif;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+#productionTitle {
     color: #291C0E;
     font-family: 'Times New Roman', serif;
     font-size: 22px;
@@ -564,7 +595,7 @@ Management</string>
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="btnOrders">
+        <widget class="QPushButton" name="btnProduction">
          <property name="minimumSize">
           <size>
            <width>0</width>
@@ -572,7 +603,7 @@ Management</string>
           </size>
          </property>
          <property name="text">
-          <string>⬡ Commandes</string>
+          <string>⬡ Production</string>
          </property>
         </widget>
        </item>
@@ -2032,6 +2063,242 @@ Management</string>
                 <column>
                  <property name="text">
                   <string>STATUT</string>
+                 </property>
+                </column>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="productionPage">
+             <layout class="QVBoxLayout" name="verticalLayout_production">
+              <property name="spacing">
+               <number>16</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item alignment="Qt::AlignmentFlag::AlignHCenter">
+               <widget class="QLabel" name="productionTitle">
+                <property name="styleSheet">
+                 <string notr="true">color: #291C0E; font-family: 'Times New Roman', serif; font-size: 22px; font-weight: bold;</string>
+                </property>
+                <property name="text">
+                 <string>GESTION DE LA PRODUCTION</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QWidget" name="productionToolbar" native="true">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>42</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>42</height>
+                 </size>
+                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_production">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLineEdit" name="searchBoxProduction">
+                   <property name="minimumSize">
+                    <size>
+                     <width>300</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="placeholderText">
+                    <string>🔍 Rechercher par référence, client, statut...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_production">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnCreerProduction">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>➕ CRÉER</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnModifierProduction">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>✏️ MODIFIER</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnSuiviProduction">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>📦 SUIVI</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnPlanificationProduction">
+                   <property name="minimumSize">
+                    <size>
+                     <width>140</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>📅 PLANIFICATION</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnFactureProduction">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>📄 FACTURE</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnExcelProduction">
+                   <property name="minimumSize">
+                    <size>
+                     <width>80</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>📊 EXCEL</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QTableWidget" name="productionTable">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="editTriggers">
+                 <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+                </property>
+                <property name="alternatingRowColors">
+                 <bool>true</bool>
+                </property>
+                <property name="selectionBehavior">
+                 <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+                </property>
+                <property name="showGrid">
+                 <bool>true</bool>
+                </property>
+                <property name="sortingEnabled">
+                 <bool>true</bool>
+                </property>
+                <attribute name="horizontalHeaderStretchLastSection">
+                 <bool>true</bool>
+                </attribute>
+                <column>
+                 <property name="text">
+                  <string>ID</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>RÉFÉRENCE</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>CLIENT</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>TYPE</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>MONTANT HT</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>DATE CRÉATION</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>DATE LIVRAISON</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>STATUT</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>PRIORITÉ</string>
                  </property>
                 </column>
                </widget>

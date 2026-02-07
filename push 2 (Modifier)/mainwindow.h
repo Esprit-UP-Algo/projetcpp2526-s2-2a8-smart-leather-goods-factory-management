@@ -45,12 +45,24 @@ private slots:
     void on_btnEmployees_clicked();
     void on_btnClients_clicked();
     void on_btnProducts_clicked();
-    void on_btnOrders_clicked();
+    // void on_btnOrders_clicked(); // REMOVED - Commandes button deleted
     void on_btnRawMaterials_clicked();
     void on_btnSuppliers_clicked();
+    void on_btnProduction_clicked();
 
     // Table selection
     void onEmployeeSelected();
+
+    // Production Management slots
+    void onCreerProduction();
+    void onModifierProduction();
+    void onSuiviProduction();
+    void onPlanificationProduction();
+    void onFactureProduction();
+    void onExcelProduction();
+    void onRechercherProduction(const QString &text);
+    void onProductionTableContextMenu(const QPoint &pos);
+    void onSupprimerProduction();
 
     // Raw Materials Management slots
     void onAddMatiere();
@@ -123,6 +135,14 @@ private:
     void setupFournisseurTable();
     void refreshFournisseurTable();
     void updateFournisseurStatistics();
+
+    // Production Management methods
+    void setupProductionTable();
+    void loadProductionData();
+    void ajouterCommandeProduction(const QString &ref, const QString &client, const QString &type,
+                                   const QString &montant, const QString &dateCreation,
+                                   const QString &dateLivraison, const QString &statut, const QString &priorite);
+    QPixmap generateQRCode(const QString &text, int size = 200);
 };
 
 #endif // MAINWINDOW_H
