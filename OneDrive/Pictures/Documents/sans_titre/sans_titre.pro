@@ -12,13 +12,16 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     employeedialog.cpp \
-    clientmanagerdialog.cpp
+    clientmanagerdialog.cpp \
+    productdialog.cpp
 
 HEADERS += \
     mainwindow.h \
     employeedialog.h \
     client.h \
-    clientmanagerdialog.h
+    clientmanagerdialog.h \
+    produit.h \
+    productdialog.h
 
 FORMS += \
     mainwindow.ui

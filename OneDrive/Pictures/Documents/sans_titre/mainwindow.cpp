@@ -2,8 +2,8 @@
 #include "ui_mainwindow.h"
 #include "employeedialog.h"
 #include "clientmanagerdialog.h"
+#include "productdialog.h"
 #include <QTableWidgetItem>
-#include <QDebug>
 #include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -11,29 +11,25 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    
     setWindowTitle("CUIREA - Management System");
     
-    // Hide vertical headers (row numbers)
-    ui->employeeTable->verticalHeader()->setVisible(false);
-    ui->clientTable->verticalHeader()->setVisible(false);
+    ui->tblEmploye->verticalHeader()->setVisible(false);
+    ui->tblClient->verticalHeader()->setVisible(false);
+    ui->tblProduit->verticalHeader()->setVisible(false);
     
-    // Populate employee table with sample data
     populateEmployeeTable();
     
-    // Set column widths for employee table
-    ui->employeeTable->setColumnWidth(0, 50);   // ID
-    ui->employeeTable->setColumnWidth(1, 110);  // Matricule
-    ui->employeeTable->setColumnWidth(2, 100);  // Nom
-    ui->employeeTable->setColumnWidth(3, 100);  // Prenom
-    ui->employeeTable->setColumnWidth(4, 100);  // CIN
-    ui->employeeTable->setColumnWidth(5, 120);  // Date Naissance
-    ui->employeeTable->setColumnWidth(6, 130);  // Departement
-    ui->employeeTable->setColumnWidth(7, 120);  // Poste
-    ui->employeeTable->setColumnWidth(8, 110);  // Telephone
-    ui->employeeTable->setColumnWidth(9, 180);  // Email
+    ui->tblEmploye->setColumnWidth(0, 50);
+    ui->tblEmploye->setColumnWidth(1, 110);
+    ui->tblEmploye->setColumnWidth(2, 100);
+    ui->tblEmploye->setColumnWidth(3, 100);
+    ui->tblEmploye->setColumnWidth(4, 100);
+    ui->tblEmploye->setColumnWidth(5, 120);
+    ui->tblEmploye->setColumnWidth(6, 130);
+    ui->tblEmploye->setColumnWidth(7, 120);
+    ui->tblEmploye->setColumnWidth(8, 110);
+    ui->tblEmploye->setColumnWidth(9, 180);
     
-    // Add sample clients
     Client c1;
     c1.setNom("Alami");
     c1.setPrenom("Hassan");
@@ -61,17 +57,69 @@ MainWindow::MainWindow(QWidget *parent)
     // Populate client table
     refreshClientTable();
     
-    // Start with employee module (page 0)
+    // Add sample products
+    Produit p1;
+    p1.setReference("SAC-001");
+    p1.setNom("Sac à main cuir classique");
+    p1.setCategorie("Sacs");
+    p1.setType("Cuir véritable");
+    p1.setCouleur("Marron");
+    p1.setDimensions("30x25x10 cm");
+    p1.setPrixUnitaire(189.99);
+    p1.setCoutFabrication(113.99);
+    p1.setStock(25);
+    p1.setStatut("Disponible");
+    p1.setDescription("Sac à main élégant en cuir véritable");
+    produits.append(p1);
+    
+    Produit p2;
+    p2.setReference("CHU-002");
+    p2.setNom("Bottines en cuir marron");
+    p2.setCategorie("Chaussures");
+    p2.setType("Cuir véritable");
+    p2.setCouleur("Marron");
+    p2.setDimensions("Pointures 36-44");
+    p2.setPrixUnitaire(299.50);
+    p2.setCoutFabrication(179.70);
+    p2.setStock(15);
+    p2.setStatut("Disponible");
+    p2.setDescription("Bottines confortables en cuir de qualité");
+    produits.append(p2);
+    
+    Produit p3;
+    p3.setReference("CEI-003");
+    p3.setNom("Ceinture cuir noir");
+    p3.setCategorie("Ceintures");
+    p3.setType("Cuir véritable");
+    p3.setCouleur("Noir");
+    p3.setDimensions("Ajustable");
+    p3.setPrixUnitaire(75.00);
+    p3.setCoutFabrication(45.00);
+    p3.setStock(40);
+    p3.setStatut("Disponible");
+    p3.setDescription("Ceinture classique en cuir noir");
+    produits.append(p3);
+    
+    // Populate product table
+    refreshProductTable();
+    
     ui->stackedWidget->setCurrentIndex(0);
+    ui->stackedWidgetEmpl->setCurrentIndex(0);
+    ui->stackedWidgetClient->setCurrentIndex(0);
+    ui->stackedWidgetProduit->setCurrentIndex(0);
+    
     ui->profilePanel->setVisible(true);
     
-    // Set initial active button style
     ui->btnEmployees->setStyleSheet(
         "QPushButton { background-color: #6E473B; color: #FFFFFF; border-left: 3px solid #FFFFFF; }"
     );
     
-    // Connect table selection to profile panel update
-    connect(ui->employeeTable, &QTableWidget::currentCellChanged, this, &MainWindow::onEmployeeSelected);
+    connect(ui->tblEmploye, &QTableWidget::currentCellChanged, this, &MainWindow::onEmployeeSelected);
+    connect(ui->tblEmploye, &QTableWidget::itemSelectionChanged, this, &MainWindow::onEmployeeSelected);
+    connect(ui->tblClient, &QTableWidget::currentCellChanged, this, &MainWindow::onClientSelected);
+    connect(ui->tblClient, &QTableWidget::itemSelectionChanged, this, &MainWindow::onClientSelected);
+    connect(ui->tblProduit, &QTableWidget::currentCellChanged, this, &MainWindow::onProductSelected);
+    connect(ui->tblProduit, &QTableWidget::itemSelectionChanged, this, &MainWindow::onProductSelected);
 }
 
 MainWindow::~MainWindow()
@@ -81,32 +129,27 @@ MainWindow::~MainWindow()
 
 void MainWindow::refreshClientTable()
 {
-    ui->clientTable->setRowCount(clients.size());
+    ui->tblClient->setRowCount(clients.size());
     
     for (int i = 0; i < clients.size(); ++i) {
         const Client &c = clients[i];
-        ui->clientTable->setItem(i, 0, new QTableWidgetItem(c.getNom()));
-        ui->clientTable->setItem(i, 1, new QTableWidgetItem(c.getPrenom()));
-        ui->clientTable->setItem(i, 2, new QTableWidgetItem(c.getSexe()));
-        ui->clientTable->setItem(i, 3, new QTableWidgetItem(c.getCin()));
-        ui->clientTable->setItem(i, 4, new QTableWidgetItem(c.getPays()));
-        ui->clientTable->setItem(i, 5, new QTableWidgetItem(c.getVille()));
-        ui->clientTable->setItem(i, 6, new QTableWidgetItem(c.getAdresse()));
-        ui->clientTable->setItem(i, 7, new QTableWidgetItem(c.getEmail()));
+        ui->tblClient->setItem(i, 0, new QTableWidgetItem(c.getNom()));
+        ui->tblClient->setItem(i, 1, new QTableWidgetItem(c.getPrenom()));
+        ui->tblClient->setItem(i, 2, new QTableWidgetItem(c.getSexe()));
+        ui->tblClient->setItem(i, 3, new QTableWidgetItem(c.getCin()));
+        ui->tblClient->setItem(i, 4, new QTableWidgetItem(c.getPays()));
+        ui->tblClient->setItem(i, 5, new QTableWidgetItem(c.getVille()));
+        ui->tblClient->setItem(i, 6, new QTableWidgetItem(c.getAdresse()));
+        ui->tblClient->setItem(i, 7, new QTableWidgetItem(c.getEmail()));
     }
 }
 
-// ============================================
-// NAVIGATION SLOTS (Auto-generated by Qt)
-// ============================================
-
 void MainWindow::on_btnEmployees_clicked()
 {
-    ui->stackedWidget->setCurrentIndex(0);  // Show employee page
-    ui->profilePanel->setVisible(true);     // Show profile panel
+    ui->stackedWidget->setCurrentIndex(0);
+    ui->profilePanel->setVisible(true);
     setWindowTitle("CUIREA - Gestion des Employés");
     
-    // Reset all navigation buttons to default style
     ui->btnEmployees->setStyleSheet("");
     ui->btnClients->setStyleSheet("");
     ui->btnProducts->setStyleSheet("");
@@ -114,7 +157,6 @@ void MainWindow::on_btnEmployees_clicked()
     ui->btnRawMaterials->setStyleSheet("");
     ui->btnSuppliers->setStyleSheet("");
     
-    // Apply active style to current button
     ui->btnEmployees->setStyleSheet(
         "QPushButton { background-color: #6E473B; color: #FFFFFF; border-left: 3px solid #FFFFFF; }"
     );
@@ -122,11 +164,10 @@ void MainWindow::on_btnEmployees_clicked()
 
 void MainWindow::on_btnClients_clicked()
 {
-    ui->stackedWidget->setCurrentIndex(1);  // Show client page
-    ui->profilePanel->setVisible(false);    // Hide profile panel
+    ui->stackedWidget->setCurrentIndex(1);
+    ui->profilePanel->setVisible(false);
     setWindowTitle("CUIREA - Gestion des Clients");
     
-    // Reset all navigation buttons to default style
     ui->btnEmployees->setStyleSheet("");
     ui->btnClients->setStyleSheet("");
     ui->btnProducts->setStyleSheet("");
@@ -134,7 +175,6 @@ void MainWindow::on_btnClients_clicked()
     ui->btnRawMaterials->setStyleSheet("");
     ui->btnSuppliers->setStyleSheet("");
     
-    // Apply active style to current button
     ui->btnClients->setStyleSheet(
         "QPushButton { background-color: #6E473B; color: #FFFFFF; border-left: 3px solid #FFFFFF; }"
     );
@@ -142,255 +182,187 @@ void MainWindow::on_btnClients_clicked()
 
 void MainWindow::on_btnProducts_clicked()
 {
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Module en développement");
-    msgBox.setText("Gestion des Produits");
-    msgBox.setInformativeText("Ce module sera disponible prochainement.\n\n"
-                              "Fonctionnalités prévues :\n"
-                              "• Ajout et modification\n"
-                              "• Recherche et filtrage\n"
-                              "• Export des données\n"
-                              "• Rapports et statistiques");
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setStyleSheet(
-        "QMessageBox { background-color: #FAF5F0; }"
-        "QMessageBox QLabel { color: #291C0E; font-family: Arial, sans-serif; font-size: 12px; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
-        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
-        "QPushButton:hover { background-color: #A0826D; }"
+    ui->stackedWidget->setCurrentIndex(2);
+    ui->profilePanel->setVisible(false);
+    setWindowTitle("CUIREA - Gestion des Produits");
+    
+    ui->btnEmployees->setStyleSheet("");
+    ui->btnClients->setStyleSheet("");
+    ui->btnProducts->setStyleSheet("");
+    ui->btnOrders->setStyleSheet("");
+    ui->btnRawMaterials->setStyleSheet("");
+    ui->btnSuppliers->setStyleSheet("");
+    
+    ui->btnProducts->setStyleSheet(
+        "QPushButton { background-color: #6E473B; color: #FFFFFF; border-left: 3px solid #FFFFFF; }"
     );
-    msgBox.exec();
 }
 
 void MainWindow::on_btnOrders_clicked()
 {
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Module en développement");
-    msgBox.setText("Gestion des Commandes");
-    msgBox.setInformativeText("Ce module sera disponible prochainement.\n\n"
-                              "Fonctionnalités prévues :\n"
-                              "• Ajout et modification\n"
-                              "• Recherche et filtrage\n"
-                              "• Export des données\n"
-                              "• Rapports et statistiques");
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setStyleSheet(
-        "QMessageBox { background-color: #FAF5F0; }"
-        "QMessageBox QLabel { color: #291C0E; font-family: Arial, sans-serif; font-size: 12px; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
-        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
-        "QPushButton:hover { background-color: #A0826D; }"
-    );
-    msgBox.exec();
+    QMessageBox::information(this, "Module en développement",
+        "Gestion des Commandes\n\n"
+        "Ce module sera disponible prochainement.\n\n"
+        "Fonctionnalités prévues :\n"
+        "• Ajout et modification\n"
+        "• Recherche et filtrage\n"
+        "• Export des données\n"
+        "• Rapports et statistiques");
 }
 
 void MainWindow::on_btnRawMaterials_clicked()
 {
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Module en développement");
-    msgBox.setText("Gestion des Matières Premières");
-    msgBox.setInformativeText("Ce module sera disponible prochainement.\n\n"
-                              "Fonctionnalités prévues :\n"
-                              "• Ajout et modification\n"
-                              "• Recherche et filtrage\n"
-                              "• Export des données\n"
-                              "• Rapports et statistiques");
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setStyleSheet(
-        "QMessageBox { background-color: #FAF5F0; }"
-        "QMessageBox QLabel { color: #291C0E; font-family: Arial, sans-serif; font-size: 12px; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
-        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
-        "QPushButton:hover { background-color: #A0826D; }"
-    );
-    msgBox.exec();
+    QMessageBox::information(this, "Module en développement",
+        "Gestion des Matières Premières\n\n"
+        "Ce module sera disponible prochainement.\n\n"
+        "Fonctionnalités prévues :\n"
+        "• Ajout et modification\n"
+        "• Recherche et filtrage\n"
+        "• Export des données\n"
+        "• Rapports et statistiques");
 }
 
 void MainWindow::on_btnSuppliers_clicked()
 {
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Module en développement");
-    msgBox.setText("Gestion des Fournisseurs");
-    msgBox.setInformativeText("Ce module sera disponible prochainement.\n\n"
-                              "Fonctionnalités prévues :\n"
-                              "• Ajout et modification\n"
-                              "• Recherche et filtrage\n"
-                              "• Export des données\n"
-                              "• Rapports et statistiques");
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setStyleSheet(
-        "QMessageBox { background-color: #FAF5F0; }"
-        "QMessageBox QLabel { color: #291C0E; font-family: Arial, sans-serif; font-size: 12px; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
-        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
-        "QPushButton:hover { background-color: #A0826D; }"
-    );
-    msgBox.exec();
+    QMessageBox::information(this, "Module en développement",
+        "Gestion des Fournisseurs\n\n"
+        "Ce module sera disponible prochainement.\n\n"
+        "Fonctionnalités prévues :\n"
+        "• Ajout et modification\n"
+        "• Recherche et filtrage\n"
+        "• Export des données\n"
+        "• Rapports et statistiques");
 }
 
-// ============================================
-// EMPLOYEE CRUD SLOTS (Auto-generated by Qt)
-// ============================================
-
-void MainWindow::on_btnAdd_clicked()
+void MainWindow::on_btnAjouterEmploye_clicked()
 {
     EmployeeDialog dialog(this, EmployeeDialog::AddMode);
     dialog.exec();
 }
 
-void MainWindow::on_btnEdit_clicked()
+void MainWindow::on_btnModifierEmploye_clicked()
 {
-    int currentRow = ui->employeeTable->currentRow();
+    int currentRow = ui->tblEmploye->currentRow();
     if (currentRow < 0) {
-        QMessageBox::warning(this, "Aucune sélection",
-                           "Veuillez sélectionner un employé à modifier.");
+        QMessageBox::warning(this, "Aucune sélection", "Veuillez sélectionner un employé à modifier.");
         return;
     }
     
     EmployeeDialog dialog(this, EmployeeDialog::EditMode);
-    
-    // Get employee data from table
-    QString id = ui->employeeTable->item(currentRow, 0)->text();
-    QString matricule = ui->employeeTable->item(currentRow, 1)->text();
-    QString nom = ui->employeeTable->item(currentRow, 2)->text();
-    QString prenom = ui->employeeTable->item(currentRow, 3)->text();
-    QString cin = ui->employeeTable->item(currentRow, 4)->text();
-    QString dateNaissance = ui->employeeTable->item(currentRow, 5)->text();
-    QString departement = ui->employeeTable->item(currentRow, 6)->text();
-    QString poste = ui->employeeTable->item(currentRow, 7)->text();
-    QString telephone = ui->employeeTable->item(currentRow, 8)->text();
-    QString email = ui->employeeTable->item(currentRow, 9)->text();
-    
-    dialog.setEmployeeData(id, matricule, nom, prenom, cin, dateNaissance,
-                          "Homme", "", telephone, email, poste, "", departement, "01/01/2024");
+    dialog.setEmployeeData(
+        ui->tblEmploye->item(currentRow, 0)->text(),
+        ui->tblEmploye->item(currentRow, 1)->text(),
+        ui->tblEmploye->item(currentRow, 2)->text(),
+        ui->tblEmploye->item(currentRow, 3)->text(),
+        ui->tblEmploye->item(currentRow, 4)->text(),
+        ui->tblEmploye->item(currentRow, 5)->text(),
+        "Homme", "",
+        ui->tblEmploye->item(currentRow, 8)->text(),
+        ui->tblEmploye->item(currentRow, 9)->text(),
+        ui->tblEmploye->item(currentRow, 7)->text(),
+        "",
+        ui->tblEmploye->item(currentRow, 6)->text(),
+        "01/01/2024"
+    );
     dialog.exec();
 }
 
-void MainWindow::on_btnDelete_clicked()
+void MainWindow::on_btnSupprimerEmploye_clicked()
 {
-    int currentRow = ui->employeeTable->currentRow();
+    int currentRow = ui->tblEmploye->currentRow();
     if (currentRow < 0) {
-        QMessageBox::warning(this, "Aucune sélection",
-                           "Veuillez sélectionner un employé à supprimer.");
+        QMessageBox::warning(this, "Aucune sélection", "Veuillez sélectionner un employé à supprimer.");
         return;
     }
     
-    // Get employee data
-    QString id = ui->employeeTable->item(currentRow, 0)->text();
-    QString matricule = ui->employeeTable->item(currentRow, 1)->text();
-    QString nom = ui->employeeTable->item(currentRow, 2)->text();
-    QString prenom = ui->employeeTable->item(currentRow, 3)->text();
-    QString departement = ui->employeeTable->item(currentRow, 6)->text();
-    QString poste = ui->employeeTable->item(currentRow, 7)->text();
-    
     EmployeeDialog dialog(this, EmployeeDialog::DeleteMode);
-    dialog.setEmployeeData(id, matricule, nom, prenom, "", "", "", "", "", "", poste, "", departement, "");
+    dialog.setEmployeeData(
+        ui->tblEmploye->item(currentRow, 0)->text(),
+        ui->tblEmploye->item(currentRow, 1)->text(),
+        ui->tblEmploye->item(currentRow, 2)->text(),
+        ui->tblEmploye->item(currentRow, 3)->text(),
+        "", "", "", "", "", "",
+        ui->tblEmploye->item(currentRow, 7)->text(),
+        "",
+        ui->tblEmploye->item(currentRow, 6)->text(),
+        ""
+    );
     dialog.exec();
 }
 
-void MainWindow::on_btnExport_clicked()
+void MainWindow::on_btnExporterEmploye_clicked()
 {
     EmployeeDialog dialog(this, EmployeeDialog::ExportMode);
     dialog.exec();
 }
 
-// ============================================
-// CLIENT CRUD SLOTS (Auto-generated by Qt)
-// ============================================
-
-void MainWindow::on_btnAddClient_clicked()
+void MainWindow::on_btnAjouterClient_clicked()
 {
     ClientManagerDialog dlg(this, ClientManagerDialog::AddMode);
     dlg.exec();
 }
 
-void MainWindow::on_btnEditClient_clicked()
+void MainWindow::on_btnModifierClient_clicked()
 {
-    int currentRow = ui->clientTable->currentRow();
+    int currentRow = ui->tblClient->currentRow();
     if (currentRow < 0) {
-        QMessageBox::warning(this, "Aucune sélection",
-                           "Veuillez sélectionner un client à modifier.");
+        QMessageBox::warning(this, "Aucune sélection", "Veuillez sélectionner un client à modifier.");
         return;
     }
     
-    // Get current client data
-    QString nom = ui->clientTable->item(currentRow, 0)->text();
-    QString prenom = ui->clientTable->item(currentRow, 1)->text();
-    QString sexe = ui->clientTable->item(currentRow, 2)->text();
-    QString cin = ui->clientTable->item(currentRow, 3)->text();
-    QString pays = ui->clientTable->item(currentRow, 4)->text();
-    QString ville = ui->clientTable->item(currentRow, 5)->text();
-    QString adresse = ui->clientTable->item(currentRow, 6)->text();
-    QString email = ui->clientTable->item(currentRow, 7)->text();
-    
-    // Open edit dialog
     ClientManagerDialog dlg(this, ClientManagerDialog::EditMode);
-    dlg.setClientData(nom, prenom, sexe, cin, pays, ville, adresse, email);
+    dlg.setClientData(
+        ui->tblClient->item(currentRow, 0)->text(),
+        ui->tblClient->item(currentRow, 1)->text(),
+        ui->tblClient->item(currentRow, 2)->text(),
+        ui->tblClient->item(currentRow, 3)->text(),
+        ui->tblClient->item(currentRow, 4)->text(),
+        ui->tblClient->item(currentRow, 5)->text(),
+        ui->tblClient->item(currentRow, 6)->text(),
+        ui->tblClient->item(currentRow, 7)->text()
+    );
     dlg.exec();
 }
 
-void MainWindow::on_btnDeleteClient_clicked()
+void MainWindow::on_btnSupprimerClient_clicked()
 {
-    int currentRow = ui->clientTable->currentRow();
+    int currentRow = ui->tblClient->currentRow();
     if (currentRow < 0) {
-        QMessageBox::warning(this, "Aucune sélection",
-                           "Veuillez sélectionner un client à supprimer.");
+        QMessageBox::warning(this, "Aucune sélection", "Veuillez sélectionner un client à supprimer.");
         return;
     }
-    
-    // Get client data
-    QString nom = ui->clientTable->item(currentRow, 0)->text();
-    QString prenom = ui->clientTable->item(currentRow, 1)->text();
-    QString sexe = ui->clientTable->item(currentRow, 2)->text();
-    QString cin = ui->clientTable->item(currentRow, 3)->text();
-    QString pays = ui->clientTable->item(currentRow, 4)->text();
-    QString ville = ui->clientTable->item(currentRow, 5)->text();
     
     ClientManagerDialog dlg(this, ClientManagerDialog::DeleteMode);
-    dlg.setClientData(nom, prenom, sexe, cin, pays, ville, "", "");
+    dlg.setClientData(
+        ui->tblClient->item(currentRow, 0)->text(),
+        ui->tblClient->item(currentRow, 1)->text(),
+        ui->tblClient->item(currentRow, 2)->text(),
+        ui->tblClient->item(currentRow, 3)->text(),
+        ui->tblClient->item(currentRow, 4)->text(),
+        ui->tblClient->item(currentRow, 5)->text(),
+        "", ""
+    );
     dlg.exec();
 }
 
-void MainWindow::on_btnExportClient_clicked()
+void MainWindow::on_btnExporterClient_clicked()
 {
     ClientManagerDialog dialog(this, ClientManagerDialog::ExportMode);
     dialog.exec();
 }
 
-void MainWindow::on_btnRefreshClient_clicked()
+void MainWindow::on_btnActualiserClient_clicked()
 {
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Actualisation");
-    msgBox.setText("Liste des clients actualisée !");
-    msgBox.setInformativeText("(Mode statique - données d'exemple)");
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setStyleSheet(
-        "QMessageBox { background-color: #FAF5F0; }"
-        "QMessageBox QLabel { color: #291C0E; font-family: Arial, sans-serif; font-size: 12px; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
-        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
-        "QPushButton:hover { background-color: #A0826D; }"
-    );
-    msgBox.exec();
+    QMessageBox::information(this, "Actualisation",
+        "Liste des clients actualisée !\n(Mode statique - données d'exemple)");
 }
 
 void MainWindow::populateEmployeeTable()
 {
-    qDebug() << "populateEmployeeTable called";
-    
-    ui->employeeTable->setRowCount(15);
+    ui->tblEmploye->setRowCount(15);
     
     struct Employee {
-        QString id;
-        QString matricule;
-        QString nom;
-        QString prenom;
-        QString cin;
-        QString dateNaissance;
-        QString departement;
-        QString poste;
-        QString telephone;
-        QString email;
+        QString id, matricule, nom, prenom, cin, dateNaissance, departement, poste, telephone, email;
     };
     
     Employee employees[] = {
@@ -412,52 +384,196 @@ void MainWindow::populateEmployeeTable()
     };
     
     for (int i = 0; i < 15; ++i) {
-        ui->employeeTable->setItem(i, 0, new QTableWidgetItem(employees[i].id));
-        ui->employeeTable->setItem(i, 1, new QTableWidgetItem(employees[i].matricule));
-        ui->employeeTable->setItem(i, 2, new QTableWidgetItem(employees[i].nom));
-        ui->employeeTable->setItem(i, 3, new QTableWidgetItem(employees[i].prenom));
-        ui->employeeTable->setItem(i, 4, new QTableWidgetItem(employees[i].cin));
-        ui->employeeTable->setItem(i, 5, new QTableWidgetItem(employees[i].dateNaissance));
-        ui->employeeTable->setItem(i, 6, new QTableWidgetItem(employees[i].departement));
-        ui->employeeTable->setItem(i, 7, new QTableWidgetItem(employees[i].poste));
-        ui->employeeTable->setItem(i, 8, new QTableWidgetItem(employees[i].telephone));
-        ui->employeeTable->setItem(i, 9, new QTableWidgetItem(employees[i].email));
+        ui->tblEmploye->setItem(i, 0, new QTableWidgetItem(employees[i].id));
+        ui->tblEmploye->setItem(i, 1, new QTableWidgetItem(employees[i].matricule));
+        ui->tblEmploye->setItem(i, 2, new QTableWidgetItem(employees[i].nom));
+        ui->tblEmploye->setItem(i, 3, new QTableWidgetItem(employees[i].prenom));
+        ui->tblEmploye->setItem(i, 4, new QTableWidgetItem(employees[i].cin));
+        ui->tblEmploye->setItem(i, 5, new QTableWidgetItem(employees[i].dateNaissance));
+        ui->tblEmploye->setItem(i, 6, new QTableWidgetItem(employees[i].departement));
+        ui->tblEmploye->setItem(i, 7, new QTableWidgetItem(employees[i].poste));
+        ui->tblEmploye->setItem(i, 8, new QTableWidgetItem(employees[i].telephone));
+        ui->tblEmploye->setItem(i, 9, new QTableWidgetItem(employees[i].email));
     }
-    
-    qDebug() << "Table populated with" << ui->employeeTable->rowCount() << "rows";
 }
 
 void MainWindow::onEmployeeSelected()
 {
-    int currentRow = ui->employeeTable->currentRow();
+    int currentRow = ui->tblEmploye->currentRow();
+    QList<QTableWidgetItem*> selectedItems = ui->tblEmploye->selectedItems();
+    
+    if (currentRow >= 0 && !selectedItems.isEmpty()) {
+        ui->btnModifierEmploye->setEnabled(true);
+        ui->btnSupprimerEmploye->setEnabled(true);
+        
+        ui->profileValue->setText(ui->tblEmploye->item(currentRow, 1)->text());
+        ui->profileValue_2->setText(ui->tblEmploye->item(currentRow, 2)->text());
+        ui->profileValue_3->setText(ui->tblEmploye->item(currentRow, 3)->text());
+        ui->profileValue_4->setText(ui->tblEmploye->item(currentRow, 4)->text());
+        ui->profileValue_5->setText(ui->tblEmploye->item(currentRow, 5)->text());
+        ui->profileValue_6->setText("M");
+        ui->profileValue_7->setText("Casablanca");
+        ui->profileValue_8->setText(ui->tblEmploye->item(currentRow, 8)->text());
+        ui->profileValue_9->setText(ui->tblEmploye->item(currentRow, 9)->text());
+        ui->profileValue_10->setText(ui->tblEmploye->item(currentRow, 7)->text());
+        ui->profileValue_11->setText(ui->tblEmploye->item(currentRow, 6)->text());
+        ui->profileValue_12->setText(ui->tblEmploye->item(currentRow, 6)->text());
+        ui->profileValue_13->setText("01/01/2024");
+        ui->photoPlaceholder->clear();
+        ui->photoPlaceholder->setText("●");
+    } else {
+        ui->btnModifierEmploye->setEnabled(false);
+        ui->btnSupprimerEmploye->setEnabled(false);
+    }
+}
+
+void MainWindow::onClientSelected()
+{
+    int currentRow = ui->tblClient->currentRow();
+    QList<QTableWidgetItem*> selectedItems = ui->tblClient->selectedItems();
+    
+    if (currentRow >= 0 && !selectedItems.isEmpty()) {
+        ui->btnModifierClient->setEnabled(true);
+        ui->btnSupprimerClient->setEnabled(true);
+    } else {
+        ui->btnModifierClient->setEnabled(false);
+        ui->btnSupprimerClient->setEnabled(false);
+    }
+}
+
+
+void MainWindow::refreshProductTable()
+{
+    ui->tblProduit->setRowCount(produits.size());
+    
+    for (int i = 0; i < produits.size(); ++i) {
+        const Produit &p = produits[i];
+        ui->tblProduit->setItem(i, 0, new QTableWidgetItem(QString::number(i + 1)));
+        ui->tblProduit->setItem(i, 1, new QTableWidgetItem(p.getReference()));
+        ui->tblProduit->setItem(i, 2, new QTableWidgetItem(p.getNom()));
+        ui->tblProduit->setItem(i, 3, new QTableWidgetItem(p.getCategorie()));
+        ui->tblProduit->setItem(i, 4, new QTableWidgetItem(QString::number(p.getPrixUnitaire(), 'f', 2)));
+        ui->tblProduit->setItem(i, 5, new QTableWidgetItem(QString::number(p.getStock())));
+        ui->tblProduit->setItem(i, 6, new QTableWidgetItem(p.getStatut()));
+    }
+}
+
+void MainWindow::onProductSelected()
+{
+    int currentRow = ui->tblProduit->currentRow();
+    QList<QTableWidgetItem*> selectedItems = ui->tblProduit->selectedItems();
+    
+    if (currentRow >= 0 && !selectedItems.isEmpty()) {
+        ui->btnModifierProduit->setEnabled(true);
+        ui->btnSupprimerProduit->setEnabled(true);
+        ui->btnConsulterProduit->setEnabled(true);
+    } else {
+        ui->btnModifierProduit->setEnabled(false);
+        ui->btnSupprimerProduit->setEnabled(false);
+        ui->btnConsulterProduit->setEnabled(false);
+    }
+}
+
+void MainWindow::on_btnAjouterProduit_clicked()
+{
+    ProductDialog dialog(this, ProductDialog::AddMode);
+    dialog.exec();
+}
+
+void MainWindow::on_btnModifierProduit_clicked()
+{
+    int currentRow = ui->tblProduit->currentRow();
     if (currentRow < 0) {
+        QMessageBox::warning(this, "Aucune sélection", "Veuillez sélectionner un produit à modifier.");
         return;
     }
     
-    QString matricule = ui->employeeTable->item(currentRow, 1)->text();
-    QString nom = ui->employeeTable->item(currentRow, 2)->text();
-    QString prenom = ui->employeeTable->item(currentRow, 3)->text();
-    QString cin = ui->employeeTable->item(currentRow, 4)->text();
-    QString dateNaissance = ui->employeeTable->item(currentRow, 5)->text();
-    QString departement = ui->employeeTable->item(currentRow, 6)->text();
-    QString poste = ui->employeeTable->item(currentRow, 7)->text();
-    QString telephone = ui->employeeTable->item(currentRow, 8)->text();
-    QString email = ui->employeeTable->item(currentRow, 9)->text();
+    ProductDialog dialog(this, ProductDialog::EditMode);
+    dialog.setProductData(
+        ui->tblProduit->item(currentRow, 0)->text(),
+        ui->tblProduit->item(currentRow, 1)->text(),
+        ui->tblProduit->item(currentRow, 2)->text(),
+        ui->tblProduit->item(currentRow, 3)->text(),
+        "Cuir véritable", "Naturel", "Standard",
+        ui->tblProduit->item(currentRow, 4)->text().toDouble(),
+        ui->tblProduit->item(currentRow, 4)->text().toDouble() * 0.6,
+        ui->tblProduit->item(currentRow, 5)->text().toInt(),
+        ui->tblProduit->item(currentRow, 6)->text(),
+        "Description exemple", "05/02/2026"
+    );
+    dialog.exec();
+}
+
+void MainWindow::on_btnSupprimerProduit_clicked()
+{
+    int currentRow = ui->tblProduit->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, "Aucune sélection", "Veuillez sélectionner un produit à supprimer.");
+        return;
+    }
     
-    ui->profileValue->setText(matricule);
-    ui->profileValue_2->setText(nom);
-    ui->profileValue_3->setText(prenom);
-    ui->profileValue_4->setText(cin);
-    ui->profileValue_5->setText(dateNaissance);
-    ui->profileValue_6->setText("M");
-    ui->profileValue_7->setText("Casablanca");
-    ui->profileValue_8->setText(telephone);
-    ui->profileValue_9->setText(email);
-    ui->profileValue_10->setText(poste);
-    ui->profileValue_11->setText(departement);
-    ui->profileValue_12->setText(departement);
-    ui->profileValue_13->setText("01/01/2024");
+    ProductDialog dialog(this, ProductDialog::DeleteMode);
+    dialog.setProductData(
+        ui->tblProduit->item(currentRow, 0)->text(),
+        ui->tblProduit->item(currentRow, 1)->text(),
+        ui->tblProduit->item(currentRow, 2)->text(),
+        "", "", "", "",
+        ui->tblProduit->item(currentRow, 4)->text().toDouble(),
+        0, 0, "", "", ""
+    );
+    dialog.exec();
+}
+
+void MainWindow::on_btnConsulterProduit_clicked()
+{
+    int currentRow = ui->tblProduit->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, "Aucune sélection", "Veuillez sélectionner un produit à consulter.");
+        return;
+    }
     
-    ui->photoPlaceholder->clear();
-    ui->photoPlaceholder->setText("●");
+    ProductDialog dialog(this, ProductDialog::ViewMode);
+    dialog.setProductData(
+        ui->tblProduit->item(currentRow, 0)->text(),
+        ui->tblProduit->item(currentRow, 1)->text(),
+        ui->tblProduit->item(currentRow, 2)->text(),
+        ui->tblProduit->item(currentRow, 3)->text(),
+        "Cuir véritable", "Naturel", "Standard",
+        ui->tblProduit->item(currentRow, 4)->text().toDouble(),
+        ui->tblProduit->item(currentRow, 4)->text().toDouble() * 0.6,
+        ui->tblProduit->item(currentRow, 5)->text().toInt(),
+        ui->tblProduit->item(currentRow, 6)->text(),
+        "Description exemple du produit " + ui->tblProduit->item(currentRow, 2)->text(),
+        "05/02/2026"
+    );
+    dialog.exec();
+}
+
+void MainWindow::on_btnStatistiquesProduit_clicked()
+{
+    int total = produits.size();
+    int disponible = 0, enProduction = 0, obsolete = 0;
+    double valeurStock = 0.0;
+    QString plusDemande = "N/A";
+    int maxStock = 0;
+    
+    for (const Produit &p : produits) {
+        if (p.getStatut() == "Disponible") {
+            disponible++;
+            valeurStock += p.getPrixUnitaire() * p.getStock();
+        } else if (p.getStatut() == "En Production") {
+            enProduction++;
+        } else if (p.getStatut() == QString::fromUtf8("Obsolète")) {
+            obsolete++;
+        }
+        
+        if (p.getStock() > maxStock) {
+            maxStock = p.getStock();
+            plusDemande = p.getNom();
+        }
+    }
+    
+    ProductDialog dialog(this, ProductDialog::StatisticsMode);
+    dialog.setStatisticsData(total, disponible, enProduction, obsolete, valeurStock, plusDemande);
+    dialog.exec();
 }
