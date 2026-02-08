@@ -56,7 +56,7 @@ QMainWindow {
 }
 
 /* Table Styling */
-#employeeTable, #clientTable, #matiereTable, #fournisseurTable, #productionTable {
+#employeeTable, #clientTable, #matiereTable, #fournisseurTable, #productionTable, #articleTable {
     background-color: #FFFFFF;
     alternate-background-color: #FFF8F0;
     border: none;
@@ -68,7 +68,7 @@ QMainWindow {
     selection-color: white;
 }
 
-#employeeTable::item, #clientTable::item, #matiereTable::item, #fournisseurTable::item, #productionTable::item {
+#employeeTable::item, #clientTable::item, #matiereTable::item, #fournisseurTable::item, #productionTable::item, #articleTable::item {
     padding: 12px 8px;
     border: none;
     border-bottom: 1px solid #F0E6DA;
@@ -76,16 +76,16 @@ QMainWindow {
     background-color: transparent;
 }
 
-#employeeTable::item:alternate, #clientTable::item:alternate, #matiereTable::item:alternate, #fournisseurTable::item:alternate, #productionTable::item:alternate {
+#employeeTable::item:alternate, #clientTable::item:alternate, #matiereTable::item:alternate, #fournisseurTable::item:alternate, #productionTable::item:alternate, #articleTable::item:alternate {
     background-color: #FFF8F0;
 }
 
-#employeeTable::item:selected, #clientTable::item:selected, #matiereTable::item:selected, #fournisseurTable::item:selected, #productionTable::item:selected {
+#employeeTable::item:selected, #clientTable::item:selected, #matiereTable::item:selected, #fournisseurTable::item:selected, #productionTable::item:selected, #articleTable::item:selected {
     background-color: #8D6E63;
     color: white;
 }
 
-#employeeTable::item:hover, #clientTable::item:hover, #matiereTable::item:hover, #fournisseurTable::item:hover, #productionTable::item:hover {
+#employeeTable::item:hover, #clientTable::item:hover, #matiereTable::item:hover, #fournisseurTable::item:hover, #productionTable::item:hover, #articleTable::item:hover {
     background-color: #F5EDE3;
 }
 
@@ -323,8 +323,32 @@ QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:presse
     padding: 11px 20px 9px 20px;
 }
 
+/* Primary Action Buttons - Articles Module */
+QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArticle, QPushButton#btnViewArticle, QPushButton#btnExportPdfArticle, QPushButton#btnAnalyseRentabilite, QPushButton#btnAideDecision {
+    background-color: #8D6E63;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
+}
+
+QPushButton#btnAddArticle:hover, QPushButton#btnEditArticle:hover, QPushButton#btnDeleteArticle:hover, QPushButton#btnViewArticle:hover, QPushButton#btnExportPdfArticle:hover, QPushButton#btnAnalyseRentabilite:hover, QPushButton#btnAideDecision:hover {
+    background-color: #A0826D;
+    border: none;
+}
+
+QPushButton#btnAddArticle:pressed, QPushButton#btnEditArticle:pressed, QPushButton#btnDeleteArticle:pressed, QPushButton#btnViewArticle:pressed, QPushButton#btnExportPdfArticle:pressed, QPushButton#btnAnalyseRentabilite:pressed, QPushButton#btnAideDecision:pressed {
+    background-color: #6E473B;
+    border: none;
+    padding: 11px 20px 9px 20px;
+}
+
 /* Search Box */
-#searchBox, #searchBoxClient, #searchBoxMatiere, #searchBoxFournisseur, #searchBoxProduction {
+#searchBox, #searchBoxClient, #searchBoxMatiere, #searchBoxFournisseur, #searchBoxProduction, #searchBoxArticle {
     background-color: white;
     color: #291C0E;
     border: 2px solid #A78D78;
@@ -334,7 +358,7 @@ QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:presse
     font-size: 11px;
 }
 
-#searchBox::placeholder, #searchBoxClient::placeholder, #searchBoxMatiere::placeholder, #searchBoxFournisseur::placeholder, #searchBoxProduction::placeholder {
+#searchBox::placeholder, #searchBoxClient::placeholder, #searchBoxMatiere::placeholder, #searchBoxFournisseur::placeholder, #searchBoxProduction::placeholder, #searchBoxArticle::placeholder {
     color: #A78D78;
 }
 
@@ -376,19 +400,19 @@ QPushButton#btnRawMaterials:pressed, QPushButton#btnSuppliers:pressed, QPushButt
 }
 
 /* Statistics Cards */
-#statsCard, #statsCard_2, #statsCard_3, #statsCardMatiere1, #statsCardMatiere2, #statsCardMatiere3, #statsCardFournisseur1, #statsCardFournisseur2, #statsCardFournisseur3 {
+#statsCard, #statsCard_2, #statsCard_3, #statsCardMatiere1, #statsCardMatiere2, #statsCardMatiere3, #statsCardFournisseur1, #statsCardFournisseur2, #statsCardFournisseur3, #statsCardArticle1, #statsCardArticle2, #statsCardArticle3 {
     background-color: #FFF8F0;
     border: 1px solid #BCAAA4;
     border-radius: 8px;
 }
 
-#statsLabel, #statsLabel_2, #statsLabel_3, #statsLabelMatiere1, #statsLabelMatiere2, #statsLabelMatiere3, #statsLabelFournisseur1, #statsLabelFournisseur2, #statsLabelFournisseur3 {
+#statsLabel, #statsLabel_2, #statsLabel_3, #statsLabelMatiere1, #statsLabelMatiere2, #statsLabelMatiere3, #statsLabelFournisseur1, #statsLabelFournisseur2, #statsLabelFournisseur3, #statsLabelArticle1, #statsLabelArticle2, #statsLabelArticle3 {
     color: #291C0E;
     font-family: Arial, sans-serif;
     font-size: 10px;
 }
 
-#statsValue, #statsValue_2, #statsValue_3, #statsValueMatiere1, #statsValueMatiere2, #statsValueMatiere3, #statsValueFournisseur1, #statsValueFournisseur2, #statsValueFournisseur3 {
+#statsValue, #statsValue_2, #statsValue_3, #statsValueMatiere1, #statsValueMatiere2, #statsValueMatiere3, #statsValueFournisseur1, #statsValueFournisseur2, #statsValueFournisseur3, #statsValueArticle1, #statsValueArticle2, #statsValueArticle3 {
     color: #8D6E63;
     font-family: 'Times New Roman', serif;
     font-size: 24px;
@@ -417,6 +441,13 @@ QPushButton#btnRawMaterials:pressed, QPushButton#btnSuppliers:pressed, QPushButt
 }
 
 #productionTitle {
+    color: #291C0E;
+    font-family: 'Times New Roman', serif;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+#articlesTitle {
     color: #291C0E;
     font-family: 'Times New Roman', serif;
     font-size: 22px;
@@ -590,7 +621,7 @@ Management</string>
           </size>
          </property>
          <property name="text">
-          <string>⬡ Produits</string>
+          <string>⬡ Articles</string>
          </property>
         </widget>
        </item>
@@ -2299,6 +2330,398 @@ Management</string>
                 <column>
                  <property name="text">
                   <string>PRIORITÉ</string>
+                 </property>
+                </column>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+            <widget class="QWidget" name="articlesPage">
+             <layout class="QVBoxLayout" name="verticalLayout_articles">
+              <property name="spacing">
+               <number>16</number>
+              </property>
+              <property name="leftMargin">
+               <number>0</number>
+              </property>
+              <property name="topMargin">
+               <number>0</number>
+              </property>
+              <property name="rightMargin">
+               <number>0</number>
+              </property>
+              <property name="bottomMargin">
+               <number>0</number>
+              </property>
+              <item alignment="Qt::AlignmentFlag::AlignHCenter">
+               <widget class="QLabel" name="articlesTitle">
+                <property name="styleSheet">
+                 <string notr="true">color: #291C0E; font-family: 'Times New Roman', serif; font-size: 22px; font-weight: bold;</string>
+                </property>
+                <property name="text">
+                 <string>GESTION DES ARTICLES</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QWidget" name="statsContainerArticle" native="true">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>65</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>65</height>
+                 </size>
+                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_statsArticle">
+                 <property name="spacing">
+                  <number>15</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QFrame" name="statsCardArticle1">
+                   <property name="frameShape">
+                    <enum>QFrame::Shape::StyledPanel</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_statsArticle1">
+                    <item>
+                     <widget class="QLabel" name="statsLabelArticle1">
+                      <property name="text">
+                       <string>Total Articles</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="statsValueArticle1">
+                      <property name="text">
+                       <string>0</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="statsCardArticle2">
+                   <property name="frameShape">
+                    <enum>QFrame::Shape::StyledPanel</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_statsArticle2">
+                    <item>
+                     <widget class="QLabel" name="statsLabelArticle2">
+                      <property name="text">
+                       <string>Disponibles</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="statsValueArticle2">
+                      <property name="text">
+                       <string>0</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="statsCardArticle3">
+                   <property name="frameShape">
+                    <enum>QFrame::Shape::StyledPanel</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_statsArticle3">
+                    <item>
+                     <widget class="QLabel" name="statsLabelArticle3">
+                      <property name="text">
+                       <string>En Production</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="statsValueArticle3">
+                      <property name="text">
+                       <string>0</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_statsArticle">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QWidget" name="articlesToolbar" native="true">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>42</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>42</height>
+                 </size>
+                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_articles">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLineEdit" name="searchBoxArticle">
+                   <property name="minimumSize">
+                    <size>
+                     <width>300</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="placeholderText">
+                    <string>🔍 Rechercher par référence, nom, catégorie...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_articles">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnAddArticle">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>➕ AJOUTER</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnEditArticle">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>✏️ MODIFIER</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnDeleteArticle">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>🗑️ SUPPRIMER</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnViewArticle">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>👁️ CONSULTER</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnExportPdfArticle">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>📄 CATALOGUE</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnAnalyseRentabilite">
+                   <property name="minimumSize">
+                    <size>
+                     <width>160</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>📊 ANALYSE RENTABILITÉ</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnAideDecision">
+                   <property name="minimumSize">
+                    <size>
+                     <width>140</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>💡 AIDE DÉCISION</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <widget class="QTableWidget" name="articleTable">
+                <property name="enabled">
+                 <bool>true</bool>
+                </property>
+                <property name="editTriggers">
+                 <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+                </property>
+                <property name="alternatingRowColors">
+                 <bool>true</bool>
+                </property>
+                <property name="selectionBehavior">
+                 <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+                </property>
+                <property name="showGrid">
+                 <bool>true</bool>
+                </property>
+                <property name="sortingEnabled">
+                 <bool>true</bool>
+                </property>
+                <attribute name="horizontalHeaderStretchLastSection">
+                 <bool>true</bool>
+                </attribute>
+                <column>
+                 <property name="text">
+                  <string>ID</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>RÉFÉRENCE</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>NOM</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>CATÉGORIE</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>TYPE</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>COULEUR</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>DIMENSIONS</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>PRIX UNITAIRE</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>COÛT FABRICATION</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>STATUT</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
+                  <string>DATE CRÉATION</string>
                  </property>
                 </column>
                </widget>

@@ -5,6 +5,7 @@
 #include "matieredialog.h"
 #include "fournisseurdialog.h"
 #include "productiondialog.h"
+#include "articledialog.h"
 #include <QTableWidgetItem>
 #include <QDebug>
 #include <QMessageBox>
@@ -17,6 +18,7 @@
 #include <QDialogButtonBox>
 #include <QDateEdit>
 #include <QPrinter>
+#include <QPageLayout>
 #include <QPainter>
 #include <QFileDialog>
 #include <QTextDocument>
@@ -26,6 +28,10 @@
 #include <QTextStream>
 #include <QStringConverter>
 #include <QMap>
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDateTime>
 #include <algorithm>
 #include <cstdlib>
 #include <QtCharts/QChartView>
@@ -141,10 +147,85 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnFactureProduction, &QPushButton::clicked, this, &MainWindow::onFactureProduction);
     connect(ui->btnExcelProduction, &QPushButton::clicked, this, &MainWindow::onExcelProduction);
     connect(ui->searchBoxProduction, &QLineEdit::textChanged, this, &MainWindow::onRechercherProduction);
+    
+    // Setup articles database and table
+    if (connectArticleDatabase()) {
+        setupArticleTable();
+        // Ajouter des données d'exemple si la table est vide
+        QSqlQuery checkQuery("SELECT COUNT(*) FROM ARTICLE", articleDB);
+        if (checkQuery.next() && checkQuery.value(0).toInt() == 0) {
+            // Insérer des articles d'exemple
+            QSqlQuery insertQuery(articleDB);
+            
+            struct ArticleData {
+                QString reference;
+                QString nom;
+                QString categorie;
+                QString type;
+                QString couleur;
+                QString dimensions;
+                double prix;
+                double cout;
+                QString statut;
+            };
+            
+            ArticleData articles[] = {
+                {"ART-2024-0001", "Sac à Main Classique", "Sacs", "Sac à main", "Noir", "30x25x10cm", 89.99, 45.00, "disponible"},
+                {"ART-2024-0002", "Portefeuille Cuir Premium", "Portefeuilles", "Portefeuille long", "Marron", "19x10x2cm", 45.50, 22.00, "disponible"},
+                {"ART-2024-0003", "Ceinture Homme Élégante", "Ceintures", "Ceinture classique", "Noir", "110x3.5cm", 35.00, 18.00, "disponible"},
+                {"ART-2024-0004", "Sac Bandoulière Femme", "Sacs", "Sac bandoulière", "Beige", "28x20x8cm", 75.00, 38.00, "en_production"},
+                {"ART-2024-0005", "Porte-Cartes Compact", "Accessoires", "Porte-cartes", "Bleu Marine", "11x7x1cm", 25.00, 12.00, "disponible"},
+                {"ART-2024-0006", "Sac à Dos Urbain", "Sacs", "Sac à dos", "Gris", "40x30x15cm", 120.00, 60.00, "disponible"},
+                {"ART-2024-0007", "Ceinture Femme Tressée", "Ceintures", "Ceinture tressée", "Camel", "95x2.5cm", 42.00, 20.00, "disponible"},
+                {"ART-2024-0008", "Portefeuille Compact", "Portefeuilles", "Portefeuille court", "Noir", "11x9x2cm", 32.00, 16.00, "disponible"},
+                {"ART-2024-0009", "Sac Shopping Grande Taille", "Sacs", "Cabas", "Rouge", "45x35x15cm", 95.00, 48.00, "en_production"},
+                {"ART-2024-0010", "Étui Lunettes Luxe", "Accessoires", "Étui", "Marron", "16x7x4cm", 28.00, 14.00, "disponible"},
+                {"ART-2024-0011", "Ceinture Réversible", "Ceintures", "Ceinture réversible", "Noir/Marron", "115x3.5cm", 55.00, 28.00, "disponible"},
+                {"ART-2024-0012", "Sac Soirée Élégant", "Sacs", "Pochette", "Or", "25x15x5cm", 65.00, 32.00, "disponible"},
+                {"ART-2024-0013", "Porte-Monnaie Vintage", "Accessoires", "Porte-monnaie", "Vert", "12x8x2cm", 22.00, 11.00, "obsolete"},
+                {"ART-2024-0014", "Sac Messager Homme", "Sacs", "Besace", "Marron Foncé", "35x28x10cm", 110.00, 55.00, "disponible"},
+                {"ART-2024-0015", "Bracelet Cuir Artisanal", "Accessoires", "Bracelet", "Noir", "22x2cm", 18.00, 9.00, "disponible"}
+            };
+            
+            for (const auto& article : articles) {
+                insertQuery.prepare(R"(
+                    INSERT INTO ARTICLE (Reference, Nom, Categorie, Type, Couleur,
+                                       Dimensions, Prix_unitaire, Cout_fabrication, Statut, Date_creation)
+                    VALUES (:ref, :nom, :cat, :type, :couleur, :dim, :prix, :cout, :statut, :date)
+                )");
+                
+                insertQuery.bindValue(":ref", article.reference);
+                insertQuery.bindValue(":nom", article.nom);
+                insertQuery.bindValue(":cat", article.categorie);
+                insertQuery.bindValue(":type", article.type);
+                insertQuery.bindValue(":couleur", article.couleur);
+                insertQuery.bindValue(":dim", article.dimensions);
+                insertQuery.bindValue(":prix", article.prix);
+                insertQuery.bindValue(":cout", article.cout);
+                insertQuery.bindValue(":statut", article.statut);
+                insertQuery.bindValue(":date", QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+                
+                if (!insertQuery.exec()) {
+                    qDebug() << "Erreur insertion article:" << insertQuery.lastError().text();
+                }
+            }
+            
+            qDebug() << "15 articles d'exemple ajoutés à la base de données";
+            // Recharger le tableau avec les nouvelles données
+            loadArticlesFromDB();
+            updateArticleStatistics();
+        }
+    } else {
+        QMessageBox::warning(this, "Erreur Base de Données",
+            "Impossible de se connecter à la base de données des articles.");
+    }
 }
 
 MainWindow::~MainWindow()
 {
+    if (articleDB.isOpen()) {
+        articleDB.close();
+    }
     delete ui;
 }
 
@@ -209,24 +290,25 @@ void MainWindow::on_btnClients_clicked()
 
 void MainWindow::on_btnProducts_clicked()
 {
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Module en développement");
-    msgBox.setText("Gestion des Produits");
-    msgBox.setInformativeText("Ce module sera disponible prochainement.\n\n"
-                              "Fonctionnalités prévues :\n"
-                              "• Ajout et modification\n"
-                              "• Recherche et filtrage\n"
-                              "• Export des données\n"
-                              "• Rapports et statistiques");
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setStyleSheet(
-        "QMessageBox { background-color: #FAF5F0; }"
-        "QMessageBox QLabel { color: #291C0E; font-family: Arial, sans-serif; font-size: 12px; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
-        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
-        "QPushButton:hover { background-color: #A0826D; }"
+    // Switch to articles page (index 5)
+    ui->stackedWidget->setCurrentIndex(5);
+    
+    // Hide profile panel for articles module
+    ui->profilePanel->setVisible(false);
+    
+    // Update button styles
+    ui->btnEmployees->setStyleSheet("");
+    ui->btnClients->setStyleSheet("");
+    ui->btnProducts->setStyleSheet(
+        "QPushButton { background-color: #6E473B; color: #FFFFFF; border-left: 3px solid #FFFFFF; }"
     );
-    msgBox.exec();
+    ui->btnRawMaterials->setStyleSheet("");
+    ui->btnSuppliers->setStyleSheet("");
+    ui->btnProduction->setStyleSheet("");
+    
+    setWindowTitle("CUIREA - Gestion des Articles");
+    
+    qDebug() << "Switched to Articles module";
 }
 
 /* REMOVED - Commandes button deleted
@@ -2391,4 +2473,935 @@ QPixmap MainWindow::generateQRCode(const QString &text, int size)
     QPixmap placeholder(size, size);
     placeholder.fill(Qt::white);
     return placeholder;
+}
+
+// ============================================
+// ARTICLES MANAGEMENT METHODS
+// ============================================
+
+bool MainWindow::connectArticleDatabase()
+{
+    articleDB = QSqlDatabase::addDatabase("QSQLITE", "articlesConnection");
+    articleDB.setDatabaseName("articles.db");
+    
+    if (!articleDB.open()) {
+        qDebug() << "Erreur de connexion à la base articles:" << articleDB.lastError().text();
+        return false;
+    }
+    
+    // Créer la table si elle n'existe pas
+    QSqlQuery query(articleDB);
+    QString createTable = R"(
+        CREATE TABLE IF NOT EXISTS ARTICLE (
+            Id_article INTEGER PRIMARY KEY AUTOINCREMENT,
+            Reference TEXT NOT NULL UNIQUE,
+            Nom TEXT NOT NULL,
+            Categorie TEXT,
+            Type TEXT,
+            Couleur TEXT,
+            Dimensions TEXT,
+            Prix_unitaire REAL,
+            Cout_fabrication REAL,
+            Statut TEXT DEFAULT 'disponible',
+            Date_creation TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+    )";
+    
+    if (!query.exec(createTable)) {
+        qDebug() << "Erreur création table ARTICLE:" << query.lastError().text();
+        return false;
+    }
+    
+    qDebug() << "Base de données articles connectée avec succès";
+    return true;
+}
+
+void MainWindow::setupArticleTable()
+{
+    // Configuration du tableau
+    ui->articleTable->setColumnCount(11);
+    ui->articleTable->setHorizontalHeaderLabels({
+        "ID", "Référence", "Nom", "Catégorie", "Type", "Couleur",
+        "Dimensions", "Prix Unitaire", "Coût Fabrication", "Statut", "Date Création"
+    });
+    
+    ui->articleTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ui->articleTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->articleTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    ui->articleTable->verticalHeader()->setVisible(false);
+    
+    // Charger les données
+    loadArticlesFromDB();
+    updateArticleStatistics();
+}
+
+void MainWindow::loadArticlesFromDB()
+{
+    ui->articleTable->setRowCount(0);
+    
+    QSqlQuery query("SELECT * FROM ARTICLE ORDER BY Id_article DESC", articleDB);
+    
+    int row = 0;
+    while (query.next()) {
+        ui->articleTable->insertRow(row);
+        
+        ui->articleTable->setItem(row, 0, new QTableWidgetItem(query.value("Id_article").toString()));
+        ui->articleTable->setItem(row, 1, new QTableWidgetItem(query.value("Reference").toString()));
+        ui->articleTable->setItem(row, 2, new QTableWidgetItem(query.value("Nom").toString()));
+        ui->articleTable->setItem(row, 3, new QTableWidgetItem(query.value("Categorie").toString()));
+        ui->articleTable->setItem(row, 4, new QTableWidgetItem(query.value("Type").toString()));
+        ui->articleTable->setItem(row, 5, new QTableWidgetItem(query.value("Couleur").toString()));
+        ui->articleTable->setItem(row, 6, new QTableWidgetItem(query.value("Dimensions").toString()));
+        ui->articleTable->setItem(row, 7, new QTableWidgetItem(
+            QString::number(query.value("Prix_unitaire").toDouble(), 'f', 2) + " €"));
+        ui->articleTable->setItem(row, 8, new QTableWidgetItem(
+            QString::number(query.value("Cout_fabrication").toDouble(), 'f', 2) + " €"));
+        ui->articleTable->setItem(row, 9, new QTableWidgetItem(query.value("Statut").toString()));
+        ui->articleTable->setItem(row, 10, new QTableWidgetItem(query.value("Date_creation").toString()));
+        
+        row++;
+    }
+}
+
+void MainWindow::refreshArticleTable()
+{
+    loadArticlesFromDB();
+    updateArticleStatistics();
+}
+
+void MainWindow::updateArticleStatistics()
+{
+    // Total articles
+    QSqlQuery queryTotal("SELECT COUNT(*) FROM ARTICLE", articleDB);
+    if (queryTotal.next()) {
+        ui->statsValueArticle1->setText(queryTotal.value(0).toString());
+    }
+    
+    // Articles disponibles
+    QSqlQuery queryDisponible("SELECT COUNT(*) FROM ARTICLE WHERE Statut = 'disponible'", articleDB);
+    if (queryDisponible.next()) {
+        ui->statsValueArticle2->setText(queryDisponible.value(0).toString());
+    }
+    
+    // Articles en production
+    QSqlQuery queryProduction("SELECT COUNT(*) FROM ARTICLE WHERE Statut = 'en_production'", articleDB);
+    if (queryProduction.next()) {
+        ui->statsValueArticle3->setText(queryProduction.value(0).toString());
+    }
+}
+
+void MainWindow::on_btnAddArticle_clicked()
+{
+    ArticleDialog dialog(this, ArticleDialog::AddMode);
+    
+    // Générer une référence automatique
+    QSqlQuery query("SELECT MAX(Id_article) FROM ARTICLE", articleDB);
+    int nextId = 1;
+    if (query.next()) {
+        nextId = query.value(0).toInt() + 1;
+    }
+    QString reference = QString("ART-%1-%2")
+        .arg(QDate::currentDate().year())
+        .arg(nextId, 4, 10, QChar('0'));
+    
+    dialog.setArticleData(reference, "", "Sacs", "", "", "", 0.0, 0.0, "disponible");
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        // Insérer dans la base de données
+        QSqlQuery insertQuery(articleDB);
+        insertQuery.prepare(R"(
+            INSERT INTO ARTICLE (Reference, Nom, Categorie, Type, Couleur,
+                               Dimensions, Prix_unitaire, Cout_fabrication, Statut, Date_creation)
+            VALUES (:ref, :nom, :cat, :type, :couleur, :dim, :prix, :cout, :statut, :date)
+        )");
+        
+        insertQuery.bindValue(":ref", dialog.getReference());
+        insertQuery.bindValue(":nom", dialog.getNom());
+        insertQuery.bindValue(":cat", dialog.getCategorie());
+        insertQuery.bindValue(":type", dialog.getType());
+        insertQuery.bindValue(":couleur", dialog.getCouleur());
+        insertQuery.bindValue(":dim", dialog.getDimensions());
+        insertQuery.bindValue(":prix", dialog.getPrixUnitaire());
+        insertQuery.bindValue(":cout", dialog.getCoutFabrication());
+        insertQuery.bindValue(":statut", dialog.getStatut());
+        insertQuery.bindValue(":date", QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss"));
+        
+        if (insertQuery.exec()) {
+            QMessageBox::information(this, "Succès", "Article créé avec succès !");
+            refreshArticleTable();
+        } else {
+            QMessageBox::critical(this, "Erreur", 
+                "Erreur lors de la création: " + insertQuery.lastError().text());
+        }
+    }
+}
+
+void MainWindow::on_btnEditArticle_clicked()
+{
+    int currentRow = ui->articleTable->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, "Aucune sélection",
+                           "Veuillez sélectionner un article à modifier.");
+        return;
+    }
+    
+    ArticleDialog dialog(this, ArticleDialog::EditMode);
+    
+    // Charger les données actuelles
+    int idArticle = ui->articleTable->item(currentRow, 0)->text().toInt();
+    QString reference = ui->articleTable->item(currentRow, 1)->text();
+    QString nom = ui->articleTable->item(currentRow, 2)->text();
+    QString categorie = ui->articleTable->item(currentRow, 3)->text();
+    QString type = ui->articleTable->item(currentRow, 4)->text();
+    QString couleur = ui->articleTable->item(currentRow, 5)->text();
+    QString dimensions = ui->articleTable->item(currentRow, 6)->text();
+    QString prixStr = ui->articleTable->item(currentRow, 7)->text();
+    QString coutStr = ui->articleTable->item(currentRow, 8)->text();
+    QString statut = ui->articleTable->item(currentRow, 9)->text();
+    
+    double prix = prixStr.remove(" €").toDouble();
+    double cout = coutStr.remove(" €").toDouble();
+    
+    dialog.setArticleData(reference, nom, categorie, type, couleur, dimensions, prix, cout, statut);
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        // Mettre à jour dans la base de données
+        QSqlQuery updateQuery(articleDB);
+        updateQuery.prepare(R"(
+            UPDATE ARTICLE SET
+                Reference = :ref,
+                Nom = :nom,
+                Categorie = :cat,
+                Type = :type,
+                Couleur = :couleur,
+                Dimensions = :dim,
+                Prix_unitaire = :prix,
+                Cout_fabrication = :cout,
+                Statut = :statut
+            WHERE Id_article = :id
+        )");
+        
+        updateQuery.bindValue(":ref", dialog.getReference());
+        updateQuery.bindValue(":nom", dialog.getNom());
+        updateQuery.bindValue(":cat", dialog.getCategorie());
+        updateQuery.bindValue(":type", dialog.getType());
+        updateQuery.bindValue(":couleur", dialog.getCouleur());
+        updateQuery.bindValue(":dim", dialog.getDimensions());
+        updateQuery.bindValue(":prix", dialog.getPrixUnitaire());
+        updateQuery.bindValue(":cout", dialog.getCoutFabrication());
+        updateQuery.bindValue(":statut", dialog.getStatut());
+        updateQuery.bindValue(":id", idArticle);
+        
+        if (updateQuery.exec()) {
+            QMessageBox::information(this, "Succès", "Article modifié avec succès !");
+            refreshArticleTable();
+        } else {
+            QMessageBox::critical(this, "Erreur",
+                "Erreur lors de la modification: " + updateQuery.lastError().text());
+        }
+    }
+}
+
+void MainWindow::on_btnDeleteArticle_clicked()
+{
+    int currentRow = ui->articleTable->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, "Aucune sélection",
+                           "Veuillez sélectionner un article à supprimer.");
+        return;
+    }
+    
+    ArticleDialog dialog(this, ArticleDialog::DeleteMode);
+    
+    // Charger les données actuelles
+    int idArticle = ui->articleTable->item(currentRow, 0)->text().toInt();
+    QString reference = ui->articleTable->item(currentRow, 1)->text();
+    QString nom = ui->articleTable->item(currentRow, 2)->text();
+    QString categorie = ui->articleTable->item(currentRow, 3)->text();
+    QString type = ui->articleTable->item(currentRow, 4)->text();
+    QString couleur = ui->articleTable->item(currentRow, 5)->text();
+    QString dimensions = ui->articleTable->item(currentRow, 6)->text();
+    QString prixStr = ui->articleTable->item(currentRow, 7)->text();
+    QString coutStr = ui->articleTable->item(currentRow, 8)->text();
+    QString statut = ui->articleTable->item(currentRow, 9)->text();
+    
+    double prix = prixStr.remove(" €").toDouble();
+    double cout = coutStr.remove(" €").toDouble();
+    
+    dialog.setArticleData(reference, nom, categorie, type, couleur, dimensions, prix, cout, statut);
+    
+    if (dialog.exec() == QDialog::Accepted) {
+        // Supprimer de la base de données
+        QSqlQuery deleteQuery(articleDB);
+        deleteQuery.prepare("DELETE FROM ARTICLE WHERE Id_article = :id");
+        deleteQuery.bindValue(":id", idArticle);
+        
+        if (deleteQuery.exec()) {
+            QMessageBox::information(this, "Succès", "Article supprimé avec succès !");
+            refreshArticleTable();
+        } else {
+            QMessageBox::critical(this, "Erreur",
+                "Erreur lors de la suppression: " + deleteQuery.lastError().text());
+        }
+    }
+}
+
+void MainWindow::on_btnViewArticle_clicked()
+{
+    int currentRow = ui->articleTable->currentRow();
+    if (currentRow < 0) {
+        QMessageBox::warning(this, "Aucune sélection",
+                           "Veuillez sélectionner un article à consulter.");
+        return;
+    }
+    
+    ArticleDialog dialog(this, ArticleDialog::ViewMode);
+    
+    // Charger les données actuelles
+    QString reference = ui->articleTable->item(currentRow, 1)->text();
+    QString nom = ui->articleTable->item(currentRow, 2)->text();
+    QString categorie = ui->articleTable->item(currentRow, 3)->text();
+    QString type = ui->articleTable->item(currentRow, 4)->text();
+    QString couleur = ui->articleTable->item(currentRow, 5)->text();
+    QString dimensions = ui->articleTable->item(currentRow, 6)->text();
+    QString prixStr = ui->articleTable->item(currentRow, 7)->text();
+    QString coutStr = ui->articleTable->item(currentRow, 8)->text();
+    QString statut = ui->articleTable->item(currentRow, 9)->text();
+    
+    double prix = prixStr.remove(" €").toDouble();
+    double cout = coutStr.remove(" €").toDouble();
+    
+    dialog.setArticleData(reference, nom, categorie, type, couleur, dimensions, prix, cout, statut);
+    dialog.exec();
+}
+
+void MainWindow::on_searchBoxArticle_textChanged(const QString &text)
+{
+    QString searchText = text.toLower();
+    
+    if (searchText.isEmpty()) {
+        for (int row = 0; row < ui->articleTable->rowCount(); ++row) {
+            ui->articleTable->setRowHidden(row, false);
+        }
+        return;
+    }
+    
+    // Rechercher dans toutes les colonnes
+    for (int row = 0; row < ui->articleTable->rowCount(); ++row) {
+        bool match = false;
+        
+        for (int col = 0; col < ui->articleTable->columnCount(); ++col) {
+            QTableWidgetItem* item = ui->articleTable->item(row, col);
+            if (item && item->text().toLower().contains(searchText)) {
+                match = true;
+                break;
+            }
+        }
+        
+        ui->articleTable->setRowHidden(row, !match);
+    }
+}
+
+void MainWindow::on_btnExportPdfArticle_clicked()
+{
+    // Demander à l'utilisateur où enregistrer le PDF
+    QString fileName = QFileDialog::getSaveFileName(this,
+        "Exporter le catalogue des articles en PDF",
+        QDir::homePath() + "/Catalogue_Articles.pdf",
+        "Fichiers PDF (*.pdf)");
+    
+    if (fileName.isEmpty()) {
+        return; // L'utilisateur a annulé
+    }
+    
+    // Créer le document PDF
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(fileName);
+    printer.setPageSize(QPageSize::A4);
+    printer.setPageOrientation(QPageLayout::Portrait);
+    printer.setPageMargins(QMarginsF(15, 15, 15, 15), QPageLayout::Millimeter);
+    
+    // Créer le document HTML pour le PDF
+    QString html = R"(
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    color: #291C0E;
+                }
+                h1 {
+                    text-align: center;
+                    color: #8D6E63;
+                    font-size: 28px;
+                    margin-bottom: 10px;
+                    border-bottom: 3px solid #8D6E63;
+                    padding-bottom: 10px;
+                }
+                .header-info {
+                    text-align: center;
+                    color: #666;
+                    font-size: 12px;
+                    margin-bottom: 20px;
+                }
+                .stats {
+                    background-color: #FFF8F0;
+                    border: 2px solid #BCAAA4;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    display: flex;
+                    justify-content: space-around;
+                }
+                .stat-item {
+                    text-align: center;
+                }
+                .stat-label {
+                    font-size: 11px;
+                    color: #666;
+                    margin-bottom: 5px;
+                }
+                .stat-value {
+                    font-size: 24px;
+                    font-weight: bold;
+                    color: #8D6E63;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin-top: 20px;
+                    font-size: 10px;
+                }
+                th {
+                    background-color: #8D6E63;
+                    color: white;
+                    padding: 10px 5px;
+                    text-align: left;
+                    font-weight: bold;
+                    font-size: 9px;
+                }
+                td {
+                    padding: 8px 5px;
+                    border-bottom: 1px solid #F0E6DA;
+                }
+                tr:nth-child(even) {
+                    background-color: #FFF8F0;
+                }
+                tr:hover {
+                    background-color: #F5EDE3;
+                }
+                .status-disponible {
+                    color: #2E7D32;
+                    font-weight: bold;
+                }
+                .status-production {
+                    color: #F57C00;
+                    font-weight: bold;
+                }
+                .status-obsolete {
+                    color: #C62828;
+                    font-weight: bold;
+                }
+                .footer {
+                    margin-top: 30px;
+                    text-align: center;
+                    font-size: 10px;
+                    color: #999;
+                    border-top: 1px solid #DDD;
+                    padding-top: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <h1>📦 CATALOGUE DES ARTICLES</h1>
+            <div class="header-info">
+                CUIREA - Management System<br>
+                Date d'export : )" + QDateTime::currentDateTime().toString("dd/MM/yyyy à HH:mm") + R"(
+            </div>
+    )";
+    
+    // Ajouter les statistiques
+    QSqlQuery statsQuery(articleDB);
+    int totalArticles = 0, disponibles = 0, enProduction = 0;
+    
+    statsQuery.exec("SELECT COUNT(*) FROM ARTICLE");
+    if (statsQuery.next()) totalArticles = statsQuery.value(0).toInt();
+    
+    statsQuery.exec("SELECT COUNT(*) FROM ARTICLE WHERE Statut = 'disponible'");
+    if (statsQuery.next()) disponibles = statsQuery.value(0).toInt();
+    
+    statsQuery.exec("SELECT COUNT(*) FROM ARTICLE WHERE Statut = 'en_production'");
+    if (statsQuery.next()) enProduction = statsQuery.value(0).toInt();
+    
+    html += R"(
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">Total Articles</div>
+                    <div class="stat-value">)" + QString::number(totalArticles) + R"(</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Disponibles</div>
+                    <div class="stat-value">)" + QString::number(disponibles) + R"(</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">En Production</div>
+                    <div class="stat-value">)" + QString::number(enProduction) + R"(</div>
+                </div>
+            </div>
+    )";
+    
+    // Ajouter le tableau des articles
+    html += R"(
+            <table>
+                <thead>
+                    <tr>
+                        <th>Réf.</th>
+                        <th>Nom</th>
+                        <th>Catégorie</th>
+                        <th>Type</th>
+                        <th>Couleur</th>
+                        <th>Dimensions</th>
+                        <th>Prix (€)</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+    )";
+    
+    // Récupérer tous les articles
+    QSqlQuery query("SELECT * FROM ARTICLE ORDER BY Reference", articleDB);
+    
+    while (query.next()) {
+        QString reference = query.value("Reference").toString();
+        QString nom = query.value("Nom").toString();
+        QString categorie = query.value("Categorie").toString();
+        QString type = query.value("Type").toString();
+        QString couleur = query.value("Couleur").toString();
+        QString dimensions = query.value("Dimensions").toString();
+        double prix = query.value("Prix_unitaire").toDouble();
+        QString statut = query.value("Statut").toString();
+        
+        QString statutClass = "status-disponible";
+        QString statutText = "Disponible";
+        if (statut == "en_production") {
+            statutClass = "status-production";
+            statutText = "En Production";
+        } else if (statut == "obsolete") {
+            statutClass = "status-obsolete";
+            statutText = "Obsolète";
+        }
+        
+        html += QString(R"(
+                    <tr>
+                        <td>%1</td>
+                        <td><strong>%2</strong></td>
+                        <td>%3</td>
+                        <td>%4</td>
+                        <td>%5</td>
+                        <td>%6</td>
+                        <td>%7</td>
+                        <td class="%8">%9</td>
+                    </tr>
+        )").arg(reference, nom, categorie, type, couleur, dimensions,
+                QString::number(prix, 'f', 2), statutClass, statutText);
+    }
+    
+    html += R"(
+                </tbody>
+            </table>
+            <div class="footer">
+                Document généré automatiquement par CUIREA Management System<br>
+                © 2024 - Tous droits réservés
+            </div>
+        </body>
+        </html>
+    )";
+    
+    // Créer le document et l'imprimer en PDF
+    QTextDocument document;
+    document.setHtml(html);
+    document.print(&printer);
+    
+    QMessageBox::information(this, "Export réussi",
+        QString("Le catalogue des articles a été exporté avec succès !\n\nFichier : %1").arg(fileName));
+}
+
+void MainWindow::on_btnAnalyseRentabilite_clicked()
+{
+    // Créer un dialog personnalisé pour l'analyse de rentabilité
+    QDialog *dialog = new QDialog(this);
+    dialog->setWindowTitle("📊 Analyse de Rentabilité des Articles");
+    dialog->setMinimumSize(900, 600);
+    
+    QVBoxLayout *mainLayout = new QVBoxLayout(dialog);
+    
+    // Titre
+    QLabel *titleLabel = new QLabel("ANALYSE DE RENTABILITÉ", dialog);
+    titleLabel->setStyleSheet("font-size: 20px; font-weight: bold; color: #8D6E63; padding: 10px;");
+    titleLabel->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(titleLabel);
+    
+    // Description
+    QLabel *descLabel = new QLabel(
+        "Comparaison entre le coût de fabrication et le prix de vente pour chaque article.\n"
+        "La marge bénéficiaire est calculée automatiquement.", dialog);
+    descLabel->setStyleSheet("font-size: 11px; color: #666; padding: 5px; background-color: #FFF8F0; border-radius: 5px;");
+    descLabel->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(descLabel);
+    
+    // Tableau d'analyse
+    QTableWidget *table = new QTableWidget(dialog);
+    table->setColumnCount(7);
+    table->setHorizontalHeaderLabels({
+        "Référence", "Nom", "Coût Fabrication", "Prix Vente", 
+        "Marge (€)", "Marge (%)", "Rentabilité"
+    });
+    
+    table->setStyleSheet(R"(
+        QTableWidget {
+            background-color: #FFFFFF;
+            border: 2px solid #BCAAA4;
+            border-radius: 8px;
+            gridline-color: #F0E6DA;
+            font-size: 11px;
+        }
+        QTableWidget::item {
+            padding: 8px;
+            border-bottom: 1px solid #F0E6DA;
+        }
+        QTableWidget::item:selected {
+            background-color: #8D6E63;
+            color: white;
+        }
+        QHeaderView::section {
+            background-color: #8D6E63;
+            color: white;
+            padding: 10px;
+            border: none;
+            font-weight: bold;
+            font-size: 11px;
+        }
+    )");
+    
+    table->horizontalHeader()->setStretchLastSection(true);
+    table->setAlternatingRowColors(true);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->verticalHeader()->setVisible(false);
+    
+    // Récupérer les données des articles
+    QSqlQuery query("SELECT Reference, Nom, Cout_fabrication, Prix_unitaire FROM ARTICLE ORDER BY Reference", articleDB);
+    
+    int row = 0;
+    double totalMarge = 0;
+    int articlesRentables = 0;
+    int articlesNonRentables = 0;
+    
+    while (query.next()) {
+        table->insertRow(row);
+        
+        QString reference = query.value("Reference").toString();
+        QString nom = query.value("Nom").toString();
+        double cout = query.value("Cout_fabrication").toDouble();
+        double prix = query.value("Prix_unitaire").toDouble();
+        
+        double marge = prix - cout;
+        double margePourcent = (cout > 0) ? (marge / cout * 100) : 0;
+        totalMarge += marge;
+        
+        QString rentabilite;
+        QString rentabiliteColor;
+        if (margePourcent >= 50) {
+            rentabilite = "⭐ Excellente";
+            rentabiliteColor = "#2E7D32"; // Vert foncé
+            articlesRentables++;
+        } else if (margePourcent >= 30) {
+            rentabilite = "✓ Bonne";
+            rentabiliteColor = "#388E3C"; // Vert
+            articlesRentables++;
+        } else if (margePourcent >= 15) {
+            rentabilite = "~ Moyenne";
+            rentabiliteColor = "#F57C00"; // Orange
+        } else if (margePourcent > 0) {
+            rentabilite = "⚠ Faible";
+            rentabiliteColor = "#E65100"; // Orange foncé
+            articlesNonRentables++;
+        } else {
+            rentabilite = "✗ Non rentable";
+            rentabiliteColor = "#C62828"; // Rouge
+            articlesNonRentables++;
+        }
+        
+        table->setItem(row, 0, new QTableWidgetItem(reference));
+        table->setItem(row, 1, new QTableWidgetItem(nom));
+        table->setItem(row, 2, new QTableWidgetItem(QString::number(cout, 'f', 2) + " €"));
+        table->setItem(row, 3, new QTableWidgetItem(QString::number(prix, 'f', 2) + " €"));
+        table->setItem(row, 4, new QTableWidgetItem(QString::number(marge, 'f', 2) + " €"));
+        table->setItem(row, 5, new QTableWidgetItem(QString::number(margePourcent, 'f', 1) + " %"));
+        
+        QTableWidgetItem *rentabiliteItem = new QTableWidgetItem(rentabilite);
+        rentabiliteItem->setForeground(QBrush(QColor(rentabiliteColor)));
+        QFont font = rentabiliteItem->font();
+        font.setBold(true);
+        rentabiliteItem->setFont(font);
+        table->setItem(row, 6, rentabiliteItem);
+        
+        row++;
+    }
+    
+    mainLayout->addWidget(table);
+    
+    // Résumé statistique
+    QFrame *summaryFrame = new QFrame(dialog);
+    summaryFrame->setStyleSheet("background-color: #FFF8F0; border: 2px solid #BCAAA4; border-radius: 8px; padding: 15px;");
+    QHBoxLayout *summaryLayout = new QHBoxLayout(summaryFrame);
+    
+    QLabel *totalMargeLabel = new QLabel(QString("💰 Marge Totale: <b>%1 €</b>").arg(QString::number(totalMarge, 'f', 2)), dialog);
+    totalMargeLabel->setStyleSheet("font-size: 13px; color: #291C0E;");
+    
+    QLabel *rentablesLabel = new QLabel(QString("✓ Articles Rentables: <b style='color: #2E7D32;'>%1</b>").arg(articlesRentables), dialog);
+    rentablesLabel->setStyleSheet("font-size: 13px; color: #291C0E;");
+    
+    QLabel *nonRentablesLabel = new QLabel(QString("✗ Articles Non Rentables: <b style='color: #C62828;'>%1</b>").arg(articlesNonRentables), dialog);
+    nonRentablesLabel->setStyleSheet("font-size: 13px; color: #291C0E;");
+    
+    summaryLayout->addWidget(totalMargeLabel);
+    summaryLayout->addWidget(rentablesLabel);
+    summaryLayout->addWidget(nonRentablesLabel);
+    summaryLayout->addStretch();
+    
+    mainLayout->addWidget(summaryFrame);
+    
+    // Bouton Fermer
+    QPushButton *closeBtn = new QPushButton("Fermer", dialog);
+    closeBtn->setStyleSheet(R"(
+        QPushButton {
+            background-color: #8D6E63;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 30px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #A0826D;
+        }
+    )");
+    connect(closeBtn, &QPushButton::clicked, dialog, &QDialog::accept);
+    
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(closeBtn);
+    mainLayout->addLayout(btnLayout);
+    
+    dialog->exec();
+    delete dialog;
+}
+
+void MainWindow::on_btnAideDecision_clicked()
+{
+    // Créer un dialog personnalisé pour l'aide à la décision
+    QDialog *dialog = new QDialog(this);
+    dialog->setWindowTitle("💡 Aide à la Décision - Priorisation des Articles");
+    dialog->setMinimumSize(900, 600);
+    
+    QVBoxLayout *mainLayout = new QVBoxLayout(dialog);
+    
+    // Titre
+    QLabel *titleLabel = new QLabel("AIDE À LA DÉCISION", dialog);
+    titleLabel->setStyleSheet("font-size: 20px; font-weight: bold; color: #8D6E63; padding: 10px;");
+    titleLabel->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(titleLabel);
+    
+    // Description
+    QLabel *descLabel = new QLabel(
+        "Suggestions d'articles à prioriser selon la demande estimée, la disponibilité et la rentabilité.\n"
+        "Les articles sont classés par score de priorité (basé sur marge, statut et catégorie).", dialog);
+    descLabel->setStyleSheet("font-size: 11px; color: #666; padding: 5px; background-color: #FFF8F0; border-radius: 5px;");
+    descLabel->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(descLabel);
+    
+    // Tableau de suggestions
+    QTableWidget *table = new QTableWidget(dialog);
+    table->setColumnCount(7);
+    table->setHorizontalHeaderLabels({
+        "Priorité", "Référence", "Nom", "Catégorie", 
+        "Marge (%)", "Statut", "Recommandation"
+    });
+    
+    table->setStyleSheet(R"(
+        QTableWidget {
+            background-color: #FFFFFF;
+            border: 2px solid #BCAAA4;
+            border-radius: 8px;
+            gridline-color: #F0E6DA;
+            font-size: 11px;
+        }
+        QTableWidget::item {
+            padding: 8px;
+            border-bottom: 1px solid #F0E6DA;
+        }
+        QTableWidget::item:selected {
+            background-color: #8D6E63;
+            color: white;
+        }
+        QHeaderView::section {
+            background-color: #8D6E63;
+            color: white;
+            padding: 10px;
+            border: none;
+            font-weight: bold;
+            font-size: 11px;
+        }
+    )");
+    
+    table->horizontalHeader()->setStretchLastSection(true);
+    table->setAlternatingRowColors(true);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->verticalHeader()->setVisible(false);
+    
+    // Récupérer et analyser les articles
+    QSqlQuery query("SELECT Reference, Nom, Categorie, Cout_fabrication, Prix_unitaire, Statut FROM ARTICLE", articleDB);
+    
+    struct ArticlePriority {
+        QString reference;
+        QString nom;
+        QString categorie;
+        double margePourcent;
+        QString statut;
+        int score;
+        QString recommandation;
+    };
+    
+    QList<ArticlePriority> articles;
+    
+    while (query.next()) {
+        ArticlePriority article;
+        article.reference = query.value("Reference").toString();
+        article.nom = query.value("Nom").toString();
+        article.categorie = query.value("Categorie").toString();
+        double cout = query.value("Cout_fabrication").toDouble();
+        double prix = query.value("Prix_unitaire").toDouble();
+        article.statut = query.value("Statut").toString();
+        
+        double marge = prix - cout;
+        article.margePourcent = (cout > 0) ? (marge / cout * 100) : 0;
+        
+        // Calcul du score de priorité (0-100)
+        article.score = 0;
+        
+        // Score basé sur la marge (0-40 points)
+        if (article.margePourcent >= 50) article.score += 40;
+        else if (article.margePourcent >= 30) article.score += 30;
+        else if (article.margePourcent >= 15) article.score += 20;
+        else if (article.margePourcent > 0) article.score += 10;
+        
+        // Score basé sur le statut (0-30 points)
+        if (article.statut == "disponible") article.score += 30;
+        else if (article.statut == "en_production") article.score += 15;
+        
+        // Score basé sur la catégorie (0-30 points) - Sacs et Portefeuilles prioritaires
+        if (article.categorie == "Sacs") article.score += 30;
+        else if (article.categorie == "Portefeuilles") article.score += 25;
+        else if (article.categorie == "Ceintures") article.score += 20;
+        else article.score += 15;
+        
+        // Générer la recommandation
+        if (article.score >= 80) {
+            article.recommandation = "🔥 PRIORITÉ MAXIMALE - Forte demande";
+        } else if (article.score >= 60) {
+            article.recommandation = "⭐ PRIORITÉ HAUTE - Bon potentiel";
+        } else if (article.score >= 40) {
+            article.recommandation = "✓ PRIORITÉ MOYENNE - À considérer";
+        } else {
+            article.recommandation = "⚠ PRIORITÉ BASSE - Réviser stratégie";
+        }
+        
+        articles.append(article);
+    }
+    
+    // Trier par score décroissant
+    std::sort(articles.begin(), articles.end(), [](const ArticlePriority &a, const ArticlePriority &b) {
+        return a.score > b.score;
+    });
+    
+    // Remplir le tableau
+    for (int i = 0; i < articles.size(); ++i) {
+        table->insertRow(i);
+        
+        const ArticlePriority &article = articles[i];
+        
+        // Priorité avec couleur
+        QTableWidgetItem *prioriteItem = new QTableWidgetItem(QString::number(i + 1));
+        if (i < 3) {
+            prioriteItem->setBackground(QBrush(QColor("#FFD700"))); // Or
+            prioriteItem->setForeground(QBrush(QColor("#000000")));
+        } else if (i < 7) {
+            prioriteItem->setBackground(QBrush(QColor("#C0C0C0"))); // Argent
+        }
+        QFont font = prioriteItem->font();
+        font.setBold(true);
+        prioriteItem->setFont(font);
+        table->setItem(i, 0, prioriteItem);
+        
+        table->setItem(i, 1, new QTableWidgetItem(article.reference));
+        table->setItem(i, 2, new QTableWidgetItem(article.nom));
+        table->setItem(i, 3, new QTableWidgetItem(article.categorie));
+        table->setItem(i, 4, new QTableWidgetItem(QString::number(article.margePourcent, 'f', 1) + " %"));
+        
+        QString statutText = article.statut == "disponible" ? "✓ Disponible" : 
+                            article.statut == "en_production" ? "⚙ En production" : "✗ Obsolète";
+        table->setItem(i, 5, new QTableWidgetItem(statutText));
+        
+        QTableWidgetItem *recommandationItem = new QTableWidgetItem(article.recommandation);
+        QFont recFont = recommandationItem->font();
+        recFont.setBold(true);
+        recommandationItem->setFont(recFont);
+        table->setItem(i, 6, recommandationItem);
+    }
+    
+    mainLayout->addWidget(table);
+    
+    // Résumé
+    QFrame *summaryFrame = new QFrame(dialog);
+    summaryFrame->setStyleSheet("background-color: #FFF8F0; border: 2px solid #BCAAA4; border-radius: 8px; padding: 15px;");
+    QVBoxLayout *summaryLayout = new QVBoxLayout(summaryFrame);
+    
+    QLabel *infoLabel = new QLabel(
+        "💡 <b>Conseil :</b> Les 3 premiers articles (en or) sont fortement recommandés pour la production immédiate.<br>"
+        "📊 Le score de priorité est calculé selon : Marge (40%) + Disponibilité (30%) + Catégorie (30%)", dialog);
+    infoLabel->setStyleSheet("font-size: 11px; color: #291C0E;");
+    infoLabel->setWordWrap(true);
+    summaryLayout->addWidget(infoLabel);
+    
+    mainLayout->addWidget(summaryFrame);
+    
+    // Bouton Fermer
+    QPushButton *closeBtn = new QPushButton("Fermer", dialog);
+    closeBtn->setStyleSheet(R"(
+        QPushButton {
+            background-color: #8D6E63;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 30px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #A0826D;
+        }
+    )");
+    connect(closeBtn, &QPushButton::clicked, dialog, &QDialog::accept);
+    
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(closeBtn);
+    mainLayout->addLayout(btnLayout);
+    
+    dialog->exec();
+    delete dialog;
 }

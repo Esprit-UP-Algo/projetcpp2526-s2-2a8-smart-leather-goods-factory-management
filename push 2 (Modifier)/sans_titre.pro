@@ -1,8 +1,11 @@
-QT       += core gui charts printsupport
+QT       += core gui charts printsupport sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
+
+TARGET = CUIREA_Management
+TEMPLATE = app
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -18,7 +21,9 @@ SOURCES += \
     fournisseur.cpp \
     fournisseurdialog.cpp \
     production.cpp \
-    productiondialog.cpp
+    productiondialog.cpp \
+    article.cpp \
+    articledialog.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -30,7 +35,9 @@ HEADERS += \
     fournisseur.h \
     fournisseurdialog.h \
     production.h \
-    productiondialog.h
+    productiondialog.h \
+    article.h \
+    articledialog.h
 
 FORMS += \
     mainwindow.ui

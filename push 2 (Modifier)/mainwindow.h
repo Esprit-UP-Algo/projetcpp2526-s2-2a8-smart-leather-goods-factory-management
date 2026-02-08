@@ -4,9 +4,11 @@
 #include <QMainWindow>
 #include <QVector>
 #include <QPushButton>  // Needed for QPushButton
+#include <QSqlDatabase>
 #include "client.h"
 #include "matiere.h"
 #include "fournisseur.h"
+#include "article.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -94,12 +96,23 @@ private slots:
     void on_btnExportFournisseur_clicked();
     void on_searchBoxFournisseur_textChanged(const QString &text);
 
+    // Articles Management slots
+    void on_btnAddArticle_clicked();
+    void on_btnEditArticle_clicked();
+    void on_btnDeleteArticle_clicked();
+    void on_btnViewArticle_clicked();
+    void on_btnExportPdfArticle_clicked();
+    void on_btnAnalyseRentabilite_clicked();
+    void on_btnAideDecision_clicked();
+    void on_searchBoxArticle_textChanged(const QString &text);
+
 private:
     Ui::MainWindow *ui;
     QVector<Client> clients;
     QList<Fournisseur> fournisseurs;
     QList<FournisseurData> fournisseursData;  // Liste des fournisseurs pour la page
     QList<MouvementStock> historiqueMouvements;
+    QSqlDatabase articleDB;  // Base de données pour les articles
     bool isEditMode;
     int editingRow;
 
@@ -135,6 +148,13 @@ private:
     void setupFournisseurTable();
     void refreshFournisseurTable();
     void updateFournisseurStatistics();
+
+    // Articles Management methods
+    void setupArticleTable();
+    void refreshArticleTable();
+    void updateArticleStatistics();
+    void loadArticlesFromDB();
+    bool connectArticleDatabase();
 
     // Production Management methods
     void setupProductionTable();
