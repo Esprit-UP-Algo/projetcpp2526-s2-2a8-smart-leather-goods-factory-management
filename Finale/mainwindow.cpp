@@ -114,8 +114,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnExportMatiere, &QPushButton::clicked, this, &MainWindow::onExportMatiere);
     // --- New Client Section Buttons ---
     connect(ui->btnAIAgent, &QPushButton::clicked, this, &MainWindow::on_btnAIAgent_clicked);
-    connect(ui->btnStatsRegion, &QPushButton::clicked, this, &MainWindow::on_btnStatsByRegion_clicked);
-    connect(ui->btnFidelityClass, &QPushButton::clicked, this, &MainWindow::on_btnFidelityClassification_clicked);
+    connect(ui->btnStatsByRegion, &QPushButton::clicked, this, &MainWindow::on_btnStatsByRegion_clicked);
+    connect(ui->btnFidelityClassification, &QPushButton::clicked, this, &MainWindow::on_btnFidelityClassification_clicked);
 
     
     // Start with employee module (page 0)
@@ -311,29 +311,7 @@ void MainWindow::on_btnProducts_clicked()
     qDebug() << "Switched to Articles module";
 }
 
-/* REMOVED - Commandes button deleted
-void MainWindow::on_btnOrders_clicked()
-{
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Module en développement");
-    msgBox.setText("Gestion des Commandes");
-    msgBox.setInformativeText("Ce module sera disponible prochainement.\n\n"
-                              "Fonctionnalités prévues :\n"
-                              "• Ajout et modification\n"
-                              "• Recherche et filtrage\n"
-                              "• Export des données\n"
-                              "• Rapports et statistiques");
-    msgBox.setIcon(QMessageBox::Information);
-    msgBox.setStyleSheet(
-        "QMessageBox { background-color: #FAF5F0; }"
-        "QMessageBox QLabel { color: #291C0E; font-family: Arial, sans-serif; font-size: 12px; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 6px; "
-        "padding: 8px 20px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; min-width: 80px; }"
-        "QPushButton:hover { background-color: #A0826D; }"
-    );
-    msgBox.exec();
-}
-*/
+
 
 void MainWindow::on_btnRawMaterials_clicked()
 {
@@ -1321,76 +1299,21 @@ void MainWindow::on_searchBoxFournisseur_textChanged(const QString &text)
 }
 void MainWindow::on_btnAIAgent_clicked()
 {
-    QMessageBox::information(this, "Agent IA",
-                             "🔍 Permet de rechercher rapidement un client dans la base de données.");
+    QMessageBox::information(this, "Agent IA", "🔍 Permet de rechercher rapidement un client dans la base de données.");
+    QMessageBox msgBox(this);
 
-    QString buttonStyle =
-        "QPushButton {"
-        "  background-color: #8D6E63;"
-        "  color: white;"
-        "  border: none;"
-        "  border-radius: 10px;"
-        "  padding: 10px 20px;"
-        "  font-family: Arial, sans-serif;"
-        "  font-size: 12px;"
-        "  font-weight: bold;"
-        "  text-align: center;"
-        "}"
-        "QPushButton:hover {"
-        "  background-color: #A98273;" // slightly lighter on hover
-        "}";
-
-    ui->btnAIAgent->setStyleSheet(buttonStyle);
 }
 
 void MainWindow::on_btnStatsByRegion_clicked()
 {
-    QMessageBox::information(this, "Statistiques par Région",
-                             "📊 Affiche le nombre de clients par région (statistiques simples).");
+    QMessageBox::information(this, "Statistiques par Région", "📊 Affiche le nombre de clients par région (statistiques simples).");
 
-    QString buttonStyle =
-        "QPushButton {"
-        "  background-color: #8D6E63;"
-        "  color: white;"
-        "  border: none;"
-        "  border-radius: 10px;"
-        "  padding: 10px 20px;"
-        "  font-family: Arial, sans-serif;"
-        "  font-size: 12px;"
-        "  font-weight: bold;"
-        "  text-align: center;"
-        "}"
-        "QPushButton:hover {"
-        "  background-color: #A98273;" // slightly lighter on hover
-        "}";
-
-    ui->btnStatsRegion->setStyleSheet(buttonStyle);
 }
 
 void MainWindow::on_btnFidelityClassification_clicked()
 {
-    QMessageBox::information(this, "Classification Fidélité",
-                             "🏆 Classe les clients selon leur fidélité (nombre de commandes).");
-
-    QString buttonStyle =
-        "QPushButton {"
-        "  background-color: #8D6E63;"
-        "  color: white;"
-        "  border: none;"
-        "  border-radius: 10px;"
-        "  padding: 10px 20px;"
-        "  font-family: Arial, sans-serif;"
-        "  font-size: 12px;"
-        "  font-weight: bold;"
-        "  text-align: center;"
-        "}"
-        "QPushButton:hover {"
-        "  background-color: #A98273;" // slightly lighter on hover
-        "}";
-
-    ui->btnFidelityClass->setStyleSheet(buttonStyle);
+    QMessageBox::information(this, "Classification Fidélité","🏆 Classe les clients selon leur fidélité (nombre de commandes).");
 }
-
 
 
 

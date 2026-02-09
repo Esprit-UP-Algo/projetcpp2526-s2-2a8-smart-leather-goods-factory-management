@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1580</width>
+    <width>1720</width>
     <height>850</height>
    </rect>
   </property>
@@ -1124,14 +1124,50 @@ Management</string>
                   </spacer>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="btnFidelityClass">
+                  <widget class="QPushButton" name="btnFidelityClassification">
+                   <property name="styleSheet">
+                    <string notr="true">QPushButton {
+  background-color: #8D6E63;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+QPushButton:hover {
+  background-color: #A98273;
+}
+</string>
+                   </property>
                    <property name="text">
                     <string>Fidelité</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="btnStatsRegion">
+                  <widget class="QPushButton" name="btnStatsByRegion">
+                   <property name="styleSheet">
+                    <string notr="true">QPushButton {
+  background-color: #8D6E63;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+QPushButton:hover {
+  background-color: #A98273;
+}
+</string>
+                   </property>
                    <property name="text">
                     <string>StatsReigon</string>
                    </property>
@@ -1139,6 +1175,24 @@ Management</string>
                  </item>
                  <item>
                   <widget class="QPushButton" name="btnAIAgent">
+                   <property name="styleSheet">
+                    <string notr="true">QPushButton {
+  background-color: #8D6E63;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-family: Arial, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+}
+
+QPushButton:hover {
+  background-color: #A98273;
+}
+</string>
+                   </property>
                    <property name="text">
                     <string>Agent IA</string>
                    </property>
