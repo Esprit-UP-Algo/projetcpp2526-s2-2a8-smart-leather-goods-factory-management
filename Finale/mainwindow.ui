@@ -914,7 +914,7 @@ Management</string>
                     </size>
                    </property>
                    <property name="text">
-                    <string>+ Add</string>
+                    <string>+ Ajouter</string>
                    </property>
                   </widget>
                  </item>
@@ -927,7 +927,7 @@ Management</string>
                     </size>
                    </property>
                    <property name="text">
-                    <string>✎ Edit</string>
+                    <string>✎ Modifier</string>
                    </property>
                   </widget>
                  </item>
@@ -940,7 +940,7 @@ Management</string>
                     </size>
                    </property>
                    <property name="text">
-                    <string>✕ Delete</string>
+                    <string>✕ Supprimer</string>
                    </property>
                   </widget>
                  </item>
@@ -1169,7 +1169,7 @@ QPushButton:hover {
 </string>
                    </property>
                    <property name="text">
-                    <string>StatsReigon</string>
+                    <string>StatsRegion</string>
                    </property>
                   </widget>
                  </item>
@@ -1207,7 +1207,7 @@ QPushButton:hover {
                     </size>
                    </property>
                    <property name="text">
-                    <string>+ Add</string>
+                    <string>+Ajouter</string>
                    </property>
                   </widget>
                  </item>
@@ -1220,7 +1220,7 @@ QPushButton:hover {
                     </size>
                    </property>
                    <property name="text">
-                    <string>✎ Edit</string>
+                    <string>✎Modifier</string>
                    </property>
                   </widget>
                  </item>
@@ -1233,7 +1233,7 @@ QPushButton:hover {
                     </size>
                    </property>
                    <property name="text">
-                    <string>✕ Delete</string>
+                    <string>✕ Supprimer</string>
                    </property>
                   </widget>
                  </item>
