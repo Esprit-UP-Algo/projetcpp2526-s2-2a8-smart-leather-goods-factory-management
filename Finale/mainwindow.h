@@ -65,6 +65,8 @@ private slots:
     void onRechercherProduction(const QString &text);
     void onProductionTableContextMenu(const QPoint &pos);
     void onSupprimerProduction();
+    void onStatistiquesProduction();
+    void onTrierProduction();
 
     // Raw Materials Management slots
     void onAddMatiere();
@@ -94,6 +96,8 @@ private slots:
     void on_btnEditFournisseur_clicked();
     void on_btnDeleteFournisseur_clicked();
     void on_btnExportFournisseur_clicked();
+    void on_btnStatsFournisseur_clicked();
+    void on_btnTriFournisseur_clicked();
     void on_searchBoxFournisseur_textChanged(const QString &text);
 
     // Articles Management slots
@@ -162,6 +166,9 @@ private:
     void ajouterCommandeProduction(const QString &ref, const QString &client, const QString &type,
                                    const QString &montant, const QString &dateCreation,
                                    const QString &dateLivraison, const QString &statut, const QString &priorite);
+    void updateProductionStatistics();
+    void updateProductionStatsCards();
+    void afficherStatistiquesModernes();
     QPixmap generateQRCode(const QString &text, int size = 200);
 };
 

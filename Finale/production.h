@@ -3,6 +3,8 @@
 
 #include <QString>
 #include <QDate>
+#include <QList>
+#include <QMap>
 
 class ProductionData
 {
@@ -34,6 +36,79 @@ public:
     void setResponsable(const QString &value) { responsable = value; }
     void setPriorite(const QString &value) { priorite = value; }
 
+    // ========== MÉTIERS BASIQUES : GESTION DES COMMANDES ==========
+    
+    // a) Recherche et filtrage
+    static QList<ProductionData> rechercherParDate(const QList<ProductionData> &liste, 
+                                                     const QDate &dateDebut, 
+                                                     const QDate &dateFin);
+    
+    static QList<ProductionData> rechercherParStatut(const QList<ProductionData> &liste, 
+                                                       const QString &statut);
+    
+    static QList<ProductionData> rechercherParPriorite(const QList<ProductionData> &liste,
+                                                         const QString &priorite);
+    
+    static QList<ProductionData> rechercherParResponsable(const QList<ProductionData> &liste,
+                                                            const QString &responsable);
+    
+    // b) Suivi des délais et priorités
+    static QList<ProductionData> obtenirProductionsUrgentes(const QList<ProductionData> &liste);
+    
+    static QList<ProductionData> obtenirProductionsEnRetard(const QList<ProductionData> &liste);
+    
+    static QList<ProductionData> obtenirProductionsARisque(const QList<ProductionData> &liste, 
+                                                             int joursAlerte = 3);
+    
+    static int compterProductionsParStatut(const QList<ProductionData> &liste, 
+                                            const QString &statut);
+    
+    // c) Analyse commerciale / Reporting
+    static int calculerQuantiteTotale(const QList<ProductionData> &liste, 
+                                       const QString &statut = "Terminé");
+    
+    static QMap<QString, int> statistiquesParProduit(const QList<ProductionData> &liste);
+    
+    static QMap<QString, int> statistiquesParStatut(const QList<ProductionData> &liste);
+    
+    static QMap<QString, int> statistiquesParResponsable(const QList<ProductionData> &liste);
+    
+    static double calculerTauxAchevementGlobal(const QList<ProductionData> &liste);
+    
+    static QMap<QString, double> calculerTauxAchevementParProduit(const QList<ProductionData> &liste);
+    
+    // d) Tri et organisation
+    static void trierParPriorite(QList<ProductionData> &liste, bool decroissant = true);
+    
+    static void trierParQuantite(QList<ProductionData> &liste, bool decroissant = true);
+    
+    static void trierParDateDebut(QList<ProductionData> &liste, bool decroissant = false);
+    
+    static void trierParDateFin(QList<ProductionData> &liste, bool decroissant = false);
+    
+    // ========== MÉTIERS INNOVANTS : VALEUR AJOUTÉE ==========
+    
+    // a) Traçabilité / Suivi QR Code
+    QString genererQRCodeData() const;
+    
+    QString genererQRCodeComplet() const;
+    
+    // b) Alerte prédictive / Retard
+    bool estEnRetard() const;
+    
+    bool estARisque(int joursAlerte = 3) const;
+    
+    int joursAvantEcheance() const;
+    
+    QString getAlerteRetard() const;
+    
+    QString getNiveauUrgence() const;
+    
+    // c) Validation et contrôle qualité
+    bool estValide() const;
+    
+    QStringList obtenirProblemes() const;
+
 private:
     QString id;
     QString reference;
@@ -44,6 +119,9 @@ private:
     QDate dateFin;
     QString responsable;
     QString priorite;
+    
+    // Helper pour convertir priorité en valeur numérique
+    static int prioriteToInt(const QString &priorite);
 };
 
 #endif // PRODUCTION_H
