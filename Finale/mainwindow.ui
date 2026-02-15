@@ -252,7 +252,7 @@ QPushButton#btnAddClient:pressed, QPushButton#btnEditClient:pressed, QPushButton
 }
 
 /* Primary Action Buttons - Raw Materials Module */
-QPushButton#btnAddMatiere, QPushButton#btnEditMatiere, QPushButton#btnDeleteMatiere, QPushButton#btnExportMatiere, QPushButton#btnSuggestion, QPushButton#btnOptimisation, QPushButton#btnRecherche, QPushButton#btnFournisseurs {
+QPushButton#btnAddMatiere, QPushButton#btnEditMatiere, QPushButton#btnDeleteMatiere, QPushButton#btnExportMatiere, QPushButton#btnSuggestion, QPushButton#btnOptimisation, QPushButton#btnRecherche, QPushButton#btnFournisseurs, QPushButton#btnStatistiques, QPushButton#btnTri {
     background-color: #8D6E63;
     color: white;
     border: none;
@@ -264,12 +264,12 @@ QPushButton#btnAddMatiere, QPushButton#btnEditMatiere, QPushButton#btnDeleteMati
     text-align: center;
 }
 
-QPushButton#btnAddMatiere:hover, QPushButton#btnEditMatiere:hover, QPushButton#btnDeleteMatiere:hover, QPushButton#btnExportMatiere:hover, QPushButton#btnSuggestion:hover, QPushButton#btnOptimisation:hover, QPushButton#btnRecherche:hover, QPushButton#btnFournisseurs:hover {
+QPushButton#btnAddMatiere:hover, QPushButton#btnEditMatiere:hover, QPushButton#btnDeleteMatiere:hover, QPushButton#btnExportMatiere:hover, QPushButton#btnSuggestion:hover, QPushButton#btnOptimisation:hover, QPushButton#btnRecherche:hover, QPushButton#btnFournisseurs:hover, QPushButton#btnStatistiques:hover, QPushButton#btnTri:hover {
     background-color: #A0826D;
     border: none;
 }
 
-QPushButton#btnAddMatiere:pressed, QPushButton#btnEditMatiere:pressed, QPushButton#btnDeleteMatiere:pressed, QPushButton#btnExportMatiere:pressed, QPushButton#btnSuggestion:pressed, QPushButton#btnOptimisation:pressed, QPushButton#btnRecherche:pressed, QPushButton#btnFournisseurs:pressed {
+QPushButton#btnAddMatiere:pressed, QPushButton#btnEditMatiere:pressed, QPushButton#btnDeleteMatiere:pressed, QPushButton#btnExportMatiere:pressed, QPushButton#btnSuggestion:pressed, QPushButton#btnOptimisation:pressed, QPushButton#btnRecherche:pressed, QPushButton#btnFournisseurs:pressed, QPushButton#btnStatistiques:pressed, QPushButton#btnTri:pressed {
     background-color: #6E473B;
     border: none;
     padding: 11px 20px 9px 20px;
@@ -1491,22 +1491,81 @@ QPushButton:hover {
                </widget>
               </item>
               <item>
-               <widget class="QLineEdit" name="searchBoxMatiere">
+               <widget class="QWidget" name="searchContainerMatiere" native="true">
                 <property name="minimumSize">
                  <size>
-                  <width>400</width>
-                  <height>0</height>
+                  <width>0</width>
+                  <height>42</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
-                  <width>400</width>
-                  <height>16777215</height>
+                  <width>16777215</width>
+                  <height>42</height>
                  </size>
                 </property>
-                <property name="placeholderText">
-                 <string>Rechercher une matière première...</string>
-                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_search">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QLineEdit" name="searchBoxMatiere">
+                   <property name="minimumSize">
+                    <size>
+                     <width>400</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>400</width>
+                     <height>16777215</height>
+                    </size>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Rechercher une matière première...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnRecherche">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>🔍 Recherche</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_search">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
                </widget>
               </item>
               <item>
@@ -1618,7 +1677,7 @@ QPushButton:hover {
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="btnRecherche">
+                  <widget class="QPushButton" name="btnStatistiques">
                    <property name="minimumSize">
                     <size>
                      <width>120</width>
@@ -1626,7 +1685,20 @@ QPushButton:hover {
                     </size>
                    </property>
                    <property name="text">
-                    <string>🔍 Recherche</string>
+                    <string>📊 Statistiques</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnTri">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>⇅ Tri</string>
                    </property>
                   </widget>
                  </item>

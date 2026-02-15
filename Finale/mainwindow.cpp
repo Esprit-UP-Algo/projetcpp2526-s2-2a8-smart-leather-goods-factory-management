@@ -111,6 +111,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnSuggestion, &QPushButton::clicked, this, &MainWindow::onSuggestionCommande);
     connect(ui->btnOptimisation, &QPushButton::clicked, this, &MainWindow::onOptimisationFIFO);
     connect(ui->btnRecherche, &QPushButton::clicked, this, &MainWindow::onRechercheTriMatiere);
+    connect(ui->btnStatistiques, &QPushButton::clicked, this, &MainWindow::onStatistiquesMatiere);
+    connect(ui->btnTri, &QPushButton::clicked, this, &MainWindow::onTriMatiere);
     connect(ui->btnFournisseurs, &QPushButton::clicked, this, &MainWindow::onGestionFournisseurs);
     connect(ui->btnExportMatiere, &QPushButton::clicked, this, &MainWindow::onExportMatiere);
     // --- New Client Section Buttons ---
@@ -945,6 +947,32 @@ void MainWindow::onRechercheTriMatiere()
         "• Filtrer par type\n"
         "• Trier par date d'expiration\n"
         "• Filtrer par niveau de stock\n\n"
+        "Disponible dans la prochaine version.");
+}
+
+void MainWindow::onStatistiquesMatiere()
+{
+    QMessageBox::information(this, "Statistiques", 
+        "📊 Statistiques des Matières Premières\n\n"
+        "Cette fonctionnalité affichera:\n"
+        "• Graphiques de consommation\n"
+        "• Analyse des tendances\n"
+        "• Prévisions de stock\n"
+        "• Coûts par matière\n"
+        "• Taux de rotation\n\n"
+        "Disponible dans la prochaine version.");
+}
+
+void MainWindow::onTriMatiere()
+{
+    QMessageBox::information(this, "Tri", 
+        "⇅ Options de Tri\n\n"
+        "Trier les matières par:\n"
+        "• Nom (A-Z / Z-A)\n"
+        "• Date d'expiration (croissant / décroissant)\n"
+        "• Niveau de stock (bas à haut / haut à bas)\n"
+        "• Type de matière\n"
+        "• Seuil d'alerte\n\n"
         "Disponible dans la prochaine version.");
 }
 

@@ -77,6 +77,8 @@ private slots:
     void onSuggestionCommande();
     void onOptimisationFIFO();
     void onRechercheTriMatiere();
+    void onStatistiquesMatiere();
+    void onTriMatiere();
     void onGestionFournisseurs();
     void onGenerateSuggestion();
     void onCloseSuggestion();
