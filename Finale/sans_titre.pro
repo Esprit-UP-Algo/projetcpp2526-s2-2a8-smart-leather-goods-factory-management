@@ -23,7 +23,8 @@ SOURCES += \
     production.cpp \
     productiondialog.cpp \
     article.cpp \
-    articledialog.cpp
+    articledialog.cpp \
+    connection.cpp
 
 HEADERS += \
     mainwindow.h \
@@ -37,7 +38,8 @@ HEADERS += \
     production.h \
     productiondialog.h \
     article.h \
-    articledialog.h
+    articledialog.h \
+    connection.h
 
 FORMS += \
     mainwindow.ui

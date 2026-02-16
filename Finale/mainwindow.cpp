@@ -620,23 +620,46 @@ void MainWindow::onEmployeeSelected()
 
 void MainWindow::setupMatiereTable()
 {
-    ui->matiereTable->setRowCount(3);
+    // Charger les données depuis Oracle
+    QSqlQuery query("SELECT MODULE, REFERENCE, TYPE, QUANTITE, SEUIL, DATE_EXPIRATION FROM MATIERES_PREMIERES");
     
-    // Sample data
-    QStringList row1 = {"Cuir Pleine Fleur", "Peau de Veau", "Peau de Veau", "2.5 m²/jour", "80", "2028-05-31"};
-    QStringList row2 = {"Ficelinée", "Peau de Vachette", "Peau de Vachette", "1.8 m²/jour", "60", "2028-05-31"};
-    QStringList row3 = {"LR-004", "D-oci", "Ficelinée", "15 bobines/jour", "50", "2026-05-31"};
+    // Compter les résultats
+    int rowCount = 0;
+    while (query.next()) {
+        rowCount++;
+    }
     
-    QList<QStringList> rows = {row1, row2, row3};
+    // Réinitialiser la requête
+    query.exec("SELECT MODULE, REFERENCE, TYPE, QUANTITE, SEUIL, DATE_EXPIRATION FROM MATIERES_PREMIERES");
     
-    for (int r = 0; r < rows.size(); ++r) {
-        for (int c = 0; c < rows[r].size(); ++c) {
-            ui->matiereTable->setItem(r, c, new QTableWidgetItem(rows[r][c]));
-        }
+    // Définir le nombre de lignes
+    ui->matiereTable->setRowCount(rowCount);
+    
+    // Remplir le tableau
+    int row = 0;
+    while (query.next()) {
+        QString module = query.value(0).toString();
+        QString reference = query.value(1).toString();
+        QString type = query.value(2).toString();
+        QString quantite = query.value(3).toString();
+        QString seuil = query.value(4).toString();
+        QString dateExp = query.value(5).toDate().toString("yyyy-MM-dd");
+        
+        ui->matiereTable->setItem(row, 0, new QTableWidgetItem(module));
+        ui->matiereTable->setItem(row, 1, new QTableWidgetItem(reference));
+        ui->matiereTable->setItem(row, 2, new QTableWidgetItem(type));
+        ui->matiereTable->setItem(row, 3, new QTableWidgetItem(quantite));
+        ui->matiereTable->setItem(row, 4, new QTableWidgetItem(seuil));
+        ui->matiereTable->setItem(row, 5, new QTableWidgetItem(dateExp));
+        
+        row++;
     }
     
     ui->matiereTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->matiereTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    
+    // Mettre à jour les statistiques
+    updateMatiereStatistics();
 }
 
 void MainWindow::setupSuggestionTable()
@@ -686,19 +709,25 @@ void MainWindow::onAddMatiere()
 {
     MatiereDialog dialog(this, MatiereDialog::AddMode);
     if (dialog.exec() == QDialog::Accepted) {
-        // Add to table
-        int row = ui->matiereTable->rowCount();
-        ui->matiereTable->insertRow(row);
+        // Insérer dans Oracle
+        QSqlQuery query;
+        query.prepare("INSERT INTO MATIERES_PREMIERES (MODULE, REFERENCE, TYPE, QUANTITE, SEUIL, DATE_EXPIRATION) "
+                     "VALUES (:module, :reference, :type, :quantite, :seuil, TO_DATE(:dateExp, 'YYYY-MM-DD'))");
         
-        ui->matiereTable->setItem(row, 0, new QTableWidgetItem(dialog.getModule()));
-        ui->matiereTable->setItem(row, 1, new QTableWidgetItem(dialog.getReference()));
-        ui->matiereTable->setItem(row, 2, new QTableWidgetItem(dialog.getType()));
-        ui->matiereTable->setItem(row, 3, new QTableWidgetItem(dialog.getQuantite()));
-        ui->matiereTable->setItem(row, 4, new QTableWidgetItem(dialog.getSeuil()));
-        ui->matiereTable->setItem(row, 5, new QTableWidgetItem(dialog.getDateExpiration()));
+        query.bindValue(":module", dialog.getModule());
+        query.bindValue(":reference", dialog.getReference());
+        query.bindValue(":type", dialog.getType());
+        query.bindValue(":quantite", dialog.getQuantite());
+        query.bindValue(":seuil", dialog.getSeuil().toInt());
+        query.bindValue(":dateExp", dialog.getDateExpiration());
         
-        // Update statistics
-        updateMatiereStatistics();
+        if (query.exec()) {
+            // Recharger le tableau depuis Oracle
+            setupMatiereTable();
+            QMessageBox::information(this, "Succès", "Matière première ajoutée avec succès!");
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de l'ajout:\n" + query.lastError().text());
+        }
     }
 }
 
@@ -714,9 +743,12 @@ void MainWindow::onEditMatiere()
     MatiereDialog dialog(this, MatiereDialog::EditMode);
     
     // Load current data
+    QString oldModule = ui->matiereTable->item(currentRow, 0)->text();
+    QString oldReference = ui->matiereTable->item(currentRow, 1)->text();
+    
     dialog.setMatiereData(
-        ui->matiereTable->item(currentRow, 0)->text(),
-        ui->matiereTable->item(currentRow, 1)->text(),
+        oldModule,
+        oldReference,
         ui->matiereTable->item(currentRow, 2)->text(),
         ui->matiereTable->item(currentRow, 3)->text(),
         ui->matiereTable->item(currentRow, 4)->text(),
@@ -724,16 +756,30 @@ void MainWindow::onEditMatiere()
     );
     
     if (dialog.exec() == QDialog::Accepted) {
-        // Update table
-        ui->matiereTable->item(currentRow, 0)->setText(dialog.getModule());
-        ui->matiereTable->item(currentRow, 1)->setText(dialog.getReference());
-        ui->matiereTable->item(currentRow, 2)->setText(dialog.getType());
-        ui->matiereTable->item(currentRow, 3)->setText(dialog.getQuantite());
-        ui->matiereTable->item(currentRow, 4)->setText(dialog.getSeuil());
-        ui->matiereTable->item(currentRow, 5)->setText(dialog.getDateExpiration());
+        // Mettre à jour dans Oracle
+        QSqlQuery query;
+        query.prepare("UPDATE MATIERES_PREMIERES SET "
+                     "MODULE = :module, REFERENCE = :reference, TYPE = :type, "
+                     "QUANTITE = :quantite, SEUIL = :seuil, "
+                     "DATE_EXPIRATION = TO_DATE(:dateExp, 'YYYY-MM-DD') "
+                     "WHERE MODULE = :oldModule AND REFERENCE = :oldReference");
         
-        // Update statistics
-        updateMatiereStatistics();
+        query.bindValue(":module", dialog.getModule());
+        query.bindValue(":reference", dialog.getReference());
+        query.bindValue(":type", dialog.getType());
+        query.bindValue(":quantite", dialog.getQuantite());
+        query.bindValue(":seuil", dialog.getSeuil().toInt());
+        query.bindValue(":dateExp", dialog.getDateExpiration());
+        query.bindValue(":oldModule", oldModule);
+        query.bindValue(":oldReference", oldReference);
+        
+        if (query.exec()) {
+            // Recharger le tableau depuis Oracle
+            setupMatiereTable();
+            QMessageBox::information(this, "Succès", "Matière première modifiée avec succès!");
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de la modification:\n" + query.lastError().text());
+        }
     }
 }
 
@@ -749,9 +795,12 @@ void MainWindow::onDeleteMatiere()
     MatiereDialog dialog(this, MatiereDialog::DeleteMode);
     
     // Load current data (read-only)
+    QString module = ui->matiereTable->item(currentRow, 0)->text();
+    QString reference = ui->matiereTable->item(currentRow, 1)->text();
+    
     dialog.setMatiereData(
-        ui->matiereTable->item(currentRow, 0)->text(),
-        ui->matiereTable->item(currentRow, 1)->text(),
+        module,
+        reference,
         ui->matiereTable->item(currentRow, 2)->text(),
         ui->matiereTable->item(currentRow, 3)->text(),
         ui->matiereTable->item(currentRow, 4)->text(),
@@ -759,10 +808,19 @@ void MainWindow::onDeleteMatiere()
     );
     
     if (dialog.exec() == QDialog::Accepted) {
-        ui->matiereTable->removeRow(currentRow);
+        // Supprimer dans Oracle
+        QSqlQuery query;
+        query.prepare("DELETE FROM MATIERES_PREMIERES WHERE MODULE = :module AND REFERENCE = :reference");
+        query.bindValue(":module", module);
+        query.bindValue(":reference", reference);
         
-        // Update statistics
-        updateMatiereStatistics();
+        if (query.exec()) {
+            // Recharger le tableau depuis Oracle
+            setupMatiereTable();
+            QMessageBox::information(this, "Succès", "Matière première supprimée avec succès!");
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de la suppression:\n" + query.lastError().text());
+        }
     }
 }
 
