@@ -5,6 +5,9 @@
 #include <QDate>
 #include <QList>
 #include <QMap>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
 
 class ProductionData
 {
@@ -108,6 +111,21 @@ public:
     bool estValide() const;
     
     QStringList obtenirProblemes() const;
+    
+    // ========== CRUD : OPÉRATIONS BASE DE DONNÉES ==========
+    
+    // Create
+    bool ajouter();
+    
+    // Read
+    static QList<ProductionData> afficher();
+    static ProductionData rechercherParId(const QString &id);
+    
+    // Update
+    bool modifier();
+    
+    // Delete
+    bool supprimer();
 
 private:
     QString id;

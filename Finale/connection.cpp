@@ -17,3 +17,17 @@ bool Connection::createconnect()
     
     return test;
 }
+
+bool Connection::createconnectProduction()
+{
+    bool test = false;
+    QSqlDatabase db = QSqlDatabase::addDatabase("QODBC", "ProductionConnection");
+    db.setDatabaseName("Productionbd"); // Nom de la source de données ODBC
+    db.setUserName("LYNA"); // Nom d'utilisateur Oracle
+    db.setPassword("000"); // Mot de passe
+    
+    if (db.open())
+        test = true;
+    
+    return test;
+}

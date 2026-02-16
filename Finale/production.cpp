@@ -426,3 +426,137 @@ int ProductionData::prioriteToInt(const QString &priorite)
     if (priorite == "Basse" || priorite == "Faible") return 1;
     return 0;
 }
+
+// ========== CRUD : OPÉRATIONS BASE DE DONNÉES ==========
+
+// CREATE : Ajouter une nouvelle production
+bool ProductionData::ajouter()
+{
+    QSqlQuery query(QSqlDatabase::database("ProductionConnection"));
+    
+    query.prepare("INSERT INTO PRODUCTION (ID, REFERENCE, PRODUIT, QUANTITE, STATUT, "
+                  "DATE_DEBUT, DATE_FIN, RESPONSABLE, PRIORITE) "
+                  "VALUES (:id, :reference, :produit, :quantite, :statut, "
+                  ":dateDebut, :dateFin, :responsable, :priorite)");
+    
+    query.bindValue(":id", id);
+    query.bindValue(":reference", reference);
+    query.bindValue(":produit", produit);
+    query.bindValue(":quantite", quantite);
+    query.bindValue(":statut", statut);
+    query.bindValue(":dateDebut", dateDebut);
+    query.bindValue(":dateFin", dateFin);
+    query.bindValue(":responsable", responsable);
+    query.bindValue(":priorite", priorite);
+    
+    if (!query.exec()) {
+        qDebug() << "Erreur lors de l'ajout de la production:" << query.lastError().text();
+        return false;
+    }
+    
+    return true;
+}
+
+// READ : Afficher toutes les productions
+QList<ProductionData> ProductionData::afficher()
+{
+    QList<ProductionData> liste;
+    QSqlQuery query(QSqlDatabase::database("ProductionConnection"));
+    
+    query.prepare("SELECT ID, REFERENCE, PRODUIT, QUANTITE, STATUT, "
+                  "DATE_DEBUT, DATE_FIN, RESPONSABLE, PRIORITE FROM PRODUCTION");
+    
+    if (!query.exec()) {
+        qDebug() << "Erreur lors de la récupération des productions:" << query.lastError().text();
+        return liste;
+    }
+    
+    while (query.next()) {
+        ProductionData prod(
+            query.value(0).toString(),  // ID
+            query.value(1).toString(),  // REFERENCE
+            query.value(2).toString(),  // PRODUIT
+            query.value(3).toString(),  // QUANTITE
+            query.value(4).toString(),  // STATUT
+            query.value(5).toDate(),    // DATE_DEBUT
+            query.value(6).toDate(),    // DATE_FIN
+            query.value(7).toString(),  // RESPONSABLE
+            query.value(8).toString()   // PRIORITE
+        );
+        liste.append(prod);
+    }
+    
+    return liste;
+}
+
+// READ : Rechercher une production par ID
+ProductionData ProductionData::rechercherParId(const QString &id)
+{
+    QSqlQuery query(QSqlDatabase::database("ProductionConnection"));
+    
+    query.prepare("SELECT ID, REFERENCE, PRODUIT, QUANTITE, STATUT, "
+                  "DATE_DEBUT, DATE_FIN, RESPONSABLE, PRIORITE FROM PRODUCTION "
+                  "WHERE ID = :id");
+    query.bindValue(":id", id);
+    
+    if (query.exec() && query.next()) {
+        return ProductionData(
+            query.value(0).toString(),  // ID
+            query.value(1).toString(),  // REFERENCE
+            query.value(2).toString(),  // PRODUIT
+            query.value(3).toString(),  // QUANTITE
+            query.value(4).toString(),  // STATUT
+            query.value(5).toDate(),    // DATE_DEBUT
+            query.value(6).toDate(),    // DATE_FIN
+            query.value(7).toString(),  // RESPONSABLE
+            query.value(8).toString()   // PRIORITE
+        );
+    }
+    
+    qDebug() << "Production non trouvée ou erreur:" << query.lastError().text();
+    return ProductionData();
+}
+
+// UPDATE : Modifier une production existante
+bool ProductionData::modifier()
+{
+    QSqlQuery query(QSqlDatabase::database("ProductionConnection"));
+    
+    query.prepare("UPDATE PRODUCTION SET REFERENCE = :reference, PRODUIT = :produit, "
+                  "QUANTITE = :quantite, STATUT = :statut, DATE_DEBUT = :dateDebut, "
+                  "DATE_FIN = :dateFin, RESPONSABLE = :responsable, PRIORITE = :priorite "
+                  "WHERE ID = :id");
+    
+    query.bindValue(":id", id);
+    query.bindValue(":reference", reference);
+    query.bindValue(":produit", produit);
+    query.bindValue(":quantite", quantite);
+    query.bindValue(":statut", statut);
+    query.bindValue(":dateDebut", dateDebut);
+    query.bindValue(":dateFin", dateFin);
+    query.bindValue(":responsable", responsable);
+    query.bindValue(":priorite", priorite);
+    
+    if (!query.exec()) {
+        qDebug() << "Erreur lors de la modification de la production:" << query.lastError().text();
+        return false;
+    }
+    
+    return true;
+}
+
+// DELETE : Supprimer une production
+bool ProductionData::supprimer()
+{
+    QSqlQuery query(QSqlDatabase::database("ProductionConnection"));
+    
+    query.prepare("DELETE FROM PRODUCTION WHERE ID = :id");
+    query.bindValue(":id", id);
+    
+    if (!query.exec()) {
+        qDebug() << "Erreur lors de la suppression de la production:" << query.lastError().text();
+        return false;
+    }
+    
+    return true;
+}

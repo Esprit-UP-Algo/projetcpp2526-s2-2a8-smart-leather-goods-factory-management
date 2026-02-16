@@ -10,6 +10,7 @@ class Connection
 public:
     Connection();
     bool createconnect();
+    bool createconnectProduction();
 };
 
 #endif // CONNECTION_H

@@ -6,6 +6,7 @@
 #include "fournisseurdialog.h"
 #include "productiondialog.h"
 #include "articledialog.h"
+#include "production.h"
 #include <QTableWidgetItem>
 #include <QDebug>
 #include <QMessageBox>
@@ -1584,27 +1585,23 @@ void MainWindow::loadProductionData()
     // Clear existing data
     ui->productionTable->setRowCount(0);
     
-    // Sample production data
-    ajouterCommandeProduction("PROD-2024-001", "Leather Masters SA", "Sacs en Cuir", "15,500.00 DT", 
-                             "2024-01-15", "2024-02-15", "En Production", "Haute");
-    ajouterCommandeProduction("PROD-2024-002", "Textile Excellence", "Vêtements", "8,200.00 DT", 
-                             "2024-01-18", "2024-02-20", "Planifié", "Moyenne");
-    ajouterCommandeProduction("PROD-2024-003", "Fashion Accessories Ltd", "Accessoires", "3,750.00 DT", 
-                             "2024-01-20", "2024-02-10", "En Production", "Haute");
-    ajouterCommandeProduction("PROD-2024-004", "Premium Bags Co", "Sacs Premium", "22,000.00 DT", 
-                             "2024-01-22", "2024-03-01", "En Attente", "Basse");
-    ajouterCommandeProduction("PROD-2024-005", "Style Clothing", "Collection Été", "12,800.00 DT", 
-                             "2024-01-25", "2024-02-28", "En Production", "Moyenne");
-    ajouterCommandeProduction("PROD-2024-006", "Quality Leather Supply", "Cuir Traité", "9,500.00 DT", 
-                             "2024-01-28", "2024-02-25", "Terminé", "Moyenne");
-    ajouterCommandeProduction("PROD-2024-007", "Modern Textiles", "Tissus Techniques", "6,300.00 DT", 
-                             "2024-02-01", "2024-03-05", "Planifié", "Basse");
-    ajouterCommandeProduction("PROD-2024-008", "Elite Accessories", "Bijoux Mode", "4,200.00 DT", 
-                             "2024-02-03", "2024-02-18", "En Production", "Haute");
-    ajouterCommandeProduction("PROD-2024-009", "Luxury Bags Import", "Sacs Luxe", "28,500.00 DT", 
-                             "2024-02-05", "2024-03-15", "En Attente", "Haute");
-    ajouterCommandeProduction("PROD-2024-010", "Fashion Forward", "Prêt-à-Porter", "11,200.00 DT", 
-                             "2024-02-07", "2024-03-10", "Planifié", "Moyenne");
+    // Charger les données depuis la base de données Oracle
+    QList<ProductionData> productions = ProductionData::afficher();
+    
+    for (const ProductionData &prod : productions) {
+        int row = ui->productionTable->rowCount();
+        ui->productionTable->insertRow(row);
+        
+        ui->productionTable->setItem(row, 0, new QTableWidgetItem(prod.getId()));
+        ui->productionTable->setItem(row, 1, new QTableWidgetItem(prod.getReference()));
+        ui->productionTable->setItem(row, 2, new QTableWidgetItem(prod.getProduit()));
+        ui->productionTable->setItem(row, 3, new QTableWidgetItem(prod.getQuantite()));
+        ui->productionTable->setItem(row, 4, new QTableWidgetItem(prod.getStatut()));
+        ui->productionTable->setItem(row, 5, new QTableWidgetItem(prod.getDateDebut().toString("dd/MM/yyyy")));
+        ui->productionTable->setItem(row, 6, new QTableWidgetItem(prod.getDateFin().toString("dd/MM/yyyy")));
+        ui->productionTable->setItem(row, 7, new QTableWidgetItem(prod.getResponsable()));
+        ui->productionTable->setItem(row, 8, new QTableWidgetItem(prod.getPriorite()));
+    }
     
     // Mettre à jour les cartes de statistiques modernes
     updateProductionStatsCards();
@@ -2300,130 +2297,29 @@ void MainWindow::afficherStatistiquesModernes()
 
 void MainWindow::onCreerProduction()
 {
-    // Créer un dialogue personnalisé
-    QDialog dialog(this);
-    dialog.setWindowTitle("Créer une nouvelle commande");
-    dialog.setMinimumWidth(550);
-    dialog.setStyleSheet(
-        "QDialog { background-color: #FFFFFF; }"
-        "QLabel { color: #2C2416; font-size: 13px; font-weight: 500; }"
-        "QLineEdit { "
-        "   background-color: #F8F8F8; "
-        "   border: 2px solid #E0E0E0; "
-        "   border-radius: 6px; "
-        "   padding: 10px; "
-        "   font-size: 13px; "
-        "   color: #2C2416; "
-        "}"
-        "QLineEdit:focus { "
-        "   border: 2px solid #8D6E63; "
-        "   background-color: #FFFFFF; "
-        "}"
-        "QComboBox { "
-        "   background-color: #F8F8F8; "
-        "   border: 2px solid #E0E0E0; "
-        "   border-radius: 6px; "
-        "   padding: 10px; "
-        "   font-size: 13px; "
-        "   color: #2C2416; "
-        "}"
-        "QComboBox:focus { border: 2px solid #8D6E63; }"
-        "QDateEdit { "
-        "   background-color: #F8F8F8; "
-        "   border: 2px solid #E0E0E0; "
-        "   border-radius: 6px; "
-        "   padding: 10px; "
-        "   font-size: 13px; "
-        "   color: #2C2416; "
-        "}"
-        "QDateEdit:focus { border: 2px solid #8D6E63; }"
-        "QPushButton { "
-        "   background-color: #8D6E63; "
-        "   color: white; "
-        "   border: none; "
-        "   border-radius: 6px; "
-        "   padding: 10px 20px; "
-        "   font-size: 13px; "
-        "   font-weight: 500; "
-        "}"
-        "QPushButton:hover { background-color: #A0826D; }"
-    );
-    
-    QVBoxLayout *mainLayout = new QVBoxLayout(&dialog);
-    mainLayout->setSpacing(20);
-    mainLayout->setContentsMargins(30, 30, 30, 30);
-    
-    QLabel *titre = new QLabel("➕ Créer une nouvelle commande");
-    titre->setStyleSheet("font-size: 20px; font-weight: bold; color: #8D6E63; margin-bottom: 10px;");
-    mainLayout->addWidget(titre);
-    
-    QFormLayout *layout = new QFormLayout();
-    layout->setSpacing(15);
-    layout->setLabelAlignment(Qt::AlignRight);
-    
-    QLineEdit *refEdit = new QLineEdit(&dialog);
-    refEdit->setPlaceholderText("Ex: CMD-2026-009");
-    
-    QLineEdit *clientEdit = new QLineEdit(&dialog);
-    clientEdit->setPlaceholderText("Nom du client");
-    
-    QComboBox *typeCombo = new QComboBox(&dialog);
-    typeCombo->addItems({"Standard", "Express", "Vente", "Devis"});
-    
-    QLineEdit *montantEdit = new QLineEdit(&dialog);
-    montantEdit->setPlaceholderText("Ex: 15000.00");
-    
-    QDateEdit *dateCreationEdit = new QDateEdit(QDate::currentDate(), &dialog);
-    dateCreationEdit->setCalendarPopup(true);
-    dateCreationEdit->setDisplayFormat("dd/MM/yyyy");
-    
-    QDateEdit *dateLivraisonEdit = new QDateEdit(QDate::currentDate().addDays(30), &dialog);
-    dateLivraisonEdit->setCalendarPopup(true);
-    dateLivraisonEdit->setDisplayFormat("dd/MM/yyyy");
-    
-    QComboBox *statutCombo = new QComboBox(&dialog);
-    statutCombo->addItems({"En Attente", "Planifié", "En Production", "Terminé"});
-    
-    QComboBox *prioriteCombo = new QComboBox(&dialog);
-    prioriteCombo->addItems({"Basse", "Normale", "Haute", "Urgente"});
-    prioriteCombo->setCurrentIndex(1);
-    
-    layout->addRow("Référence *:", refEdit);
-    layout->addRow("Client *:", clientEdit);
-    layout->addRow("Type:", typeCombo);
-    layout->addRow("Montant HT *:", montantEdit);
-    layout->addRow("Date Création:", dateCreationEdit);
-    layout->addRow("Date Livraison:", dateLivraisonEdit);
-    layout->addRow("Statut:", statutCombo);
-    layout->addRow("Priorité:", prioriteCombo);
-    
-    mainLayout->addLayout(layout);
-    
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-    buttonLayout->addStretch();
-    QPushButton *btnOk = new QPushButton("✓ Créer");
-    QPushButton *btnCancel = new QPushButton("✗ Annuler");
-    btnCancel->setStyleSheet("QPushButton { background-color: #95877C; } QPushButton:hover { background-color: #A5978C; }");
-    buttonLayout->addWidget(btnOk);
-    buttonLayout->addWidget(btnCancel);
-    mainLayout->addLayout(buttonLayout);
-    
-    connect(btnOk, &QPushButton::clicked, &dialog, &QDialog::accept);
-    connect(btnCancel, &QPushButton::clicked, &dialog, &QDialog::reject);
+    ProductionDialog dialog(this, ProductionDialog::AddMode);
     
     if (dialog.exec() == QDialog::Accepted) {
-        if (refEdit->text().isEmpty() || clientEdit->text().isEmpty() || montantEdit->text().isEmpty()) {
-            QMessageBox::warning(this, "Champs manquants", "Veuillez remplir tous les champs obligatoires (*)");
-            return;
+        // Créer un objet ProductionData avec les données du dialogue
+        ProductionData prod(
+            dialog.getId(),
+            dialog.getReference(),
+            dialog.getProduit(),
+            dialog.getQuantite(),
+            dialog.getStatut(),
+            QDate::fromString(dialog.getDateDebut(), "dd/MM/yyyy"),
+            QDate::fromString(dialog.getDateFin(), "dd/MM/yyyy"),
+            dialog.getResponsable(),
+            dialog.getPriorite()
+        );
+        
+        // Ajouter à la base de données
+        if (prod.ajouter()) {
+            QMessageBox::information(this, "Succès", "Production créée avec succès !");
+            loadProductionData(); // Recharger les données
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de la création de la production.");
         }
-        
-        QString montantFormatted = montantEdit->text() + " DT";
-        ajouterCommandeProduction(refEdit->text(), clientEdit->text(), typeCombo->currentText(),
-                       montantFormatted, dateCreationEdit->date().toString("dd/MM/yyyy"),
-                       dateLivraisonEdit->date().toString("dd/MM/yyyy"),
-                       statutCombo->currentText(), prioriteCombo->currentText());
-        
-        QMessageBox::information(this, "Succès", "Commande créée avec succès !");
     }
 }
 
@@ -2432,131 +2328,46 @@ void MainWindow::onModifierProduction()
     int currentRow = ui->productionTable->currentRow();
     if (currentRow < 0) {
         QMessageBox::warning(this, "Aucune sélection",
-                           "Veuillez sélectionner une commande à modifier.");
+                           "Veuillez sélectionner une production à modifier.");
         return;
     }
     
-    QDialog dialog(this);
-    dialog.setWindowTitle("Modifier la commande");
-    dialog.setMinimumWidth(550);
-    dialog.setStyleSheet(
-        "QDialog { background-color: #FFFFFF; }"
-        "QLabel { color: #2C2416; font-size: 13px; font-weight: 500; }"
-        "QLineEdit { "
-        "   background-color: #F8F8F8; "
-        "   border: 2px solid #E0E0E0; "
-        "   border-radius: 6px; "
-        "   padding: 10px; "
-        "   font-size: 13px; "
-        "   color: #2C2416; "
-        "}"
-        "QLineEdit:focus { border: 2px solid #8D6E63; background-color: #FFFFFF; }"
-        "QComboBox { "
-        "   background-color: #F8F8F8; "
-        "   border: 2px solid #E0E0E0; "
-        "   border-radius: 6px; "
-        "   padding: 10px; "
-        "   font-size: 13px; "
-        "   color: #2C2416; "
-        "}"
-        "QComboBox:focus { border: 2px solid #8D6E63; }"
-        "QDateEdit { "
-        "   background-color: #F8F8F8; "
-        "   border: 2px solid #E0E0E0; "
-        "   border-radius: 6px; "
-        "   padding: 10px; "
-        "   font-size: 13px; "
-        "   color: #2C2416; "
-        "}"
-        "QDateEdit:focus { border: 2px solid #8D6E63; }"
-        "QPushButton { "
-        "   background-color: #8D6E63; "
-        "   color: white; "
-        "   border: none; "
-        "   border-radius: 6px; "
-        "   padding: 10px 20px; "
-        "   font-size: 13px; "
-        "   font-weight: 500; "
-        "}"
-        "QPushButton:hover { background-color: #A0826D; }"
-    );
+    // Récupérer les données de la ligne sélectionnée
+    QString id = ui->productionTable->item(currentRow, 0)->text();
+    QString reference = ui->productionTable->item(currentRow, 1)->text();
+    QString produit = ui->productionTable->item(currentRow, 2)->text();
+    QString quantite = ui->productionTable->item(currentRow, 3)->text();
+    QString statut = ui->productionTable->item(currentRow, 4)->text();
+    QString dateDebut = ui->productionTable->item(currentRow, 5)->text();
+    QString dateFin = ui->productionTable->item(currentRow, 6)->text();
+    QString responsable = ui->productionTable->item(currentRow, 7)->text();
+    QString priorite = ui->productionTable->item(currentRow, 8)->text();
     
-    QVBoxLayout *mainLayout = new QVBoxLayout(&dialog);
-    mainLayout->setSpacing(20);
-    mainLayout->setContentsMargins(30, 30, 30, 30);
-    
-    QLabel *titre = new QLabel("✏️ Modifier la commande");
-    titre->setStyleSheet("font-size: 20px; font-weight: bold; color: #8D6E63; margin-bottom: 10px;");
-    mainLayout->addWidget(titre);
-    
-    QFormLayout *layout = new QFormLayout();
-    layout->setSpacing(15);
-    layout->setLabelAlignment(Qt::AlignRight);
-    
-    QLineEdit *refEdit = new QLineEdit(ui->productionTable->item(currentRow, 1)->text(), &dialog);
-    QLineEdit *clientEdit = new QLineEdit(ui->productionTable->item(currentRow, 2)->text(), &dialog);
-    
-    QComboBox *typeCombo = new QComboBox(&dialog);
-    typeCombo->addItems({"Standard", "Express", "Vente", "Devis"});
-    typeCombo->setCurrentText(ui->productionTable->item(currentRow, 3)->text());
-    
-    QLineEdit *montantEdit = new QLineEdit(ui->productionTable->item(currentRow, 4)->text(), &dialog);
-    
-    QDateEdit *dateCreationEdit = new QDateEdit(QDate::fromString(ui->productionTable->item(currentRow, 5)->text(), "dd/MM/yyyy"), &dialog);
-    dateCreationEdit->setCalendarPopup(true);
-    dateCreationEdit->setDisplayFormat("dd/MM/yyyy");
-    
-    QDateEdit *dateLivraisonEdit = new QDateEdit(QDate::fromString(ui->productionTable->item(currentRow, 6)->text(), "dd/MM/yyyy"), &dialog);
-    dateLivraisonEdit->setCalendarPopup(true);
-    dateLivraisonEdit->setDisplayFormat("dd/MM/yyyy");
-    
-    QComboBox *statutCombo = new QComboBox(&dialog);
-    statutCombo->addItems({"En Attente", "Planifié", "En Production", "Terminé"});
-    statutCombo->setCurrentText(ui->productionTable->item(currentRow, 7)->text());
-    
-    QComboBox *prioriteCombo = new QComboBox(&dialog);
-    prioriteCombo->addItems({"Basse", "Normale", "Haute", "Urgente"});
-    prioriteCombo->setCurrentText(ui->productionTable->item(currentRow, 8)->text());
-    
-    layout->addRow("Référence *:", refEdit);
-    layout->addRow("Client *:", clientEdit);
-    layout->addRow("Type:", typeCombo);
-    layout->addRow("Montant HT *:", montantEdit);
-    layout->addRow("Date Création:", dateCreationEdit);
-    layout->addRow("Date Livraison:", dateLivraisonEdit);
-    layout->addRow("Statut:", statutCombo);
-    layout->addRow("Priorité:", prioriteCombo);
-    
-    mainLayout->addLayout(layout);
-    
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-    buttonLayout->addStretch();
-    QPushButton *btnOk = new QPushButton("✓ Enregistrer");
-    QPushButton *btnCancel = new QPushButton("✗ Annuler");
-    btnCancel->setStyleSheet("QPushButton { background-color: #95877C; } QPushButton:hover { background-color: #A5978C; }");
-    buttonLayout->addWidget(btnOk);
-    buttonLayout->addWidget(btnCancel);
-    mainLayout->addLayout(buttonLayout);
-    
-    connect(btnOk, &QPushButton::clicked, &dialog, &QDialog::accept);
-    connect(btnCancel, &QPushButton::clicked, &dialog, &QDialog::reject);
+    // Ouvrir le dialogue en mode édition
+    ProductionDialog dialog(this, ProductionDialog::EditMode);
+    dialog.setProductionData(id, reference, produit, quantite, statut, dateDebut, dateFin, responsable, priorite);
     
     if (dialog.exec() == QDialog::Accepted) {
-        if (refEdit->text().isEmpty() || clientEdit->text().isEmpty() || montantEdit->text().isEmpty()) {
-            QMessageBox::warning(this, "Champs manquants", "Veuillez remplir tous les champs obligatoires (*)");
-            return;
+        // Créer un objet ProductionData avec les nouvelles données
+        ProductionData prod(
+            dialog.getId(),
+            dialog.getReference(),
+            dialog.getProduit(),
+            dialog.getQuantite(),
+            dialog.getStatut(),
+            QDate::fromString(dialog.getDateDebut(), "dd/MM/yyyy"),
+            QDate::fromString(dialog.getDateFin(), "dd/MM/yyyy"),
+            dialog.getResponsable(),
+            dialog.getPriorite()
+        );
+        
+        // Modifier dans la base de données
+        if (prod.modifier()) {
+            QMessageBox::information(this, "Succès", "Production modifiée avec succès !");
+            loadProductionData(); // Recharger les données
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de la modification de la production.");
         }
-        
-        ui->productionTable->item(currentRow, 1)->setText(refEdit->text());
-        ui->productionTable->item(currentRow, 2)->setText(clientEdit->text());
-        ui->productionTable->item(currentRow, 3)->setText(typeCombo->currentText());
-        ui->productionTable->item(currentRow, 4)->setText(montantEdit->text());
-        ui->productionTable->item(currentRow, 5)->setText(dateCreationEdit->date().toString("dd/MM/yyyy"));
-        ui->productionTable->item(currentRow, 6)->setText(dateLivraisonEdit->date().toString("dd/MM/yyyy"));
-        ui->productionTable->item(currentRow, 7)->setText(statutCombo->currentText());
-        ui->productionTable->item(currentRow, 8)->setText(prioriteCombo->currentText());
-        
-        QMessageBox::information(this, "Succès", "Commande modifiée avec succès !");
     }
 }
 
@@ -3370,25 +3181,46 @@ void MainWindow::onSupprimerProduction()
     int currentRow = ui->productionTable->currentRow();
     if (currentRow < 0) {
         QMessageBox::warning(this, "Aucune sélection",
-                           "Veuillez sélectionner une commande à supprimer.");
+                           "Veuillez sélectionner une production à supprimer.");
         return;
     }
     
-    QString ref = ui->productionTable->item(currentRow, 1)->text();
-    QString client = ui->productionTable->item(currentRow, 2)->text();
+    // Récupérer les données de la ligne sélectionnée
+    QString id = ui->productionTable->item(currentRow, 0)->text();
+    QString reference = ui->productionTable->item(currentRow, 1)->text();
+    QString produit = ui->productionTable->item(currentRow, 2)->text();
+    QString quantite = ui->productionTable->item(currentRow, 3)->text();
+    QString statut = ui->productionTable->item(currentRow, 4)->text();
+    QString dateDebut = ui->productionTable->item(currentRow, 5)->text();
+    QString dateFin = ui->productionTable->item(currentRow, 6)->text();
+    QString responsable = ui->productionTable->item(currentRow, 7)->text();
+    QString priorite = ui->productionTable->item(currentRow, 8)->text();
     
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this, "Confirmer la suppression",
-                                 QString("Êtes-vous sûr de vouloir supprimer cette commande?\n\n"
-                                        "Référence: %1\nClient: %2\n\n"
-                                        "Cette action est irréversible.")
-                                 .arg(ref, client),
-                                 QMessageBox::Yes | QMessageBox::No);
+    // Ouvrir le dialogue en mode suppression
+    ProductionDialog dialog(this, ProductionDialog::DeleteMode);
+    dialog.setProductionData(id, reference, produit, quantite, statut, dateDebut, dateFin, responsable, priorite);
     
-    if (reply == QMessageBox::Yes) {
-        ui->productionTable->removeRow(currentRow);
-        QMessageBox::information(this, "Suppression réussie",
-                               "La commande a été supprimée avec succès.");
+    if (dialog.exec() == QDialog::Accepted) {
+        // Créer un objet ProductionData pour la suppression
+        ProductionData prod(
+            id,
+            reference,
+            produit,
+            quantite,
+            statut,
+            QDate::fromString(dateDebut, "dd/MM/yyyy"),
+            QDate::fromString(dateFin, "dd/MM/yyyy"),
+            responsable,
+            priorite
+        );
+        
+        // Supprimer de la base de données
+        if (prod.supprimer()) {
+            QMessageBox::information(this, "Succès", "Production supprimée avec succès !");
+            loadProductionData(); // Recharger les données
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de la suppression de la production.");
+        }
     }
 }
 
