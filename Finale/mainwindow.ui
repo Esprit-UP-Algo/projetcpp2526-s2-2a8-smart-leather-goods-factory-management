@@ -324,7 +324,7 @@ QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:presse
 }
 
 /* Primary Action Buttons - Articles Module */
-QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArticle, QPushButton#btnViewArticle, QPushButton#btnExportPdfArticle, QPushButton#btnAnalyseRentabilite, QPushButton#btnAideDecision {
+QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArticle, QPushButton#btnViewArticle, QPushButton#btnExportPdfArticle, QPushButton#btnAnalyseRentabilite, QPushButton#btnAideDecision, QPushButton#btnStatistiquesArticle {
     background-color: #8D6E63;
     color: white;
     border: none;
@@ -336,15 +336,35 @@ QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArti
     text-align: center;
 }
 
-QPushButton#btnAddArticle:hover, QPushButton#btnEditArticle:hover, QPushButton#btnDeleteArticle:hover, QPushButton#btnViewArticle:hover, QPushButton#btnExportPdfArticle:hover, QPushButton#btnAnalyseRentabilite:hover, QPushButton#btnAideDecision:hover {
+QPushButton#btnAddArticle:hover, QPushButton#btnEditArticle:hover, QPushButton#btnDeleteArticle:hover, QPushButton#btnViewArticle:hover, QPushButton#btnExportPdfArticle:hover, QPushButton#btnAnalyseRentabilite:hover, QPushButton#btnAideDecision:hover, QPushButton#btnStatistiquesArticle:hover {
     background-color: #A0826D;
     border: none;
 }
 
-QPushButton#btnAddArticle:pressed, QPushButton#btnEditArticle:pressed, QPushButton#btnDeleteArticle:pressed, QPushButton#btnViewArticle:pressed, QPushButton#btnExportPdfArticle:pressed, QPushButton#btnAnalyseRentabilite:pressed, QPushButton#btnAideDecision:pressed {
+QPushButton#btnAddArticle:pressed, QPushButton#btnEditArticle:pressed, QPushButton#btnDeleteArticle:pressed, QPushButton#btnViewArticle:pressed, QPushButton#btnExportPdfArticle:pressed, QPushButton#btnAnalyseRentabilite:pressed, QPushButton#btnAideDecision:pressed, QPushButton#btnStatistiquesArticle:pressed {
     background-color: #6E473B;
     border: none;
     padding: 11px 20px 9px 20px;
+}
+
+/* ComboBox Tri Articles */
+QComboBox#comboBoxTriArticle {
+    background-color: white;
+    color: #291C0E;
+    border: 2px solid #A78D78;
+    border-radius: 6px;
+    padding: 8px;
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+}
+
+QComboBox#comboBoxTriArticle::drop-down {
+    border: none;
+}
+
+QComboBox#comboBoxTriArticle::down-arrow {
+    image: none;
+    border: none;
 }
 
 /* Search Box */
@@ -3023,13 +3043,53 @@ QFrame:hover {
                   <widget class="QLineEdit" name="searchBoxArticle">
                    <property name="minimumSize">
                     <size>
-                     <width>300</width>
+                     <width>250</width>
                      <height>0</height>
                     </size>
                    </property>
                    <property name="placeholderText">
                     <string>🔍 Rechercher par référence, nom, catégorie...</string>
                    </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="comboBoxTriArticle">
+                   <property name="minimumSize">
+                    <size>
+                     <width>150</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>🔽 Trier par...</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Prix (Croissant)</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Prix (Décroissant)</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Catégorie (A-Z)</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Statut</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Référence</string>
+                    </property>
+                   </item>
                   </widget>
                  </item>
                  <item>
@@ -3049,8 +3109,8 @@ QFrame:hover {
                   <widget class="QPushButton" name="btnAddArticle">
                    <property name="minimumSize">
                     <size>
-                     <width>100</width>
-                     <height>32</height>
+                     <width>140</width>
+                     <height>40</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3062,8 +3122,8 @@ QFrame:hover {
                   <widget class="QPushButton" name="btnEditArticle">
                    <property name="minimumSize">
                     <size>
-                     <width>100</width>
-                     <height>32</height>
+                     <width>140</width>
+                     <height>40</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3075,8 +3135,8 @@ QFrame:hover {
                   <widget class="QPushButton" name="btnDeleteArticle">
                    <property name="minimumSize">
                     <size>
-                     <width>100</width>
-                     <height>32</height>
+                     <width>150</width>
+                     <height>40</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3088,8 +3148,8 @@ QFrame:hover {
                   <widget class="QPushButton" name="btnViewArticle">
                    <property name="minimumSize">
                     <size>
-                     <width>100</width>
-                     <height>32</height>
+                     <width>150</width>
+                     <height>40</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3098,11 +3158,24 @@ QFrame:hover {
                   </widget>
                  </item>
                  <item>
+                  <widget class="QPushButton" name="btnStatistiquesArticle">
+                   <property name="minimumSize">
+                    <size>
+                     <width>160</width>
+                     <height>40</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>📈 STATISTIQUES</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <widget class="QPushButton" name="btnExportPdfArticle">
                    <property name="minimumSize">
                     <size>
-                     <width>120</width>
-                     <height>32</height>
+                     <width>150</width>
+                     <height>40</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3114,8 +3187,8 @@ QFrame:hover {
                   <widget class="QPushButton" name="btnAnalyseRentabilite">
                    <property name="minimumSize">
                     <size>
-                     <width>160</width>
-                     <height>32</height>
+                     <width>200</width>
+                     <height>40</height>
                     </size>
                    </property>
                    <property name="text">
@@ -3127,8 +3200,8 @@ QFrame:hover {
                   <widget class="QPushButton" name="btnAideDecision">
                    <property name="minimumSize">
                     <size>
-                     <width>140</width>
-                     <height>32</height>
+                     <width>180</width>
+                     <height>40</height>
                     </size>
                    </property>
                    <property name="text">

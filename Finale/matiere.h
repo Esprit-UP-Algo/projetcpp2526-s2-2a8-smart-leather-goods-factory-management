@@ -23,7 +23,7 @@ struct Fournisseur {
                 const QString &_telephone, const QString &_matriculeFiscal,
                 const QString &_typeProduit, const QString &_conditionPaiement,
                 const QString &_statut)
-        : id(_id), nomEntreprise(_nomEntreprise), email(_email), telephone(_telephone),
+        : id(_id), nomEntreprise(_nomEntreprise), telephone(_telephone), email(_email),
           matriculeFiscal(_matriculeFiscal), typeProduit(_typeProduit),
           conditionPaiement(_conditionPaiement), statut(_statut) {}
     

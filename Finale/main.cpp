@@ -6,33 +6,30 @@
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    MainWindow w;
-    Connection c;
     
-    // Connexion à la base de données des matières premières
-    bool test = c.createconnect();
+    // Vérifier les drivers disponibles
+    QStringList drivers = QSqlDatabase::drivers();
+    qDebug() << "Drivers SQL disponibles:" << drivers;
     
-    // Connexion à la base de données de production
-    bool testProduction = c.createconnectProduction();
+    // Obtenir l'instance unique de Connection et établir la connexion
+    bool connected = Connection::getInstance().createConnection();
     
-    if (test && testProduction)
-    {
-        w.show();
-        QMessageBox::information(nullptr, QObject::tr("Connexions établies"),
-                                QObject::tr("Connexion aux bases de données réussie.\n"
-                                          "- Matières Premières: OK\n"
-                                          "- Production: OK\n"
-                                          "Click OK to continue."), QMessageBox::Ok);
-    }
-    else
-    {
-        QString errorMsg = "Échec de connexion:\n";
-        if (!test) errorMsg += "- Matières Premières: ÉCHEC\n";
-        if (!testProduction) errorMsg += "- Production: ÉCHEC\n";
+    if (connected) {
+        QMessageBox::information(nullptr, "Connexion", "Connexion à la base de données réussie !");
+    } else {
+        QString errorMsg = "Échec de connexion à la base de données.\n\n";
+        errorMsg += "Drivers disponibles: " + drivers.join(", ") + "\n\n";
+        errorMsg += "Vérifiez que:\n";
+        errorMsg += "1. Le driver QODBC est installé\n";
+        errorMsg += "2. La source de données ODBC 'Source_Projet2A' existe\n";
+        errorMsg += "3. Oracle Client est installé\n\n";
+        errorMsg += "L'application va continuer sans connexion.";
         
-        QMessageBox::critical(nullptr, QObject::tr("Erreur de connexion"),
-                            QObject::tr(errorMsg.toStdString().c_str()), QMessageBox::Cancel);
+        QMessageBox::warning(nullptr, "Connexion", errorMsg);
     }
+    
+    MainWindow w;
+    w.show();
     
     return a.exec();
 }

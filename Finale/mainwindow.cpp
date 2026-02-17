@@ -7,6 +7,7 @@
 #include "productiondialog.h"
 #include "articledialog.h"
 #include "production.h"
+#include "connection.h"
 #include <QTableWidgetItem>
 #include <QDebug>
 #include <QMessageBox>
@@ -38,6 +39,7 @@
 #include <cstdlib>
 #include <QtCharts/QChartView>
 #include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
 #include <QtCharts/QBarSet>
 #include <QtCharts/QBarSeries>
 #include <QtCharts/QBarCategoryAxis>
@@ -3290,6 +3292,9 @@ void MainWindow::setupArticleTable()
     ui->articleTable->setSelectionMode(QAbstractItemView::SingleSelection);
     ui->articleTable->verticalHeader()->setVisible(false);
     
+    // Cacher la colonne ID (clé primaire)
+    ui->articleTable->setColumnHidden(0, true);
+    
     // Charger les données
     loadArticlesFromDB();
     updateArticleStatistics();
@@ -4136,6 +4141,220 @@ void MainWindow::on_btnAideDecision_clicked()
     infoLabel->setStyleSheet("font-size: 11px; color: #291C0E;");
     infoLabel->setWordWrap(true);
     summaryLayout->addWidget(infoLabel);
+    
+    mainLayout->addWidget(summaryFrame);
+    
+    // Bouton Fermer
+    QPushButton *closeBtn = new QPushButton("Fermer", dialog);
+    closeBtn->setStyleSheet(R"(
+        QPushButton {
+            background-color: #8D6E63;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 30px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        QPushButton:hover {
+            background-color: #A0826D;
+        }
+    )");
+    connect(closeBtn, &QPushButton::clicked, dialog, &QDialog::accept);
+    
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(closeBtn);
+    mainLayout->addLayout(btnLayout);
+    
+    dialog->exec();
+    delete dialog;
+}
+
+void MainWindow::on_comboBoxTriArticle_currentIndexChanged(int index)
+{
+    if (index == 0) {
+        // "Trier par..." - recharger sans tri
+        loadArticlesFromDB();
+        return;
+    }
+    
+    // Trier le tableau selon l'option choisie
+    int columnToSort = -1;
+    Qt::SortOrder order = Qt::AscendingOrder;
+    
+    switch (index) {
+    case 1: // Prix (Croissant)
+        columnToSort = 7; // Colonne Prix Unitaire
+        order = Qt::AscendingOrder;
+        break;
+    case 2: // Prix (Décroissant)
+        columnToSort = 7;
+        order = Qt::DescendingOrder;
+        break;
+    case 3: // Catégorie (A-Z)
+        columnToSort = 3; // Colonne Catégorie
+        order = Qt::AscendingOrder;
+        break;
+    case 4: // Statut
+        columnToSort = 9; // Colonne Statut
+        order = Qt::AscendingOrder;
+        break;
+    case 5: // Référence
+        columnToSort = 1; // Colonne Référence
+        order = Qt::AscendingOrder;
+        break;
+    }
+    
+    if (columnToSort >= 0) {
+        ui->articleTable->sortItems(columnToSort, order);
+    }
+}
+
+void MainWindow::on_btnStatistiquesArticle_clicked()
+{
+    // Créer un dialog pour les statistiques
+    QDialog *dialog = new QDialog(this);
+    dialog->setWindowTitle("📈 Statistiques des Articles");
+    dialog->setMinimumSize(1000, 700);
+    
+    QVBoxLayout *mainLayout = new QVBoxLayout(dialog);
+    
+    // Titre
+    QLabel *titleLabel = new QLabel("STATISTIQUES DES ARTICLES", dialog);
+    titleLabel->setStyleSheet("font-size: 20px; font-weight: bold; color: #8D6E63; padding: 10px;");
+    titleLabel->setAlignment(Qt::AlignCenter);
+    mainLayout->addWidget(titleLabel);
+    
+    // Récupérer les données
+    QSqlQuery query(articleDB);
+    
+    // Statistiques par statut
+    QMap<QString, int> statutCounts;
+    query.exec("SELECT Statut, COUNT(*) FROM ARTICLE GROUP BY Statut");
+    while (query.next()) {
+        statutCounts[query.value(0).toString()] = query.value(1).toInt();
+    }
+    
+    int disponibles = statutCounts.value("disponible", 0);
+    int enProduction = statutCounts.value("en_production", 0);
+    int obsoletes = statutCounts.value("obsolete", 0);
+    int total = disponibles + enProduction + obsoletes;
+    
+    // Statistiques par catégorie
+    QMap<QString, int> categorieCounts;
+    query.exec("SELECT Categorie, COUNT(*) FROM ARTICLE GROUP BY Categorie");
+    while (query.next()) {
+        categorieCounts[query.value(0).toString()] = query.value(1).toInt();
+    }
+    
+    // Créer un widget avec deux graphiques côte à côte
+    QWidget *chartsWidget = new QWidget(dialog);
+    QHBoxLayout *chartsLayout = new QHBoxLayout(chartsWidget);
+    
+    // === GRAPHIQUE 1: Répartition par Statut (Camembert) ===
+    QPieSeries *pieSeries = new QPieSeries();
+    
+    if (disponibles > 0) {
+        QPieSlice *sliceDisponible = pieSeries->append("Disponibles", disponibles);
+        sliceDisponible->setBrush(QColor("#2E7D32")); // Vert
+        sliceDisponible->setLabelVisible(true);
+        sliceDisponible->setLabel(QString("Disponibles\n%1 (%2%)")
+            .arg(disponibles)
+            .arg(QString::number(disponibles * 100.0 / total, 'f', 1)));
+    }
+    
+    if (enProduction > 0) {
+        QPieSlice *sliceProduction = pieSeries->append("En Production", enProduction);
+        sliceProduction->setBrush(QColor("#F57C00")); // Orange
+        sliceProduction->setLabelVisible(true);
+        sliceProduction->setLabel(QString("En Production\n%1 (%2%)")
+            .arg(enProduction)
+            .arg(QString::number(enProduction * 100.0 / total, 'f', 1)));
+    }
+    
+    if (obsoletes > 0) {
+        QPieSlice *sliceObsolete = pieSeries->append("Obsolètes", obsoletes);
+        sliceObsolete->setBrush(QColor("#C62828")); // Rouge
+        sliceObsolete->setLabelVisible(true);
+        sliceObsolete->setLabel(QString("Obsolètes\n%1 (%2%)")
+            .arg(obsoletes)
+            .arg(QString::number(obsoletes * 100.0 / total, 'f', 1)));
+    }
+    
+    QChart *pieChart = new QChart();
+    pieChart->addSeries(pieSeries);
+    pieChart->setTitle("Répartition par Statut");
+    pieChart->setTitleFont(QFont("Arial", 14, QFont::Bold));
+    pieChart->legend()->setVisible(true);
+    pieChart->legend()->setAlignment(Qt::AlignBottom);
+    pieChart->setAnimationOptions(QChart::SeriesAnimations);
+    
+    QChartView *pieChartView = new QChartView(pieChart);
+    pieChartView->setRenderHint(QPainter::Antialiasing);
+    chartsLayout->addWidget(pieChartView);
+    
+    // === GRAPHIQUE 2: Articles par Catégorie (Barres) ===
+    QBarSet *barSet = new QBarSet("Nombre d'articles");
+    barSet->setColor(QColor("#8D6E63"));
+    
+    QStringList categories;
+    for (auto it = categorieCounts.begin(); it != categorieCounts.end(); ++it) {
+        categories << it.key();
+        *barSet << it.value();
+    }
+    
+    QBarSeries *barSeries = new QBarSeries();
+    barSeries->append(barSet);
+    
+    QChart *barChart = new QChart();
+    barChart->addSeries(barSeries);
+    barChart->setTitle("Articles par Catégorie");
+    barChart->setTitleFont(QFont("Arial", 14, QFont::Bold));
+    barChart->setAnimationOptions(QChart::SeriesAnimations);
+    
+    QBarCategoryAxis *axisX = new QBarCategoryAxis();
+    axisX->append(categories);
+    barChart->addAxis(axisX, Qt::AlignBottom);
+    barSeries->attachAxis(axisX);
+    
+    QValueAxis *axisY = new QValueAxis();
+    axisY->setTitleText("Nombre");
+    axisY->setLabelFormat("%d");
+    barChart->addAxis(axisY, Qt::AlignLeft);
+    barSeries->attachAxis(axisY);
+    
+    barChart->legend()->setVisible(false);
+    
+    QChartView *barChartView = new QChartView(barChart);
+    barChartView->setRenderHint(QPainter::Antialiasing);
+    chartsLayout->addWidget(barChartView);
+    
+    mainLayout->addWidget(chartsWidget);
+    
+    // Résumé textuel
+    QFrame *summaryFrame = new QFrame(dialog);
+    summaryFrame->setStyleSheet("background-color: #FFF8F0; border: 2px solid #BCAAA4; border-radius: 8px; padding: 20px;");
+    QVBoxLayout *summaryLayout = new QVBoxLayout(summaryFrame);
+    
+    QLabel *summaryTitle = new QLabel("📊 RÉSUMÉ STATISTIQUE", dialog);
+    summaryTitle->setStyleSheet("font-size: 16px; font-weight: bold; color: #8D6E63;");
+    summaryLayout->addWidget(summaryTitle);
+    
+    QLabel *summaryText = new QLabel(QString(
+        "• <b>Total des articles :</b> %1<br>"
+        "• <b>Articles disponibles :</b> %2 (%3%)<br>"
+        "• <b>Articles en production :</b> %4 (%5%)<br>"
+        "• <b>Articles obsolètes :</b> %6 (%7%)<br>"
+        "• <b>Nombre de catégories :</b> %8"
+    ).arg(total)
+     .arg(disponibles).arg(QString::number(disponibles * 100.0 / total, 'f', 1))
+     .arg(enProduction).arg(QString::number(enProduction * 100.0 / total, 'f', 1))
+     .arg(obsoletes).arg(QString::number(obsoletes * 100.0 / total, 'f', 1))
+     .arg(categorieCounts.size()), dialog);
+    
+    summaryText->setStyleSheet("font-size: 13px; color: #291C0E; line-height: 1.6;");
+    summaryLayout->addWidget(summaryText);
     
     mainLayout->addWidget(summaryFrame);
     

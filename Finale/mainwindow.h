@@ -110,7 +110,9 @@ private slots:
     void on_btnExportPdfArticle_clicked();
     void on_btnAnalyseRentabilite_clicked();
     void on_btnAideDecision_clicked();
+    void on_btnStatistiquesArticle_clicked();
     void on_searchBoxArticle_textChanged(const QString &text);
+    void on_comboBoxTriArticle_currentIndexChanged(int index);
 
 private:
     Ui::MainWindow *ui;
