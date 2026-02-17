@@ -29,9 +29,9 @@ bool Connection::createConnection()
     qDebug() << "Sources enregistrées:" << dataSources;
     
     db = QSqlDatabase::addDatabase("QODBC");
-    db.setDatabaseName("Source_Projet2A");
-    db.setUserName("malek");
-    db.setPassword("malek123");
+    db.setDatabaseName("Projet2A");
+    db.setUserName("cuirea");
+    db.setPassword("0000");
     
     qDebug() << "\n=== TENTATIVE DE CONNEXION ===";
     qDebug() << "Database Name:" << db.databaseName();
@@ -39,7 +39,7 @@ bool Connection::createConnection()
     qDebug() << "Driver:" << db.driverName();
     
     if (db.open()) {
-        qDebug() << "✓ Connexion réussie à la base de données Source_Projet2A";
+        qDebug() << "✓ Connexion réussie à la base de données Projet2A";
         return true;
     } else {
         qDebug() << "\n✗ ERREUR DE CONNEXION:";
@@ -47,7 +47,7 @@ bool Connection::createConnection()
         qDebug() << "   Error Text:" << db.lastError().text();
         qDebug() << "   Native Error Code:" << db.lastError().nativeErrorCode();
         qDebug() << "\nVÉRIFIEZ:";
-        qDebug() << "1. Que la source ODBC 'Source_Projet2A' existe dans le bon gestionnaire (32 ou 64-bit)";
+        qDebug() << "1. Que la source ODBC 'Projet2A' existe dans le bon gestionnaire (32 ou 64-bit)";
         qDebug() << "2. Ouvrez C:\\Windows\\System32\\odbcad32.exe (64-bit)";
         qDebug() << "3. Vérifiez l'onglet 'System DSN' ou 'User DSN'";
         return false;
