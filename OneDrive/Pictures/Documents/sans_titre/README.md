@@ -1,4 +1,4 @@
-# CUIREA - Système de Gestion
+d# CUIREA - Système de Gestion
 
 Système de gestion complet pour CUIREA (entreprise de maroquinerie) développé avec Qt/C++.
 
