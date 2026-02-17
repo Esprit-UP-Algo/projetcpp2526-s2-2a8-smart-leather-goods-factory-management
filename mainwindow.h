@@ -3,17 +3,14 @@
 
 #include <QMainWindow>
 #include <QVector>
-#include <QPushButton>  // Needed for QPushButton
-#include <QSqlDatabase>
+#include <QPushButton>
 #include "client.h"
 #include "matiere.h"
 #include "fournisseur.h"
 #include "article.h"
 
 QT_BEGIN_NAMESPACE
-namespace Ui {
-class MainWindow;
-}
+namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
@@ -25,7 +22,7 @@ public:
     ~MainWindow();
 
 private slots:
-    // Auto-generated slots for Employee buttons
+    // Employee
     void on_btnAdd_clicked();
     void on_btnEdit_clicked();
     void on_btnDelete_clicked();
@@ -33,31 +30,29 @@ private slots:
     void on_btnSort_clicked();
     void on_btnStatistics_clicked();
 
-    // Auto-generated slots for Client buttons
+    // Client
     void on_btnAddClient_clicked();
     void on_btnEditClient_clicked();
     void on_btnDeleteClient_clicked();
     void on_btnExportClient_clicked();
     void on_btnRefreshClient_clicked();
-
-    // New Client section buttons
+    void on_btnTriClient_clicked();
     void on_btnStatsByRegion_clicked();
     void on_btnFidelityClassification_clicked();
     void on_btnAIAgent_clicked();
 
-    // Auto-generated slots for Navigation buttons
+    // Navigation
     void on_btnEmployees_clicked();
     void on_btnClients_clicked();
     void on_btnProducts_clicked();
-    // void on_btnOrders_clicked(); // REMOVED - Commandes button deleted
     void on_btnRawMaterials_clicked();
     void on_btnSuppliers_clicked();
     void on_btnProduction_clicked();
 
-    // Table selection
+    // Employee table
     void onEmployeeSelected();
 
-    // Production Management slots
+    // Production
     void onCreerProduction();
     void onModifierProduction();
     void onSuiviProduction();
@@ -70,7 +65,7 @@ private slots:
     void onStatistiquesProduction();
     void onTrierProduction();
 
-    // Raw Materials Management slots
+    // Raw materials
     void onAddMatiere();
     void onEditMatiere();
     void onDeleteMatiere();
@@ -93,7 +88,7 @@ private slots:
     void onCloseFournisseurs();
     void onExportMatiere();
 
-    // Suppliers Management slots
+    // Suppliers
     void on_btnAddFournisseur_clicked();
     void on_btnEditFournisseur_clicked();
     void on_btnDeleteFournisseur_clicked();
@@ -102,12 +97,13 @@ private slots:
     void on_btnTriFournisseur_clicked();
     void on_searchBoxFournisseur_textChanged(const QString &text);
 
-    // Articles Management slots
+    // Articles
     void on_btnAddArticle_clicked();
     void on_btnEditArticle_clicked();
     void on_btnDeleteArticle_clicked();
     void on_btnViewArticle_clicked();
     void on_btnExportPdfArticle_clicked();
+    void on_btnTriArticle_clicked();
     void on_btnAnalyseRentabilite_clicked();
     void on_btnAideDecision_clicked();
     void on_searchBoxArticle_textChanged(const QString &text);
@@ -115,22 +111,21 @@ private slots:
 private:
     Ui::MainWindow *ui;
     QVector<Client> clients;
-    QList<Fournisseur> fournisseurs;
-    QList<FournisseurData> fournisseursData;  // Liste des fournisseurs pour la page
-    QList<MouvementStock> historiqueMouvements;
-    QSqlDatabase articleDB;  // Base de données pour les articles
+    QList<FournisseurData> fournisseursData;
+    QList<Article> articles;
     bool isEditMode;
     int editingRow;
 
-    // New Client section buttons
-    QPushButton* btnStatsByRegion;
-    QPushButton* btnFidelityClassification;
-    QPushButton* btnAIAgent;
+    // Navigation
+    void switchPage(int index, QPushButton *activeBtn, const QString &title, bool showProfile);
 
+    // Employee
     void populateEmployeeTable();
+
+    // Client
     void refreshClientTable();
 
-    // Raw Materials Management methods
+    // Raw materials
     void setupMatiereTable();
     void setupSuggestionTable();
     void setupHistoriqueTable();
@@ -138,36 +133,35 @@ private:
     void hideForm();
     void clearForm();
     void hideAllPanels();
-    void addMatiereToTable(const QString &module, const QString &reference, const QString &type,
-                           const QString &quantite, const QString &seuil, const QString &dateExp);
+    void addMatiereToTable(const QString&, const QString&, const QString&,
+                           const QString&, const QString&, const QString&);
     void loadFournisseurs();
     void saveFournisseurs();
     void updateFournisseursList();
     void updateHistoriqueTable();
     void updateConsommationChart();
     int calculateDaysToExpiration(const QString &dateStr);
-    QString getStockLevel(int currentStock, int threshold);
+    QString getStockLevel(int current, int threshold);
     int calculateSuggestedQuantity(const QString &matiere);
     void updateMatiereStatistics();
 
-    // Suppliers Management methods
+    // Suppliers
     void setupFournisseurTable();
     void refreshFournisseurTable();
     void updateFournisseurStatistics();
 
-    // Articles Management methods
+    // Articles
     void setupArticleTable();
     void refreshArticleTable();
     void updateArticleStatistics();
     void loadArticlesFromDB();
-    bool connectArticleDatabase();
 
-    // Production Management methods
+    // Production
     void setupProductionTable();
     void loadProductionData();
-    void ajouterCommandeProduction(const QString &ref, const QString &client, const QString &type,
-                                   const QString &montant, const QString &dateCreation,
-                                   const QString &dateLivraison, const QString &statut, const QString &priorite);
+    void ajouterCommandeProduction(const QString&, const QString&, const QString&,
+                                   const QString&, const QString&, const QString&,
+                                   const QString&, const QString&);
     void updateProductionStatistics();
     void updateProductionStatsCards();
     void afficherStatistiquesModernes();
