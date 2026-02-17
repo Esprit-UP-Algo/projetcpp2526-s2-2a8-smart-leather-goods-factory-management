@@ -1,4 +1,4 @@
-QT       += core gui charts printsupport sql
+QT       += core gui charts printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -12,7 +12,6 @@ TEMPLATE = app
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
-    connection.cpp \
     employe.cpp \
     employemanager.cpp \
     main.cpp \
@@ -30,7 +29,6 @@ SOURCES += \
     logindialog.cpp
 
 HEADERS += \
-    connection.h \
     employe.h \
     employemanager.h \
     mainwindow.h \

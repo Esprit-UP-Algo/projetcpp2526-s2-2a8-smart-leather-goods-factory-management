@@ -6,8 +6,8 @@
 
 struct Fournisseur {
     QString id;
-    QString nom;
     QString nomEntreprise;
+    QString nom;
     QString contact;
     QString telephone;
     QString email;

@@ -228,7 +228,7 @@ QPushButton#btnAdd:pressed, QPushButton#btnEdit:pressed, QPushButton#btnDelete:p
 }
 
 /* Primary Action Buttons - Client Module */
-QPushButton#btnAddClient, QPushButton#btnEditClient, QPushButton#btnDeleteClient, QPushButton#btnExportClient, QPushButton#btnRefreshClient {
+QPushButton#btnAddClient, QPushButton#btnEditClient, QPushButton#btnDeleteClient, QPushButton#btnExportClient, QPushButton#btnRefreshClient, QPushButton#btnTriClient {
     background-color: #8D6E63;
     color: white;
     border: none;
@@ -240,12 +240,12 @@ QPushButton#btnAddClient, QPushButton#btnEditClient, QPushButton#btnDeleteClient
     text-align: center;
 }
 
-QPushButton#btnAddClient:hover, QPushButton#btnEditClient:hover, QPushButton#btnDeleteClient:hover, QPushButton#btnExportClient:hover, QPushButton#btnRefreshClient:hover {
+QPushButton#btnAddClient:hover, QPushButton#btnEditClient:hover, QPushButton#btnDeleteClient:hover, QPushButton#btnExportClient:hover, QPushButton#btnRefreshClient:hover, QPushButton#btnTriClient:hover {
     background-color: #A0826D;
     border: none;
 }
 
-QPushButton#btnAddClient:pressed, QPushButton#btnEditClient:pressed, QPushButton#btnDeleteClient:pressed, QPushButton#btnExportClient:pressed, QPushButton#btnRefreshClient:pressed {
+QPushButton#btnAddClient:pressed, QPushButton#btnEditClient:pressed, QPushButton#btnDeleteClient:pressed, QPushButton#btnExportClient:pressed, QPushButton#btnRefreshClient:pressed, QPushButton#btnTriClient:pressed {
     background-color: #6E473B;
     border: none;
     padding: 11px 20px 9px 20px;
@@ -324,7 +324,7 @@ QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:presse
 }
 
 /* Primary Action Buttons - Articles Module */
-QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArticle, QPushButton#btnViewArticle, QPushButton#btnExportPdfArticle, QPushButton#btnAnalyseRentabilite, QPushButton#btnAideDecision {
+QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArticle, QPushButton#btnViewArticle, QPushButton#btnExportPdfArticle, QPushButton#btnAnalyseRentabilite, QPushButton#btnAideDecision, QPushButton#btnTriArticle {
     background-color: #8D6E63;
     color: white;
     border: none;
@@ -336,12 +336,12 @@ QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArti
     text-align: center;
 }
 
-QPushButton#btnAddArticle:hover, QPushButton#btnEditArticle:hover, QPushButton#btnDeleteArticle:hover, QPushButton#btnViewArticle:hover, QPushButton#btnExportPdfArticle:hover, QPushButton#btnAnalyseRentabilite:hover, QPushButton#btnAideDecision:hover {
+QPushButton#btnAddArticle:hover, QPushButton#btnEditArticle:hover, QPushButton#btnDeleteArticle:hover, QPushButton#btnViewArticle:hover, QPushButton#btnExportPdfArticle:hover, QPushButton#btnAnalyseRentabilite:hover, QPushButton#btnAideDecision:hover, QPushButton#btnTriArticle:hover {
     background-color: #A0826D;
     border: none;
 }
 
-QPushButton#btnAddArticle:pressed, QPushButton#btnEditArticle:pressed, QPushButton#btnDeleteArticle:pressed, QPushButton#btnViewArticle:pressed, QPushButton#btnExportPdfArticle:pressed, QPushButton#btnAnalyseRentabilite:pressed, QPushButton#btnAideDecision:pressed {
+QPushButton#btnAddArticle:pressed, QPushButton#btnEditArticle:pressed, QPushButton#btnDeleteArticle:pressed, QPushButton#btnViewArticle:pressed, QPushButton#btnExportPdfArticle:pressed, QPushButton#btnAnalyseRentabilite:pressed, QPushButton#btnAideDecision:pressed, QPushButton#btnTriArticle:pressed {
     background-color: #6E473B;
     border: none;
     padding: 11px 20px 9px 20px;
@@ -1298,6 +1298,19 @@ QPushButton:hover {
                    </property>
                    <property name="text">
                     <string>↻ Actualiser</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnTriClient">
+                   <property name="minimumSize">
+                    <size>
+                     <width>85</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>⇅ Trier</string>
                    </property>
                   </widget>
                  </item>
@@ -3086,6 +3099,19 @@ QFrame:hover {
                    </property>
                    <property name="text">
                     <string>▤ Catalogue</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnTriArticle">
+                   <property name="minimumSize">
+                    <size>
+                     <width>85</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>⇅ Trier</string>
                    </property>
                   </widget>
                  </item>
