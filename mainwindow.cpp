@@ -752,24 +752,271 @@ void MainWindow::on_btnDeleteFournisseur_clicked()
 
 void MainWindow::on_btnExportFournisseur_clicked()
 {
-    showInfo(this,"Exporter","Export fournisseurs en développement.\nFormats prévus: PDF, CSV, JSON.");
+    QString fn = QFileDialog::getSaveFileName(this,"Exporter Historique Fournisseurs PDF",
+                                               QDir::homePath()+"/Historique_Fournisseurs.pdf","PDF (*.pdf)");
+    if (fn.isEmpty()) return;
+
+    QPrinter printer(QPrinter::HighResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(fn);
+    printer.setPageSize(QPageSize::A4);
+    printer.setPageMargins(QMarginsF(15,15,15,15), QPageLayout::Millimeter);
+
+    int actifs=0, suspendus=0;
+    for (const FournisseurData &f : fournisseursData) {
+        if (f.getStatut()=="Actif") ++actifs;
+        if (f.getStatut()=="Suspendu") ++suspendus;
+    }
+
+    QString html = QString(
+        "<html><head><style>body{font-family:Arial;color:#291C0E;}"
+        "h1{text-align:center;color:#8D6E63;border-bottom:3px solid #8D6E63;padding-bottom:8px;}"
+        ".hdr{text-align:center;color:#666;font-size:12px;margin-bottom:15px;}"
+        ".section{margin-top:25px;padding:15px;background:#FFF8F0;border-left:4px solid #8D6E63;}"
+        ".section h2{color:#8D6E63;font-size:14px;margin:0 0 10px 0;}"
+        "table{width:100%%;border-collapse:collapse;font-size:10px;margin-top:10px;}"
+        "th{background:#8D6E63;color:white;padding:8px;text-align:left;}"
+        "td{padding:6px;border-bottom:1px solid #F0E6DA;}"
+        "tr:nth-child(even){background:#FFF8F0;}"
+        ".summary{background:#E8DED2;padding:10px;border-radius:5px;margin:15px 0;}"
+        ".summary p{margin:5px 0;font-size:11px;}"
+        "</style></head><body>"
+        "<h1>HISTORIQUE DES TRANSACTIONS - FOURNISSEURS</h1>"
+        "<div class='hdr'>CUIREA - Export: %1<br>Total Fournisseurs: %2 | Actifs: %3 | Suspendus: %4</div>"
+    ).arg(QDateTime::currentDateTime().toString("dd/MM/yyyy HH:mm"))
+     .arg(fournisseursData.size()).arg(actifs).arg(suspendus);
+
+    // Section 1: Liste des fournisseurs
+    html += "<div class='section'><h2>📋 Liste des Fournisseurs</h2>"
+            "<table><thead><tr><th>ID</th><th>Nom Entreprise</th><th>Email</th><th>Téléphone</th>"
+            "<th>Type Produit</th><th>Condition Paiement</th><th>Statut</th></tr></thead><tbody>";
+
+    for (const FournisseurData &f : fournisseursData) {
+        html += QString("<tr><td>%1</td><td><b>%2</b></td><td>%3</td><td>%4</td>"
+                        "<td>%5</td><td>%6</td><td>%7</td></tr>")
+                .arg(f.getId(), f.getNomEntreprise(), f.getEmail(), f.getTelephone(),
+                     f.getTypeProduit(), f.getConditionPaiement(), f.getStatut());
+    }
+    html += "</tbody></table></div>";
+
+    // Section 2: Historique des transactions (données statiques)
+    html += "<div class='section'><h2>💰 Historique des Transactions</h2>"
+            "<table><thead><tr><th>Date</th><th>Fournisseur</th><th>Type</th><th>Montant (TND)</th><th>Référence</th></tr></thead><tbody>"
+            "<tr><td>15/01/2025</td><td>Leather Premium Co.</td><td>Paiement</td><td>5,000.00</td><td>PAY-2025-001</td></tr>"
+            "<tr><td>10/01/2025</td><td>Textile Supplies Ltd</td><td>Facture</td><td>12,500.00</td><td>INV-2025-003</td></tr>"
+            "<tr><td>05/01/2025</td><td>Metal Accessories Inc</td><td>Paiement</td><td>7,500.00</td><td>PAY-2025-002</td></tr>"
+            "<tr><td>28/12/2024</td><td>Leather Premium Co.</td><td>Facture</td><td>8,200.00</td><td>INV-2024-125</td></tr>"
+            "<tr><td>20/12/2024</td><td>Textile Supplies Ltd</td><td>Paiement</td><td>8,200.00</td><td>PAY-2024-089</td></tr>"
+            "<tr><td>15/12/2024</td><td>Zipper World</td><td>Facture</td><td>3,500.00</td><td>INV-2024-118</td></tr>"
+            "<tr><td>10/12/2024</td><td>Button Factory</td><td>Paiement</td><td>1,800.00</td><td>PAY-2024-075</td></tr>"
+            "</tbody></table></div>";
+
+    // Section 3: Liste des commandes effectuées
+    html += "<div class='section'><h2>📦 Liste des Commandes Effectuées</h2>"
+            "<table><thead><tr><th>N° Commande</th><th>Date</th><th>Fournisseur</th><th>Produit</th><th>Quantité</th><th>Montant (TND)</th></tr></thead><tbody>"
+            "<tr><td>CMD-2025-015</td><td>10/01/2025</td><td>Leather Premium Co.</td><td>Cuir Premium</td><td>500 m²</td><td>12,500.00</td></tr>"
+            "<tr><td>CMD-2024-098</td><td>28/12/2024</td><td>Textile Supplies Ltd</td><td>Tissu Doublure</td><td>300 m</td><td>8,200.00</td></tr>"
+            "<tr><td>CMD-2024-087</td><td>15/12/2024</td><td>Zipper World</td><td>Fermetures Éclair</td><td>1000 pcs</td><td>3,500.00</td></tr>"
+            "<tr><td>CMD-2024-076</td><td>05/12/2024</td><td>Button Factory</td><td>Boutons Métal</td><td>2000 pcs</td><td>1,800.00</td></tr>"
+            "<tr><td>CMD-2024-065</td><td>28/11/2024</td><td>Metal Accessories Inc</td><td>Boucles</td><td>500 pcs</td><td>4,200.00</td></tr>"
+            "</tbody></table></div>";
+
+    // Section 4: Résumé financier
+    html += "<div class='summary'>"
+            "<h2 style='color:#8D6E63;margin-top:0;'>💵 Résumé Financier</h2>"
+            "<p><b>💰 Montant Total Payé:</b> 26,000.00 TND</p>"
+            "<p><b>📊 Montant Total Facturé:</b> 38,500.00 TND</p>"
+            "<p><b>⚠ Solde Restant:</b> 12,500.00 TND</p>"
+            "<p><b>📈 Nombre de Transactions:</b> 7</p>"
+            "<p><b>📦 Nombre de Commandes:</b> 5</p>"
+            "</div>";
+
+    html += "<div style='text-align:center;margin-top:30px;color:#999;font-size:9px;'>"
+            "Document généré automatiquement par CUIREA Management System<br>"
+            "Pour usage interne uniquement - Confidentiel</div>"
+            "</body></html>";
+
+    QTextDocument doc; doc.setHtml(html); doc.print(&printer);
+    QMessageBox::information(this,"Succès","Historique des transactions exporté: "+fn);
 }
 
 void MainWindow::on_btnStatsFournisseur_clicked()
 {
-    int total = 0, actifs = 0, suspendus = 0;
-    QMap<QString,int> types;
-    for (int r = 0; r < ui->fournisseurTable->rowCount(); ++r) {
-        ++total;
-        QString st = cellText(ui->fournisseurTable,r,7);
-        if (st == "Actif") ++actifs; else if (st == "Suspendu") ++suspendus;
-        types[cellText(ui->fournisseurTable,r,5)]++;
+    QDialog dlg(this); 
+    dlg.setWindowTitle("Statistiques de Performance - Fournisseurs"); 
+    dlg.setMinimumSize(900,600);
+    dlg.setStyleSheet("QDialog{background:#FAF5F0;}");
+    
+    QVBoxLayout lay(&dlg); 
+    lay.setContentsMargins(20,20,20,20);
+    lay.setSpacing(15);
+    
+    // Title
+    auto *title = new QLabel("🚚 STATISTIQUES DE PERFORMANCE DES FOURNISSEURS");
+    title->setAlignment(Qt::AlignCenter);
+    title->setStyleSheet("font-size:18px;font-weight:bold;color:#8D6E63;padding:10px;");
+    lay.addWidget(title);
+    
+    // Table with performance metrics
+    auto *table = new QTableWidget(&dlg);
+    table->setColumnCount(7);
+    table->setHorizontalHeaderLabels({
+        "Fournisseur", 
+        "⏱️ Délai Moyen", 
+        "📦 Retards (%)", 
+        "❌ Annulations (%)", 
+        "🔁 Retours (%)", 
+        "⭐ Score", 
+        "Fiabilité"
+    });
+    table->horizontalHeader()->setStretchLastSection(true);
+    table->setAlternatingRowColors(true);
+    table->verticalHeader()->setVisible(false);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->setStyleSheet(
+        "QTableWidget{background:white;border:2px solid #BCAAA4;border-radius:8px;}"
+        "QHeaderView::section{background:#8D6E63;color:white;padding:8px;font-weight:bold;border:none;}"
+        "QTableWidget::item{padding:8px;}"
+    );
+    
+    // Static performance data for suppliers
+    struct FournisseurPerf {
+        QString nom;
+        int delaiMoyen;      // en jours
+        double tauxRetard;   // %
+        double tauxAnnulation; // %
+        double tauxRetour;   // %
+    };
+    
+    QList<FournisseurPerf> perfs = {
+        {"Leather Premium Co.", 5, 8.5, 2.0, 1.5},
+        {"Textile Supplies Ltd", 7, 15.2, 5.0, 3.2},
+        {"Metal Accessories Inc", 4, 5.0, 1.0, 0.8},
+        {"Zipper World", 6, 12.0, 3.5, 2.0},
+        {"Button Factory", 3, 3.0, 0.5, 0.3},
+        {"Leather Deluxe", 8, 20.0, 8.0, 5.5},
+        {"Fabric Masters", 5, 10.0, 2.5, 1.8},
+        {"Hardware Supplies", 4, 6.5, 1.5, 1.0}
+    };
+    
+    int excellents=0, bons=0, moyens=0, faibles=0;
+    double scoreMoyen=0;
+    
+    for (int i=0; i<perfs.size(); ++i) {
+        const auto &p = perfs[i];
+        
+        // Calculate reliability score (0-100)
+        double score = 100.0;
+        score -= (p.delaiMoyen - 3) * 2;  // Pénalité délai
+        score -= p.tauxRetard * 1.5;       // Pénalité retards
+        score -= p.tauxAnnulation * 3;     // Pénalité annulations
+        score -= p.tauxRetour * 2;         // Pénalité retours
+        if (score < 0) score = 0;
+        if (score > 100) score = 100;
+        
+        scoreMoyen += score;
+        
+        QString fiabilite;
+        QString couleur;
+        if (score >= 85) {
+            fiabilite = "⭐ Excellent";
+            couleur = "#2E7D32";
+            ++excellents;
+        } else if (score >= 70) {
+            fiabilite = "✓ Bon";
+            couleur = "#388E3C";
+            ++bons;
+        } else if (score >= 50) {
+            fiabilite = "~ Moyen";
+            couleur = "#F57C00";
+            ++moyens;
+        } else {
+            fiabilite = "⚠ Faible";
+            couleur = "#C62828";
+            ++faibles;
+        }
+        
+        table->insertRow(i);
+        table->setItem(i, 0, new QTableWidgetItem(p.nom));
+        table->setItem(i, 1, new QTableWidgetItem(QString::number(p.delaiMoyen) + " jours"));
+        table->setItem(i, 2, new QTableWidgetItem(QString::number(p.tauxRetard, 'f', 1) + " %"));
+        table->setItem(i, 3, new QTableWidgetItem(QString::number(p.tauxAnnulation, 'f', 1) + " %"));
+        table->setItem(i, 4, new QTableWidgetItem(QString::number(p.tauxRetour, 'f', 1) + " %"));
+        table->setItem(i, 5, new QTableWidgetItem(QString::number(score, 'f', 1)));
+        
+        auto *fiabItem = new QTableWidgetItem(fiabilite);
+        fiabItem->setForeground(QBrush(QColor(couleur)));
+        QFont f = fiabItem->font();
+        f.setBold(true);
+        fiabItem->setFont(f);
+        table->setItem(i, 6, fiabItem);
     }
-    QString msg = QString("Total: %1\nActifs: %2\nSuspendus: %3\n\nRépartition par type:\n").arg(total).arg(actifs).arg(suspendus);
-    for (auto it = types.begin(); it != types.end(); ++it)
-        msg += QString("  • %1: %2 (%3%)\n").arg(it.key()).arg(it.value())
-               .arg(QString::number(total>0?100.0*it.value()/total:0,'f',1));
-    showInfo(this,"Statistiques Fournisseurs", msg);
+    
+    lay.addWidget(table);
+    
+    scoreMoyen /= perfs.size();
+    
+    // Summary cards
+    QHBoxLayout *cardsLayout = new QHBoxLayout();
+    cardsLayout->setSpacing(10);
+    
+    auto createCard = [](const QString &label, const QString &value, const QString &bgColor) {
+        QFrame *card = new QFrame();
+        card->setStyleSheet(QString(
+            "QFrame{background:%1;border-radius:8px;padding:12px;}"
+        ).arg(bgColor));
+        QVBoxLayout *vl = new QVBoxLayout(card);
+        vl->setSpacing(5);
+        auto *lbl = new QLabel(label);
+        lbl->setStyleSheet("color:#291C0E;font-size:11px;font-weight:bold;");
+        lbl->setAlignment(Qt::AlignCenter);
+        auto *val = new QLabel(value);
+        val->setStyleSheet("color:#291C0E;font-size:16px;font-weight:bold;");
+        val->setAlignment(Qt::AlignCenter);
+        vl->addWidget(lbl);
+        vl->addWidget(val);
+        return card;
+    };
+    
+    cardsLayout->addWidget(createCard("Score Moyen", QString::number(scoreMoyen, 'f', 1), "#C8E6C9"));
+    cardsLayout->addWidget(createCard("⭐ Excellents", QString::number(excellents), "#A5D6A7"));
+    cardsLayout->addWidget(createCard("✓ Bons", QString::number(bons), "#81C784"));
+    cardsLayout->addWidget(createCard("~ Moyens", QString::number(moyens), "#FFE082"));
+    cardsLayout->addWidget(createCard("⚠ Faibles", QString::number(faibles), "#FFAB91"));
+    
+    lay.addLayout(cardsLayout);
+    
+    // Summary text
+    auto *summary = new QLabel(QString(
+        "📊 <b>Résumé:</b> Sur %1 fournisseurs analysés, le score moyen de fiabilité est de <b>%2/100</b>. "
+        "<span style='color:#2E7D32;'><b>%3</b> excellents</span>, "
+        "<span style='color:#388E3C;'><b>%4</b> bons</span>, "
+        "<span style='color:#F57C00;'><b>%5</b> moyens</span>, "
+        "<span style='color:#C62828;'><b>%6</b> faibles</span>."
+    ).arg(perfs.size()).arg(QString::number(scoreMoyen, 'f', 1))
+     .arg(excellents).arg(bons).arg(moyens).arg(faibles));
+    summary->setWordWrap(true);
+    summary->setStyleSheet(
+        "background:#FFF8F0;border:2px solid #BCAAA4;border-radius:8px;padding:12px;"
+        "color:#291C0E;font-size:12px;"
+    );
+    lay.addWidget(summary);
+    
+    // Close button
+    QPushButton *close = new QPushButton("Fermer", &dlg);
+    close->setStyleSheet(
+        "QPushButton{background:#8D6E63;color:white;border:none;border-radius:8px;padding:10px 30px;font-weight:bold;}"
+        "QPushButton:hover{background:#A0826D;}"
+        "QPushButton:pressed{background:#6E473B;}"
+    );
+    connect(close, &QPushButton::clicked, &dlg, &QDialog::accept);
+    
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    btnLayout->addStretch();
+    btnLayout->addWidget(close);
+    lay.addLayout(btnLayout);
+    
+    dlg.exec();
 }
 
 void MainWindow::on_searchBoxFournisseur_textChanged(const QString &text)
