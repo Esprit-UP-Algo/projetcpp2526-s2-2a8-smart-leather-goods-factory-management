@@ -300,7 +300,7 @@ QPushButton#btnAddFournisseur:pressed, QPushButton#btnEditFournisseur:pressed, Q
 }
 
 /* Primary Action Buttons - Production Module */
-QPushButton#btnCreerProduction, QPushButton#btnModifierProduction, QPushButton#btnSuiviProduction, QPushButton#btnPlanificationProduction, QPushButton#btnFactureProduction, QPushButton#btnExcelProduction, QPushButton#btnTrierProduction {
+QPushButton#btnCreerProduction, QPushButton#btnModifierProduction, QPushButton#btnPlanificationProduction, QPushButton#btnFactureProduction, QPushButton#btnExcelProduction, QPushButton#btnTrierProduction, QPushButton#btnStatistiquesProduction {
     background-color: #8D6E63;
     color: white;
     border: none;
@@ -312,12 +312,12 @@ QPushButton#btnCreerProduction, QPushButton#btnModifierProduction, QPushButton#b
     text-align: center;
 }
 
-QPushButton#btnCreerProduction:hover, QPushButton#btnModifierProduction:hover, QPushButton#btnSuiviProduction:hover, QPushButton#btnPlanificationProduction:hover, QPushButton#btnFactureProduction:hover, QPushButton#btnExcelProduction:hover, QPushButton#btnTrierProduction:hover {
+QPushButton#btnCreerProduction:hover, QPushButton#btnModifierProduction:hover, QPushButton#btnPlanificationProduction:hover, QPushButton#btnFactureProduction:hover, QPushButton#btnExcelProduction:hover, QPushButton#btnTrierProduction:hover, QPushButton#btnStatistiquesProduction:hover {
     background-color: #A0826D;
     border: none;
 }
 
-QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:pressed, QPushButton#btnSuiviProduction:pressed, QPushButton#btnPlanificationProduction:pressed, QPushButton#btnFactureProduction:pressed, QPushButton#btnExcelProduction:pressed, QPushButton#btnTrierProduction:pressed {
+QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:pressed, QPushButton#btnPlanificationProduction:pressed, QPushButton#btnFactureProduction:pressed, QPushButton#btnExcelProduction:pressed, QPushButton#btnTrierProduction:pressed, QPushButton#btnStatistiquesProduction:pressed {
     background-color: #6E473B;
     border: none;
     padding: 11px 20px 9px 20px;
@@ -400,19 +400,19 @@ QPushButton#btnRawMaterials:pressed, QPushButton#btnSuppliers:pressed, QPushButt
 }
 
 /* Statistics Cards */
-#statsCard, #statsCard_2, #statsCard_3, #statsCardMatiere1, #statsCardMatiere2, #statsCardMatiere3, #statsCardFournisseur1, #statsCardFournisseur2, #statsCardFournisseur3, #statsCardArticle1, #statsCardArticle2, #statsCardArticle3 {
+#statsCard, #statsCard_2, #statsCard_3, #statsCardMatiere1, #statsCardMatiere2, #statsCardMatiere3, #statsCardFournisseur1, #statsCardFournisseur2, #statsCardFournisseur3, #statsCardArticle1, #statsCardArticle2, #statsCardArticle3, #statsCardProduction1, #statsCardProduction2, #statsCardProduction3, #statsCardProduction4 {
     background-color: #FFF8F0;
     border: 1px solid #BCAAA4;
     border-radius: 8px;
 }
 
-#statsLabel, #statsLabel_2, #statsLabel_3, #statsLabelMatiere1, #statsLabelMatiere2, #statsLabelMatiere3, #statsLabelFournisseur1, #statsLabelFournisseur2, #statsLabelFournisseur3, #statsLabelArticle1, #statsLabelArticle2, #statsLabelArticle3 {
+#statsLabel, #statsLabel_2, #statsLabel_3, #statsLabelMatiere1, #statsLabelMatiere2, #statsLabelMatiere3, #statsLabelFournisseur1, #statsLabelFournisseur2, #statsLabelFournisseur3, #statsLabelArticle1, #statsLabelArticle2, #statsLabelArticle3, #statsLabelProduction1, #statsLabelProduction2, #statsLabelProduction3, #statsLabelProduction4 {
     color: #291C0E;
     font-family: Arial, sans-serif;
     font-size: 10px;
 }
 
-#statsValue, #statsValue_2, #statsValue_3, #statsValueMatiere1, #statsValueMatiere2, #statsValueMatiere3, #statsValueFournisseur1, #statsValueFournisseur2, #statsValueFournisseur3, #statsValueArticle1, #statsValueArticle2, #statsValueArticle3 {
+#statsValue, #statsValue_2, #statsValue_3, #statsValueMatiere1, #statsValueMatiere2, #statsValueMatiere3, #statsValueFournisseur1, #statsValueFournisseur2, #statsValueFournisseur3, #statsValueArticle1, #statsValueArticle2, #statsValueArticle3, #statsValueProduction1, #statsValueProduction2, #statsValueProduction3, #statsValueProduction4 {
     color: #8D6E63;
     font-family: 'Times New Roman', serif;
     font-size: 24px;
@@ -2272,6 +2272,168 @@ QPushButton:hover {
                </widget>
               </item>
               <item>
+               <widget class="QWidget" name="productionStatsContainer" native="true">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>65</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>16777215</width>
+                  <height>65</height>
+                 </size>
+                </property>
+                <layout class="QHBoxLayout" name="horizontalLayout_productionStats">
+                 <property name="spacing">
+                  <number>15</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>0</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>0</number>
+                 </property>
+                 <item>
+                  <widget class="QFrame" name="statsCardProduction1">
+                   <property name="frameShape">
+                    <enum>QFrame::Shape::StyledPanel</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_statsProduction1">
+                    <item>
+                     <widget class="QLabel" name="statsLabelProduction1">
+                      <property name="text">
+                       <string>Total Commandes</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="statsValueProduction1">
+                      <property name="text">
+                       <string>0</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="statsCardProduction2">
+                   <property name="frameShape">
+                    <enum>QFrame::Shape::StyledPanel</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_statsProduction2">
+                    <item>
+                     <widget class="QLabel" name="statsLabelProduction2">
+                      <property name="text">
+                       <string>En Production</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="statsValueProduction2">
+                      <property name="text">
+                       <string>0</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="statsCardProduction3">
+                   <property name="frameShape">
+                    <enum>QFrame::Shape::StyledPanel</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_statsProduction3">
+                    <item>
+                     <widget class="QLabel" name="statsLabelProduction3">
+                      <property name="text">
+                       <string>Terminées</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="statsValueProduction3">
+                      <property name="text">
+                       <string>0</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QFrame" name="statsCardProduction4">
+                   <property name="frameShape">
+                    <enum>QFrame::Shape::StyledPanel</enum>
+                   </property>
+                   <layout class="QVBoxLayout" name="verticalLayout_statsProduction4">
+                    <item>
+                     <widget class="QLabel" name="statsLabelProduction4">
+                      <property name="text">
+                       <string>Montant Total</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QLabel" name="statsValueProduction4">
+                      <property name="text">
+                       <string>0 DT</string>
+                      </property>
+                      <property name="alignment">
+                       <set>Qt::AlignmentFlag::AlignCenter</set>
+                      </property>
+                     </widget>
+                    </item>
+                   </layout>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="horizontalSpacer_statsProduction">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>40</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
                <widget class="QWidget" name="productionToolbar" native="true">
                 <property name="minimumSize">
                  <size>
@@ -2354,28 +2516,15 @@ QPushButton:hover {
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="btnSuiviProduction">
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>⇒ Suivi</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
                   <widget class="QPushButton" name="btnPlanificationProduction">
                    <property name="minimumSize">
                     <size>
-                     <width>140</width>
+                     <width>180</width>
                      <height>32</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>▦ Planification</string>
+                    <string>▦ Planification &amp; Suivi</string>
                    </property>
                   </widget>
                  </item>
@@ -2401,7 +2550,7 @@ QPushButton:hover {
                     </size>
                    </property>
                    <property name="text">
-                    <string>⬇ Export</string>
+                    <string>⚖ Bilan</string>
                    </property>
                   </widget>
                  </item>
@@ -2415,6 +2564,19 @@ QPushButton:hover {
                    </property>
                    <property name="text">
                     <string>⇅ Trier</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnStatistiquesProduction">
+                   <property name="minimumSize">
+                    <size>
+                     <width>120</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>☆ Statistiques</string>
                    </property>
                   </widget>
                  </item>
@@ -2489,334 +2651,6 @@ QPushButton:hover {
                   <string>PRIORITÉ</string>
                  </property>
                 </column>
-               </widget>
-              </item>
-              <item>
-               <widget class="QWidget" name="productionStatsContainer" native="true">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>120</height>
-                 </size>
-                </property>
-                <property name="maximumSize">
-                 <size>
-                  <width>16777215</width>
-                  <height>120</height>
-                 </size>
-                </property>
-                <property name="styleSheet">
-                 <string notr="true">background-color: transparent;</string>
-                </property>
-                <layout class="QHBoxLayout" name="horizontalLayout_productionStats">
-                 <property name="spacing">
-                  <number>15</number>
-                 </property>
-                 <property name="leftMargin">
-                  <number>0</number>
-                 </property>
-                 <property name="topMargin">
-                  <number>10</number>
-                 </property>
-                 <property name="rightMargin">
-                  <number>0</number>
-                 </property>
-                 <property name="bottomMargin">
-                  <number>0</number>
-                 </property>
-                 <item>
-                  <widget class="QFrame" name="statCard1">
-                   <property name="styleSheet">
-                    <string notr="true">QFrame {
-    background-color: #FFFFFF;
-    border-radius: 12px;
-    border: 1px solid #E0E0E0;
-}
-QFrame:hover {
-    border: 1px solid #8D6E63;
-}</string>
-                   </property>
-                   <property name="frameShape">
-                    <enum>QFrame::Shape::StyledPanel</enum>
-                   </property>
-                   <layout class="QVBoxLayout" name="verticalLayout_stat1">
-                    <property name="spacing">
-                     <number>5</number>
-                    </property>
-                    <property name="leftMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="topMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="rightMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="bottomMargin">
-                     <number>15</number>
-                    </property>
-                    <item>
-                     <widget class="QLabel" name="lblStatIcon1">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 24px;</string>
-                      </property>
-                      <property name="text">
-                       <string>[]</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLabel" name="lblStatValue1">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 22px; font-weight: bold; color: #8D6E63;</string>
-                      </property>
-                      <property name="text">
-                       <string>0</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLabel" name="lblStatLabel1">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 11px; color: #666666;</string>
-                      </property>
-                      <property name="text">
-                       <string>Total Commandes</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QFrame" name="statCard2">
-                   <property name="styleSheet">
-                    <string notr="true">QFrame {
-    background-color: #FFFFFF;
-    border-radius: 12px;
-    border: 1px solid #E0E0E0;
-}
-QFrame:hover {
-    border: 1px solid #8D6E63;
-}</string>
-                   </property>
-                   <property name="frameShape">
-                    <enum>QFrame::Shape::StyledPanel</enum>
-                   </property>
-                   <layout class="QVBoxLayout" name="verticalLayout_stat2">
-                    <property name="spacing">
-                     <number>5</number>
-                    </property>
-                    <property name="leftMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="topMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="rightMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="bottomMargin">
-                     <number>15</number>
-                    </property>
-                    <item>
-                     <widget class="QLabel" name="lblStatIcon2">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 24px;</string>
-                      </property>
-                      <property name="text">
-                       <string>[]</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLabel" name="lblStatValue2">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 22px; font-weight: bold; color: #2196F3;</string>
-                      </property>
-                      <property name="text">
-                       <string>0</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLabel" name="lblStatLabel2">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 11px; color: #666666;</string>
-                      </property>
-                      <property name="text">
-                       <string>En Production</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QFrame" name="statCard3">
-                   <property name="styleSheet">
-                    <string notr="true">QFrame {
-    background-color: #FFFFFF;
-    border-radius: 12px;
-    border: 1px solid #E0E0E0;
-}
-QFrame:hover {
-    border: 1px solid #8D6E63;
-}</string>
-                   </property>
-                   <property name="frameShape">
-                    <enum>QFrame::Shape::StyledPanel</enum>
-                   </property>
-                   <layout class="QVBoxLayout" name="verticalLayout_stat3">
-                    <property name="spacing">
-                     <number>5</number>
-                    </property>
-                    <property name="leftMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="topMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="rightMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="bottomMargin">
-                     <number>15</number>
-                    </property>
-                    <item>
-                     <widget class="QLabel" name="lblStatIcon3">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 24px;</string>
-                      </property>
-                      <property name="text">
-                       <string>+</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLabel" name="lblStatValue3">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 22px; font-weight: bold; color: #4CAF50;</string>
-                      </property>
-                      <property name="text">
-                       <string>0</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLabel" name="lblStatLabel3">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 11px; color: #666666;</string>
-                      </property>
-                      <property name="text">
-                       <string>Terminées</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QFrame" name="statCard4">
-                   <property name="styleSheet">
-                    <string notr="true">QFrame {
-    background-color: #FFFFFF;
-    border-radius: 12px;
-    border: 1px solid #E0E0E0;
-}
-QFrame:hover {
-    border: 1px solid #8D6E63;
-}</string>
-                   </property>
-                   <property name="frameShape">
-                    <enum>QFrame::Shape::StyledPanel</enum>
-                   </property>
-                   <layout class="QVBoxLayout" name="verticalLayout_stat4">
-                    <property name="spacing">
-                     <number>5</number>
-                    </property>
-                    <property name="leftMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="topMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="rightMargin">
-                     <number>15</number>
-                    </property>
-                    <property name="bottomMargin">
-                     <number>15</number>
-                    </property>
-                    <item>
-                     <widget class="QLabel" name="lblStatIcon4">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 24px;</string>
-                      </property>
-                      <property name="text">
-                       <string>💰</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLabel" name="lblStatValue4">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 18px; font-weight: bold; color: #FF9800;</string>
-                      </property>
-                      <property name="text">
-                       <string>0 DT</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLabel" name="lblStatLabel4">
-                      <property name="styleSheet">
-                       <string notr="true">font-size: 11px; color: #666666;</string>
-                      </property>
-                      <property name="text">
-                       <string>Montant Total</string>
-                      </property>
-                      <property name="alignment">
-                       <set>Qt::AlignmentFlag::AlignCenter</set>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                </layout>
                </widget>
               </item>
              </layout>
