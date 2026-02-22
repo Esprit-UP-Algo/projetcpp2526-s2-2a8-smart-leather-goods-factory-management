@@ -94,6 +94,9 @@ bool FournisseurData::supprimer(const QString &id)
 QSqlQueryModel* FournisseurData::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
+    
+    qDebug() << "🔍 Tentative d'affichage des fournisseurs depuis la BD...";
+    
     model->setQuery("SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
                     "TYPE_PRODUIT_FOURNIS, CONDITION_PAIEMENT, STATUT "
                     "FROM FOURNISSEURS ORDER BY NOM_ENTREPRISE", 
@@ -101,9 +104,12 @@ QSqlQueryModel* FournisseurData::afficher()
     
     if (model->lastError().isValid()) {
         qDebug() << "❌ Erreur affichage fournisseurs:" << model->lastError().text();
+        qDebug() << "❌ Type d'erreur:" << model->lastError().type();
         delete model;
         return nullptr;
     }
+    
+    qDebug() << "✅ Requête réussie! Nombre de lignes:" << model->rowCount();
     
     model->setHeaderData(0, Qt::Horizontal, "ID");
     model->setHeaderData(1, Qt::Horizontal, "Nom Entreprise");
