@@ -2,6 +2,8 @@
 #define FOURNISSEUR_H
 
 #include <QString>
+#include <QSqlQuery>
+#include <QSqlQueryModel>
 
 class FournisseurData
 {
@@ -31,6 +33,14 @@ public:
     void setTypeProduit(const QString &value) { typeProduit = value; }
     void setConditionPaiement(const QString &value) { conditionPaiement = value; }
     void setStatut(const QString &value) { statut = value; }
+
+    // Méthodes CRUD
+    bool ajouter();
+    bool modifier();
+    bool supprimer(const QString &id);
+    QSqlQueryModel* afficher();
+    QSqlQueryModel* rechercher(const QString &terme);
+    QSqlQueryModel* trierPar(const QString &colonne);
 
 private:
     QString id;
