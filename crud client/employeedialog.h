@@ -30,7 +30,7 @@ public:
                         const QString &sexe, const QString &adresse, const QString &telephone,
                         const QString &email, const QString &poste, const QString &specialite,
                         const QString &departement, const QString &dateEmbauche);
-    
+
     // Getters pour récupérer les données saisies
     QString getMatricule() const;
     QString getNom() const;
@@ -55,7 +55,7 @@ private:
     void validateAndAccept(); // Validation des champs
 
     DialogMode mode;
-    
+
     // Add/Edit fields
     QLineEdit *matriculeEdit;
     QLineEdit *nomEdit;
@@ -73,7 +73,7 @@ private:
     QLabel *photoPreview;
     QPushButton *browsePhotoButton;
     QLineEdit *photoUrlEdit;
-    
+
     // Delete fields
     QString deleteId;
     QString deleteMatricule;
@@ -81,7 +81,7 @@ private:
     QString deletePrenom;
     QString deleteDepartement;
     QString deletePoste;
-    
+
     // Export fields
     QComboBox *formatCombo;
     QLineEdit *fileNameEdit;

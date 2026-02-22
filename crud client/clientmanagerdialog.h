@@ -27,8 +27,8 @@ public:
     ~ClientManagerDialog();
 
     void setClientData(const QString &nom, const QString &prenom, const QString &sexe,
-                      const QString &cin, const QString &pays, const QString &ville,
-                      const QString &adresse, const QString &email);
+                       const QString &cin, const QString &pays, const QString &ville,
+                       const QString &adresse, const QString &email);
     Client getClient() const;
 
 private:
@@ -38,8 +38,9 @@ private:
     void applyStyles();
 
     DialogMode mode;
-    
+
     // Add/Edit fields
+
     QLineEdit *nomEdit;
     QLineEdit *prenomEdit;
     QComboBox *sexeCombo;
@@ -49,7 +50,7 @@ private:
     QLineEdit *adresseEdit;
     QLineEdit *emailEdit;
     QDateEdit *dateInscrit;
-    
+
     // Delete fields
     QString deleteNom;
     QString deletePrenom;
@@ -57,7 +58,7 @@ private:
     QString deleteCIN;
     QString deletePays;
     QString deleteVille;
-    
+
     // Export fields
     QComboBox *formatCombo;
     QLineEdit *fileNameEdit;
@@ -73,6 +74,8 @@ private:
     QRadioButton *radioAll;
     QRadioButton *radioSelected;
     QRadioButton *radioFiltered;
+    int deleteId;       // <<< add this
+    int editingId;
 };
 
 #endif // CLIENTMANAGERDIALOG_H

@@ -133,19 +133,7 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::onEmployeeSelected);
 
     // ── Clients ─────────────────────────────────────────────────────────────
-    ui->clientTable->verticalHeader()->setVisible(false);
-    auto addClient = [&](const QString &nom, const QString &prenom, const QString &sexe,
-                         const QString &cin, const QString &pays, const QString &ville,
-                         const QString &adr, const QString &email, int daysAgo) {
-        Client c;
-        c.setNom(nom); c.setPrenom(prenom); c.setSexe(sexe); c.setCin(cin);
-        c.setPays(pays); c.setVille(ville); c.setAdresse(adr); c.setEmail(email);
-        c.setDateInscrit(QDate::currentDate().addDays(-daysAgo));
-        clients.append(c);
-    };
-    addClient("Alami","Hassan","Homme","AB123456","Maroc","Casablanca","123 Rue Mohammed V","h.alami@email.com",30);
-    addClient("Benali","Fatima","Femme","CD789012","Maroc","Rabat","456 Avenue Hassan II","f.benali@email.com",15);
-    refreshClientTable();
+
 
     // ── Raw materials ───────────────────────────────────────────────────────
     ui->matiereTable->verticalHeader()->setVisible(false);
@@ -574,89 +562,125 @@ void MainWindow::onEmployeeSelected()
 }
 
 // ── Client CRUD ───────────────────────────────────────────────────────────────
-void MainWindow::refreshClientTable()
+void MainWindow::afficherClients()
 {
-    ui->clientTable->setRowCount(clients.size());
-    for (int i = 0; i < clients.size(); ++i) {
-        const Client &c = clients[i];
-        ui->clientTable->setItem(i,0,new QTableWidgetItem(c.getNom()));
-        ui->clientTable->setItem(i,1,new QTableWidgetItem(c.getPrenom()));
-        ui->clientTable->setItem(i,2,new QTableWidgetItem(c.getSexe()));
-        ui->clientTable->setItem(i,3,new QTableWidgetItem(c.getCin()));
-        ui->clientTable->setItem(i,4,new QTableWidgetItem(c.getPays()));
-        ui->clientTable->setItem(i,5,new QTableWidgetItem(c.getVille()));
-        ui->clientTable->setItem(i,6,new QTableWidgetItem(c.getAdresse()));
-        ui->clientTable->setItem(i,7,new QTableWidgetItem(c.getEmail()));
+    Client c;
+    QSqlQueryModel* model = c.afficherClients(); // fetch data from DB
+
+    ui->clientTable->clear();  // clear previous items
+    ui->clientTable->setRowCount(model->rowCount());
+    ui->clientTable->setColumnCount(model->columnCount());
+
+    // Set header labels (adjust according to your DB)
+    QStringList headers = {"ID", "Nom", "Prénom", "Sexe", "CIN", "Pays", "Ville", "Adresse", "Email", "Date Inscription"};
+    ui->clientTable->setHorizontalHeaderLabels(headers);
+
+    for(int row = 0; row < model->rowCount(); ++row) {
+        for(int col = 0; col < model->columnCount(); ++col) {
+            QTableWidgetItem *item = new QTableWidgetItem(model->index(row,col).data().toString());
+            ui->clientTable->setItem(row, col, item);
+        }
+    }
+
+    // Resize columns to fit content
+    ui->clientTable->resizeColumnsToContents();
+    ui->clientTable->horizontalHeader()->setStretchLastSection(true);
+}
+
+
+void MainWindow::on_btnAddClient_clicked()
+{
+    ClientManagerDialog dlg(this, ClientManagerDialog::AddMode);
+    if(dlg.exec() == QDialog::Accepted) {
+        Client c = dlg.getClient();
+        if(c.ajouter()) {
+            afficherClients();  // refresh table
+            QMessageBox::critical(this, "succées", "client ajouter !");
+        }
     }
 }
 
-void MainWindow::on_btnAddClient_clicked()  { ClientManagerDialog(this, ClientManagerDialog::AddMode).exec(); }
-void MainWindow::on_btnExportClient_clicked(){ ClientManagerDialog(this, ClientManagerDialog::ExportMode).exec(); }
-
 void MainWindow::on_btnEditClient_clicked()
 {
-    int row = ui->clientTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","Veuillez sélectionner un client à modifier."); return; }
+    QModelIndex index = ui->clientTable->currentIndex();
+    if(!index.isValid()) {
+        QMessageBox::warning(this, "Erreur", "Veuillez sélectionner un client à modifier.");
+        return;
+    }
+
+
+
+
+    QSqlQueryModel* model = Client().afficherClients();
+
     ClientManagerDialog dlg(this, ClientManagerDialog::EditMode);
-    dlg.setClientData(cellText(ui->clientTable,row,0),cellText(ui->clientTable,row,1),
-                      cellText(ui->clientTable,row,2),cellText(ui->clientTable,row,3),
-                      cellText(ui->clientTable,row,4),cellText(ui->clientTable,row,5),
-                      cellText(ui->clientTable,row,6),cellText(ui->clientTable,row,7));
-    dlg.exec();
+    dlg.setClientData(
+        model->index(index.row(), 1).data().toString(), // Nom
+        model->index(index.row(), 2).data().toString(), // Prénom
+        model->index(index.row(), 3).data().toString(), // Sexe
+        model->index(index.row(), 4).data().toString(), // CIN
+        model->index(index.row(), 5).data().toString(), // Pays
+        model->index(index.row(), 6).data().toString(), // Ville
+        model->index(index.row(), 7).data().toString(), // Adresse
+        model->index(index.row(), 8).data().toString()  // Email
+        );
+
+    if(dlg.exec() == QDialog::Accepted) {
+        Client updatedClient = dlg.getClient();
+        if(updatedClient.modifier()) {
+            afficherClients();
+        } else {
+            QMessageBox::critical(this, "Erreur", "Échec de modification du client !");
+        }
+    }
 }
 
 void MainWindow::on_btnDeleteClient_clicked()
 {
-    int row = ui->clientTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","Veuillez sélectionner un client à supprimer."); return; }
+    QModelIndex index = ui->clientTable->currentIndex();
+    if(!index.isValid()) {
+        QMessageBox::warning(this,"Erreur","Veuillez sélectionner un client à supprimer.");
+        return;
+    }
+
+    int row = index.row();
+    int id_client = ui->clientTable->item(row, 0)->text().toInt(); // hidden id
+
     ClientManagerDialog dlg(this, ClientManagerDialog::DeleteMode);
-    dlg.setClientData(cellText(ui->clientTable,row,0),cellText(ui->clientTable,row,1),
-                      cellText(ui->clientTable,row,2),cellText(ui->clientTable,row,3),
-                      cellText(ui->clientTable,row,4),cellText(ui->clientTable,row,5),"","");
-    dlg.exec();
+    dlg.setClientData(
+        ui->clientTable->item(row, 1)->text(), // Nom
+        ui->clientTable->item(row, 2)->text(), // Prénom
+        ui->clientTable->item(row, 3)->text(), // Sexe
+        ui->clientTable->item(row, 4)->text(), // CIN
+        ui->clientTable->item(row, 5)->text(), // Pays
+        ui->clientTable->item(row, 6)->text(), // Ville
+        "", "" // ignore adresse/email in delete
+        );
+
+    if(dlg.exec() == QDialog::Accepted) {
+        if(Client().supprimer(id_client)) {
+            afficherClients(); // refresh immediately
+        } else {
+            QMessageBox::critical(this,"Erreur","Échec de suppression du client !");
+        }
+    }
 }
 
 void MainWindow::on_btnRefreshClient_clicked()
 {
-    showInfo(this,"Actualisation","Liste des clients actualisée ! (Mode statique - données d'exemple)");
+    afficherClients();
 }
 
-void MainWindow::on_btnTriClient_clicked()
-{
-    QMenu menu(this);
-    menu.setStyleSheet(
-        "QMenu{background:#FAF5F0;border:2px solid #8D6E63;border-radius:6px;padding:8px;}"
-        "QMenu::item{padding:8px 25px;color:#291C0E;border-radius:4px;}"
-        "QMenu::item:selected{background:#8D6E63;color:white;}"
-        "QMenu::separator{height:2px;background:#BCAAA4;margin:5px 10px;}"
-    );
 
-    auto addSortOptions = [&](const QString &label, int col) {
-        QMenu *sub = menu.addMenu("📋 " + label);
-        sub->setStyleSheet(menu.styleSheet());
-        auto *asc = sub->addAction("↑ Croissant (A → Z)");
-        auto *desc = sub->addAction("↓ Décroissant (Z → A)");
-        connect(asc, &QAction::triggered, [=]{ ui->clientTable->sortItems(col, Qt::AscendingOrder); });
-        connect(desc, &QAction::triggered, [=]{ ui->clientTable->sortItems(col, Qt::DescendingOrder); });
-    };
 
-    addSortOptions("Nom", 0);
-    addSortOptions("Prénom", 1);
-    addSortOptions("Sexe", 2);
-    menu.addSeparator();
-    addSortOptions("CIN", 3);
-    addSortOptions("Pays", 4);
-    addSortOptions("Ville", 5);
-    menu.addSeparator();
-    addSortOptions("Email", 7);
 
-    QPoint pos = ui->btnTriClient->mapToGlobal(QPoint(0, ui->btnTriClient->height()));
-    menu.exec(pos);
-}
 
-void MainWindow::on_btnStatsByRegion_clicked()       { showInfo(this,"Stats Région","Affiche le nombre de clients par région."); }
-void MainWindow::on_btnFidelityClassification_clicked(){ showInfo(this,"Classification Fidélité","Classe les clients selon leur fidélité."); }
-void MainWindow::on_btnAIAgent_clicked()             { showInfo(this,"Agent IA","Permet de rechercher rapidement un client."); }
+void MainWindow::on_btnFidelityClassification_clicked() {}
+void MainWindow::on_btnStatsByRegion_clicked() {}
+void MainWindow::on_btnAIAgent_clicked() {}
+void MainWindow::on_btnExportClient_clicked() {}
+void MainWindow::on_btnTriClient_clicked() {}
+
 
 // ── Raw Materials ─────────────────────────────────────────────────────────────
 void MainWindow::setupMatiereTable()

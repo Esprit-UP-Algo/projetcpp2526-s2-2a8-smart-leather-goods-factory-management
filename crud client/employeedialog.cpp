@@ -22,7 +22,7 @@ EmployeeDialog::EmployeeDialog(QWidget *parent, DialogMode mode)
         setupAddEditUI();
     }
     applyStyles();
-    
+
     if (mode == AddMode) {
         setWindowTitle("Créer Employé - CUIREA");
     } else if (mode == EditMode) {
@@ -32,7 +32,7 @@ EmployeeDialog::EmployeeDialog(QWidget *parent, DialogMode mode)
     } else {
         setWindowTitle("Supprimer Employé - CUIREA");
     }
-    
+
     if (mode == ExportMode) {
         setMinimumSize(700, 600);
     } else {
@@ -66,20 +66,20 @@ void EmployeeDialog::setupAddEditUI()
 
     matriculeEdit = new QLineEdit();
     matriculeEdit->setPlaceholderText("EMP-2024-XXX");
-    
+
     nomEdit = new QLineEdit();
     nomEdit->setPlaceholderText("Obligatoire");
-    
+
     prenomEdit = new QLineEdit();
     prenomEdit->setPlaceholderText("Obligatoire");
-    
+
     cinEdit = new QLineEdit();
     cinEdit->setPlaceholderText("AB123456");
-    
+
     dateNaissanceEdit = new QDateEdit(QDate::currentDate().addYears(-25));
     dateNaissanceEdit->setCalendarPopup(true);
     dateNaissanceEdit->setDisplayFormat("dd/MM/yyyy");
-    
+
     sexeCombo = new QComboBox();
     sexeCombo->addItems({"Homme", "Femme"});
 
@@ -93,12 +93,12 @@ void EmployeeDialog::setupAddEditUI()
     // PHOTO SECTION (Center)
     QVBoxLayout *photoLayout = new QVBoxLayout();
     photoLayout->setSpacing(10);
-    
+
     QLabel *photoLabel = new QLabel("Photo de l'employé", this);
     photoLabel->setObjectName("sectionLabel");
     photoLabel->setAlignment(Qt::AlignCenter);
     photoLayout->addWidget(photoLabel);
-    
+
     photoPreview = new QLabel(this);
     photoPreview->setObjectName("photoPreview");
     photoPreview->setFixedSize(150, 150);
@@ -106,18 +106,18 @@ void EmployeeDialog::setupAddEditUI()
     photoPreview->setText("●");
     photoPreview->setScaledContents(true);
     photoLayout->addWidget(photoPreview, 0, Qt::AlignCenter);
-    
+
     browsePhotoButton = new QPushButton("Parcourir...", this);
     browsePhotoButton->setObjectName("browseButton");
     browsePhotoButton->setMinimumHeight(35);
     browsePhotoButton->setEnabled(false);
     photoLayout->addWidget(browsePhotoButton);
-    
+
     photoUrlEdit = new QLineEdit(this);
     photoUrlEdit->setPlaceholderText("Chemin de la photo");
     photoUrlEdit->setReadOnly(true);
     photoLayout->addWidget(photoUrlEdit);
-    
+
     photoLayout->addStretch();
 
     // RIGHT COLUMN
@@ -125,28 +125,28 @@ void EmployeeDialog::setupAddEditUI()
     rightForm->setLabelAlignment(Qt::AlignRight);
     rightForm->setHorizontalSpacing(14);
     rightForm->setVerticalSpacing(12);
-    
+
     adresseEdit = new QLineEdit();
     adresseEdit->setPlaceholderText("Adresse complète");
-    
+
     telephoneEdit = new QLineEdit();
     telephoneEdit->setPlaceholderText("0612345678");
-    
+
     emailEdit = new QLineEdit();
     emailEdit->setPlaceholderText("email@cuirea.com");
-    
+
     posteCombo = new QComboBox();
-    posteCombo->addItems({"Supervisor", "Inspector", "Operator", "Team Leader", "Technician", 
+    posteCombo->addItems({"Supervisor", "Inspector", "Operator", "Team Leader", "Technician",
                          "Designer", "Manager", "HR Officer"});
-    
+
     specialiteEdit = new QLineEdit();
     specialiteEdit->setPlaceholderText("Spécialité");
-    
+
     departementCombo = new QComboBox();
-    departementCombo->addItems({"Production", "Quality Control", "Cutting", "Stitching", 
-                               "Finishing", "Design", "Warehouse", "Administration", 
+    departementCombo->addItems({"Production", "Quality Control", "Cutting", "Stitching",
+                               "Finishing", "Design", "Warehouse", "Administration",
                                "Maintenance", "Packaging"});
-    
+
     dateEmbaucheEdit = new QDateEdit(QDate::currentDate());
     dateEmbaucheEdit->setCalendarPopup(true);
     dateEmbaucheEdit->setDisplayFormat("dd/MM/yyyy");
@@ -187,56 +187,56 @@ void EmployeeDialog::setupDeleteUI()
     QVBoxLayout *mainLay = new QVBoxLayout(this);
     mainLay->setContentsMargins(40, 30, 40, 30);
     mainLay->setSpacing(20);
-    
+
     setMinimumSize(500, 350);
-    
+
     QLabel *title = new QLabel("Confirmation de Suppression");
     title->setObjectName("dialogTitle");
     title->setAlignment(Qt::AlignCenter);
     mainLay->addWidget(title);
-    
+
     QLabel *question = new QLabel("Êtes-vous sûr de vouloir supprimer cet employé ?");
     question->setObjectName("questionLabel");
     question->setAlignment(Qt::AlignCenter);
     question->setWordWrap(true);
     mainLay->addWidget(question);
-    
+
     mainLay->addSpacing(10);
-    
+
     // Employee info will be set later
     QLabel *infoLabel = new QLabel();
     infoLabel->setObjectName("infoLabel");
     infoLabel->setAlignment(Qt::AlignLeft);
     infoLabel->setWordWrap(true);
     mainLay->addWidget(infoLabel);
-    
+
     mainLay->addSpacing(10);
-    
+
     QLabel *warningLabel = new QLabel("Cette action est irréversible !");
     warningLabel->setObjectName("warningLabel");
     warningLabel->setAlignment(Qt::AlignCenter);
     mainLay->addWidget(warningLabel);
-    
+
     mainLay->addStretch();
-    
+
     QHBoxLayout *btnLayout = new QHBoxLayout();
     btnLayout->setSpacing(15);
-    
+
     QPushButton *cancelBtn = new QPushButton("Annuler");
     cancelBtn->setObjectName("cancelButton");
     cancelBtn->setMinimumSize(120, 40);
-    
+
     QPushButton *deleteBtn = new QPushButton("Supprimer");
     deleteBtn->setObjectName("deleteButton");
     deleteBtn->setMinimumSize(120, 40);
-    
+
     btnLayout->addStretch();
     btnLayout->addWidget(cancelBtn);
     btnLayout->addWidget(deleteBtn);
     btnLayout->addStretch();
-    
+
     mainLay->addLayout(btnLayout);
-    
+
     connect(cancelBtn, &QPushButton::clicked, this, &EmployeeDialog::reject);
     connect(deleteBtn, &QPushButton::clicked, this, &EmployeeDialog::accept);
 }
@@ -254,7 +254,7 @@ void EmployeeDialog::setEmployeeData(const QString &id, const QString &matricule
         deletePrenom = prenom;
         deleteDepartement = departement;
         deletePoste = poste;
-        
+
         QLabel *infoLabel = findChild<QLabel*>("infoLabel");
         if (infoLabel) {
             infoLabel->setText(
@@ -300,15 +300,15 @@ void EmployeeDialog::setupExportUI()
     formatLayout->setLabelAlignment(Qt::AlignRight);
     formatLayout->setHorizontalSpacing(14);
     formatLayout->setVerticalSpacing(12);
-    
+
     formatCombo = new QComboBox();
     formatCombo->addItems({"Excel (.xlsx)", "CSV (.csv)", "PDF (.pdf)", "JSON (.json)"});
     formatLayout->addRow("Format *:", formatCombo);
-    
+
     fileNameEdit = new QLineEdit();
     fileNameEdit->setPlaceholderText("employees_export");
     formatLayout->addRow("Nom du fichier *:", fileNameEdit);
-    
+
     locationEdit = new QLineEdit();
     locationEdit->setPlaceholderText("C:\\Users\\Documents\\");
     locationEdit->setReadOnly(true);
@@ -319,40 +319,40 @@ void EmployeeDialog::setupExportUI()
     locLayout->addWidget(locationEdit);
     locLayout->addWidget(browseBtn);
     formatLayout->addRow("Emplacement *:", locLayout);
-    
+
     mainLay->addWidget(formatGroup);
 
     // Data selection section
     QGroupBox *dataGroup = new QGroupBox("Données à exporter");
     dataGroup->setObjectName("groupBox");
     QVBoxLayout *dataLayout = new QVBoxLayout(dataGroup);
-    
+
     // Radio buttons for scope
     QLabel *scopeLabel = new QLabel("Portée de l'export :");
     scopeLabel->setObjectName("sectionLabel");
     dataLayout->addWidget(scopeLabel);
-    
+
     radioAll = new QRadioButton("Tous les employés");
     radioSelected = new QRadioButton("Employés sélectionnés uniquement");
     radioFiltered = new QRadioButton("Résultats de recherche actuels");
     radioAll->setChecked(true);
-    
+
     dataLayout->addWidget(radioAll);
     dataLayout->addWidget(radioSelected);
     dataLayout->addWidget(radioFiltered);
-    
+
     dataLayout->addSpacing(10);
-    
+
     // Checkboxes for fields
     QLabel *fieldsLabel = new QLabel("Champs à inclure :");
     fieldsLabel->setObjectName("sectionLabel");
     dataLayout->addWidget(fieldsLabel);
-    
+
     QWidget *fieldsWidget = new QWidget();
     QGridLayout *fieldsGrid = new QGridLayout(fieldsWidget);
     fieldsGrid->setSpacing(10);
     fieldsGrid->setContentsMargins(10, 10, 10, 10);
-    
+
     chkID = new QCheckBox("ID");
     chkMatricule = new QCheckBox("Matricule");
     chkNom = new QCheckBox("Nom");
@@ -363,7 +363,7 @@ void EmployeeDialog::setupExportUI()
     chkPoste = new QCheckBox("Poste");
     chkTelephone = new QCheckBox("Téléphone");
     chkEmail = new QCheckBox("Email");
-    
+
     // Check all by default
     chkID->setChecked(true);
     chkMatricule->setChecked(true);
@@ -375,7 +375,7 @@ void EmployeeDialog::setupExportUI()
     chkPoste->setChecked(true);
     chkTelephone->setChecked(true);
     chkEmail->setChecked(true);
-    
+
     fieldsGrid->addWidget(chkID, 0, 0);
     fieldsGrid->addWidget(chkMatricule, 0, 1);
     fieldsGrid->addWidget(chkNom, 1, 0);
@@ -386,9 +386,9 @@ void EmployeeDialog::setupExportUI()
     fieldsGrid->addWidget(chkPoste, 3, 1);
     fieldsGrid->addWidget(chkTelephone, 4, 0);
     fieldsGrid->addWidget(chkEmail, 4, 1);
-    
+
     dataLayout->addWidget(fieldsWidget);
-    
+
     mainLay->addWidget(dataGroup);
 
     // Note
@@ -534,31 +534,31 @@ void EmployeeDialog::validateAndAccept()
         accept();
         return;
     }
-    
+
     // Validation des champs obligatoires
     QStringList errors;
-    
+
     if (matriculeEdit->text().trimmed().isEmpty()) {
         errors << "- Le matricule est obligatoire";
         matriculeEdit->setStyleSheet("border: 2px solid red;");
     } else {
         matriculeEdit->setStyleSheet("");
     }
-    
+
     if (nomEdit->text().trimmed().isEmpty()) {
         errors << "- Le nom est obligatoire";
         nomEdit->setStyleSheet("border: 2px solid red;");
     } else {
         nomEdit->setStyleSheet("");
     }
-    
+
     if (prenomEdit->text().trimmed().isEmpty()) {
         errors << "- Le prénom est obligatoire";
         prenomEdit->setStyleSheet("border: 2px solid red;");
     } else {
         prenomEdit->setStyleSheet("");
     }
-    
+
     if (cinEdit->text().trimmed().isEmpty()) {
         errors << "- Le CIN est obligatoire";
         cinEdit->setStyleSheet("border: 2px solid red;");
@@ -568,18 +568,18 @@ void EmployeeDialog::validateAndAccept()
     } else {
         cinEdit->setStyleSheet("");
     }
-    
+
     if (telephoneEdit->text().trimmed().isEmpty()) {
         errors << "- Le téléphone est obligatoire";
         telephoneEdit->setStyleSheet("border: 2px solid red;");
-    } else if (!telephoneEdit->text().trimmed().startsWith("0") || 
+    } else if (!telephoneEdit->text().trimmed().startsWith("0") ||
                telephoneEdit->text().trimmed().length() != 10) {
         errors << "- Le téléphone doit contenir 10 chiffres et commencer par 0";
         telephoneEdit->setStyleSheet("border: 2px solid red;");
     } else {
         telephoneEdit->setStyleSheet("");
     }
-    
+
     if (emailEdit->text().trimmed().isEmpty()) {
         errors << "- L'email est obligatoire";
         emailEdit->setStyleSheet("border: 2px solid red;");
@@ -589,7 +589,7 @@ void EmployeeDialog::validateAndAccept()
     } else {
         emailEdit->setStyleSheet("");
     }
-    
+
     // Si des erreurs existent, afficher un message
     if (!errors.isEmpty()) {
         QMessageBox msgBox(this);
@@ -607,7 +607,7 @@ void EmployeeDialog::validateAndAccept()
         msgBox.exec();
         return;
     }
-    
+
     // Validation réussie
     accept();
 }

@@ -41,6 +41,7 @@ private slots:
     void on_btnFidelityClassification_clicked();
     void on_btnAIAgent_clicked();
 
+
     // Navigation
     void on_btnEmployees_clicked();
     void on_btnClients_clicked();
@@ -124,7 +125,7 @@ private:
 
     // Client
     void refreshClientTable();
-
+    void afficherClients();
     // Raw materials
     void setupMatiereTable();
     void setupSuggestionTable();
