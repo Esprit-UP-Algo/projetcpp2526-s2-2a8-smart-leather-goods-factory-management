@@ -7,14 +7,19 @@
 #include "productiondialog.h"
 #include "articledialog.h"
 #include "employe.h"
+#include "production.h"
+#include "connection.h"
 #include <QTableWidgetItem>
 #include <QDebug>
 #include <QMessageBox>
 #include <QDate>
 #include <QDateTime>
+#include <QSqlQuery>
+#include <QSqlError>
 #include <QMenu>
 #include <QDialog>
 #include <QFormLayout>
+#include <QGroupBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDateEdit>
@@ -1458,20 +1463,40 @@ void MainWindow::setupProductionTable()
 void MainWindow::loadProductionData()
 {
     ui->productionTable->setRowCount(0);
-    const struct { const char *ref,*client,*type,*montant,*dc,*dl,*stat,*prio; } data[] = {
-        {"PROD-2024-001","Leather Masters SA","Sacs en Cuir","15,500.00 DT","2024-01-15","2024-02-15","En Production","Haute"},
-        {"PROD-2024-002","Textile Excellence","Vêtements","8,200.00 DT","2024-01-18","2024-02-20","Planifié","Moyenne"},
-        {"PROD-2024-003","Fashion Accessories Ltd","Accessoires","3,750.00 DT","2024-01-20","2024-02-10","En Production","Haute"},
-        {"PROD-2024-004","Premium Bags Co","Sacs Premium","22,000.00 DT","2024-01-22","2024-03-01","En Attente","Basse"},
-        {"PROD-2024-005","Style Clothing","Collection Été","12,800.00 DT","2024-01-25","2024-02-28","En Production","Moyenne"},
-        {"PROD-2024-006","Quality Leather Supply","Cuir Traité","9,500.00 DT","2024-01-28","2024-02-25","Terminé","Moyenne"},
-        {"PROD-2024-007","Modern Textiles","Tissus Techniques","6,300.00 DT","2024-02-01","2024-03-05","Planifié","Basse"},
-        {"PROD-2024-008","Elite Accessories","Bijoux Mode","4,200.00 DT","2024-02-03","2024-02-18","En Production","Haute"},
-        {"PROD-2024-009","Luxury Bags Import","Sacs Luxe","28,500.00 DT","2024-02-05","2024-03-15","En Attente","Haute"},
-        {"PROD-2024-010","Fashion Forward","Prêt-à-Porter","11,200.00 DT","2024-02-07","2024-03-10","Planifié","Moyenne"},
-    };
-    for (const auto &d : data)
-        ajouterCommandeProduction(d.ref,d.client,d.type,d.montant,d.dc,d.dl,d.stat,d.prio);
+    
+    Production prod;
+    QSqlQueryModel* model = prod.afficher();
+    
+    if (!model) {
+        qDebug() << "❌ Erreur lors du chargement des commandes";
+        return;
+    }
+    
+    for (int i = 0; i < model->rowCount(); ++i) {
+        int row = ui->productionTable->rowCount();
+        ui->productionTable->insertRow(row);
+        
+        // ID_COMMANDE (caché)
+        ui->productionTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));
+        // Référence
+        ui->productionTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));
+        // Client (maintenant avec jointure)
+        ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
+        // Type
+        ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
+        // Montant
+        ui->productionTable->setItem(row, 4, new QTableWidgetItem(model->data(model->index(i, 4)).toString() + " DT"));
+        // Date Création
+        ui->productionTable->setItem(row, 5, new QTableWidgetItem(model->data(model->index(i, 5)).toDate().toString("dd/MM/yyyy")));
+        // Date Livraison
+        ui->productionTable->setItem(row, 6, new QTableWidgetItem(model->data(model->index(i, 6)).toDate().toString("dd/MM/yyyy")));
+        // Statut
+        ui->productionTable->setItem(row, 7, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
+        // Priorité
+        ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 8)).toString()));
+    }
+    
+    delete model;
     updateProductionStatsCards();
 }
 
@@ -1515,58 +1540,147 @@ void MainWindow::updateProductionStatsCards()
 void MainWindow::onCreerProduction()
 {
     ProductionDialog dlg(this, ProductionDialog::AddMode);
-    if (dlg.exec() == QDialog::Accepted)
-        ajouterCommandeProduction(dlg.getReference(), dlg.getProduit(), dlg.getProduit(),
-                                   "0.00 DT", dlg.getDateDebut(), dlg.getDateFin(),
-                                   dlg.getStatut(), dlg.getPriorite());
+    if (dlg.exec() == QDialog::Accepted) {
+        qDebug() << "========== AJOUT COMMANDE ==========";
+        
+        // Créer l'objet Production
+        Production prod;
+        
+        // Générer une référence unique
+        QString ref = dlg.getReference();
+        if (ref.isEmpty()) {
+            ref = QString("PROD-%1-%2")
+                .arg(QDate::currentDate().year())
+                .arg(QTime::currentTime().toString("HHmmss"));
+        }
+        
+        prod.setReference(ref);
+        prod.setType(dlg.getProduit());
+        prod.setMontantHT(dlg.getQuantite().toDouble());
+        
+        // Gérer les dates
+        QDate dateCreation = QDate::fromString(dlg.getDateDebut(), "dd/MM/yyyy");
+        QDate dateLivraison = QDate::fromString(dlg.getDateFin(), "dd/MM/yyyy");
+        
+        if (!dateCreation.isValid()) {
+            dateCreation = QDate::currentDate();
+        }
+        if (!dateLivraison.isValid()) {
+            dateLivraison = QDate::currentDate().addDays(30);
+        }
+        
+        prod.setDateCreation(dateCreation);
+        prod.setDateLivraison(dateLivraison);
+        prod.setStatut(dlg.getStatut());
+        prod.setPriorite(dlg.getPriorite());
+        
+        // Debug
+        qDebug() << "Reference:" << prod.getReference();
+        qDebug() << "Type:" << prod.getType();
+        qDebug() << "Montant:" << prod.getMontantHT();
+        qDebug() << "Date Creation:" << prod.getDateCreation().toString("yyyy-MM-dd");
+        qDebug() << "Date Livraison:" << prod.getDateLivraison().toString("yyyy-MM-dd");
+        qDebug() << "Statut:" << prod.getStatut();
+        qDebug() << "Priorite:" << prod.getPriorite();
+        
+        if (prod.ajouter()) {
+            qDebug() << "✅ Commande ajoutée avec succès";
+            QMessageBox::information(this, "Succès", "Commande ajoutée avec succès!");
+            loadProductionData();
+        } else {
+            qDebug() << "❌ Échec de l'ajout";
+            QMessageBox::critical(this, "Erreur", "Erreur lors de l'ajout de la commande.");
+        }
+    }
 }
 
 void MainWindow::onModifierProduction()
 {
     int row = ui->productionTable->currentRow();
-    if (row < 0 || !cellText(ui->productionTable,row,1).startsWith("PROD-")) {
-        QMessageBox::warning(this,"","Veuillez sélectionner une commande."); return;
+    if (row < 0) {
+        QMessageBox::warning(this, "Attention", "Veuillez sélectionner une commande.");
+        return;
     }
-    QDialog d(this); d.setWindowTitle("Modifier Commande"); d.setMinimumSize(500,450);
+    
+    QDialog d(this);
+    d.setWindowTitle("Modifier Commande");
+    d.setMinimumSize(500, 450);
     d.setStyleSheet(DIALOG_STYLE);
-    QVBoxLayout lay(&d); lay.setContentsMargins(20,20,20,20);
+    
+    QVBoxLayout lay(&d);
+    lay.setContentsMargins(20, 20, 20, 20);
     QFormLayout form;
-    QLineEdit refE(cellText(ui->productionTable,row,1),&d);
-    QLineEdit clientE(cellText(ui->productionTable,row,2),&d);
-    QComboBox typeC(&d); typeC.addItems({"Standard","Express","Vente","Devis"});
-    typeC.setCurrentText(cellText(ui->productionTable,row,3));
-    QLineEdit montantE(cellText(ui->productionTable,row,4),&d);
-    QDateEdit dcE(QDate::fromString(cellText(ui->productionTable,row,5),"dd/MM/yyyy"),&d);
-    dcE.setCalendarPopup(true); dcE.setDisplayFormat("dd/MM/yyyy");
-    QDateEdit dlE(QDate::fromString(cellText(ui->productionTable,row,6),"dd/MM/yyyy"),&d);
-    dlE.setCalendarPopup(true); dlE.setDisplayFormat("dd/MM/yyyy");
-    QComboBox statC(&d); statC.addItems({"En Attente","Planifié","En Production","Terminé"});
-    statC.setCurrentText(cellText(ui->productionTable,row,7));
-    QComboBox prioC(&d); prioC.addItems({"Basse","Normale","Haute","Urgente"});
-    prioC.setCurrentText(cellText(ui->productionTable,row,8));
-    form.addRow("Référence *:",&refE); form.addRow("Client *:",&clientE);
-    form.addRow("Type:",&typeC); form.addRow("Montant HT *:",&montantE);
-    form.addRow("Date Création:",&dcE); form.addRow("Date Livraison:",&dlE);
-    form.addRow("Statut:",&statC); form.addRow("Priorité:",&prioC);
+    
+    QLineEdit refE(cellText(ui->productionTable, row, 1), &d);
+    QLineEdit clientE(cellText(ui->productionTable, row, 2), &d);
+    QComboBox typeC(&d);
+    typeC.addItems({"Standard", "Express", "Vente", "Devis"});
+    typeC.setCurrentText(cellText(ui->productionTable, row, 3));
+    
+    QString montantStr = cellText(ui->productionTable, row, 4);
+    montantStr.remove(" DT").remove(",").replace(" ", "");
+    QLineEdit montantE(montantStr, &d);
+    
+    QDateEdit dcE(QDate::fromString(cellText(ui->productionTable, row, 5), "dd/MM/yyyy"), &d);
+    dcE.setCalendarPopup(true);
+    dcE.setDisplayFormat("dd/MM/yyyy");
+    
+    QDateEdit dlE(QDate::fromString(cellText(ui->productionTable, row, 6), "dd/MM/yyyy"), &d);
+    dlE.setCalendarPopup(true);
+    dlE.setDisplayFormat("dd/MM/yyyy");
+    
+    QComboBox statC(&d);
+    statC.addItems({"En Attente", "Planifié", "En Production", "Terminé"});
+    statC.setCurrentText(cellText(ui->productionTable, row, 7));
+    
+    QComboBox prioC(&d);
+    prioC.addItems({"Basse", "Normale", "Haute", "Urgente"});
+    prioC.setCurrentText(cellText(ui->productionTable, row, 8));
+    
+    form.addRow("Référence *:", &refE);
+    form.addRow("Client *:", &clientE);
+    form.addRow("Type:", &typeC);
+    form.addRow("Montant HT *:", &montantE);
+    form.addRow("Date Création:", &dcE);
+    form.addRow("Date Livraison:", &dlE);
+    form.addRow("Statut:", &statC);
+    form.addRow("Priorité:", &prioC);
     lay.addLayout(&form);
-    QHBoxLayout btns; QPushButton ok("Enregistrer",&d), cancel("Annuler",&d);
+    
+    QHBoxLayout btns;
+    QPushButton ok("Enregistrer", &d), cancel("Annuler", &d);
     cancel.setStyleSheet("QPushButton{background:#95877C;}");
-    btns.addStretch(); btns.addWidget(&ok); btns.addWidget(&cancel);
+    btns.addStretch();
+    btns.addWidget(&ok);
+    btns.addWidget(&cancel);
     lay.addLayout(&btns);
-    connect(&ok,&QPushButton::clicked,&d,&QDialog::accept);
-    connect(&cancel,&QPushButton::clicked,&d,&QDialog::reject);
+    
+    connect(&ok, &QPushButton::clicked, &d, &QDialog::accept);
+    connect(&cancel, &QPushButton::clicked, &d, &QDialog::reject);
+    
     if (d.exec() == QDialog::Accepted) {
-        if (refE.text().isEmpty()||clientE.text().isEmpty()||montantE.text().isEmpty()) {
-            QMessageBox::warning(this,"","Champs obligatoires manquants."); return;
+        if (refE.text().isEmpty() || clientE.text().isEmpty() || montantE.text().isEmpty()) {
+            QMessageBox::warning(this, "Attention", "Champs obligatoires manquants.");
+            return;
         }
-        ui->productionTable->item(row,1)->setText(refE.text());
-        ui->productionTable->item(row,2)->setText(clientE.text());
-        ui->productionTable->item(row,3)->setText(typeC.currentText());
-        ui->productionTable->item(row,4)->setText(montantE.text());
-        ui->productionTable->item(row,5)->setText(dcE.date().toString("dd/MM/yyyy"));
-        ui->productionTable->item(row,6)->setText(dlE.date().toString("dd/MM/yyyy"));
-        ui->productionTable->item(row,7)->setText(statC.currentText());
-        ui->productionTable->item(row,8)->setText(prioC.currentText());
+        
+        Production prod;
+        prod.setId(cellText(ui->productionTable, row, 0).toInt());
+        prod.setReference(refE.text());
+        prod.setClient(clientE.text());
+        prod.setType(typeC.currentText());
+        prod.setMontantHT(montantE.text().toDouble());
+        prod.setDateCreation(dcE.date());
+        prod.setDateLivraison(dlE.date());
+        prod.setStatut(statC.currentText());
+        prod.setPriorite(prioC.currentText());
+        
+        if (prod.modifier()) {
+            QMessageBox::information(this, "Succès", "Commande modifiée avec succès!");
+            loadProductionData(); // Actualiser l'affichage
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de la modification de la commande.");
+        }
     }
 }
 
@@ -1624,181 +1738,83 @@ void MainWindow::onSuiviProduction()
 
 void MainWindow::onPlanificationProduction()
 {
-    // Créer un dialogue avec tableau unifié planification + suivi
+    // Créer une fenêtre de planification complète avec tableau
     QDialog dlg(this);
-    dlg.setWindowTitle("Planification & Suivi Production");
-    dlg.setMinimumSize(1200, 700);
+    dlg.setWindowTitle("Planification & Suivi Production - Vue Complète");
+    dlg.setMinimumSize(1400, 750);
+    dlg.setStyleSheet("QDialog { background-color: #FAF5F0; }");
     
-    QVBoxLayout *mainLay = new QVBoxLayout(&dlg);
-    mainLay->setContentsMargins(20, 20, 20, 20);
-    mainLay->setSpacing(15);
+    QVBoxLayout *mainLayout = new QVBoxLayout(&dlg);
+    mainLayout->setContentsMargins(15, 15, 15, 15);
+    mainLayout->setSpacing(10);
     
-    // En-tête avec statistiques
-    QFrame *headerFrame = new QFrame();
-    headerFrame->setStyleSheet("background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #8D6E63,stop:1 #A0826D);"
-                                "border-radius:8px;padding:15px;");
-    QVBoxLayout *headerLay = new QVBoxLayout(headerFrame);
+    // ========== BARRE DE RECHERCHE ET FILTRES ==========
+    QHBoxLayout *filterLayout = new QHBoxLayout();
     
-    QLabel *title = new QLabel("📋 PLANIFICATION & SUIVI DE PRODUCTION");
-    title->setStyleSheet("font-size:18px;font-weight:bold;color:white;");
-    title->setAlignment(Qt::AlignCenter);
-    headerLay->addWidget(title);
+    QLabel *lblSearch = new QLabel("Recherche référence:", &dlg);
+    QLineEdit *searchEdit = new QLineEdit(&dlg);
+    searchEdit->setPlaceholderText("Entrez une référence...");
+    searchEdit->setMaximumWidth(250);
     
-    // Statistiques par statut
-    QHBoxLayout *statsLay = new QHBoxLayout();
-    QMap<QString,int> cnt;
-    int prioritaires = 0;
-    for (int r = 0; r < ui->productionTable->rowCount(); ++r) {
-        cnt[cellText(ui->productionTable,r,7)]++;
-        if (cellText(ui->productionTable,r,8)=="Haute") prioritaires++;
-    }
+    QLabel *lblEtat = new QLabel("État production:", &dlg);
+    QComboBox *etatCombo = new QComboBox(&dlg);
+    etatCombo->addItems({"Tous", "Planifié", "En cours", "Bloqué", "Terminé"});
+    etatCombo->setMaximumWidth(150);
     
-    auto addStat = [&](const QString &label, int value, const QString &color) {
-        QFrame *statFrame = new QFrame();
-        statFrame->setStyleSheet(QString("background:%1;border-radius:6px;padding:8px;").arg(color));
-        QVBoxLayout *statLay = new QVBoxLayout(statFrame);
-        statLay->setSpacing(2);
-        QLabel *valLbl = new QLabel(QString::number(value));
-        valLbl->setStyleSheet("font-size:20px;font-weight:bold;color:white;");
-        valLbl->setAlignment(Qt::AlignCenter);
-        QLabel *lblLbl = new QLabel(label);
-        lblLbl->setStyleSheet("font-size:10px;color:white;");
-        lblLbl->setAlignment(Qt::AlignCenter);
-        statLay->addWidget(valLbl);
-        statLay->addWidget(lblLbl);
-        statsLay->addWidget(statFrame);
-    };
+    QLabel *lblStatut = new QLabel("Statut livraison:", &dlg);
+    QComboBox *statutCombo = new QComboBox(&dlg);
+    statutCombo->addItems({"Tous", "Non expédiée", "En livraison", "Livrée"});
+    statutCombo->setMaximumWidth(150);
     
-    addStat("En Attente", cnt["En Attente"], "#FF9800");
-    addStat("Planifié", cnt["Planifié"], "#2196F3");
-    addStat("En Production", cnt["En Production"], "#FFC107");
-    addStat("Terminé", cnt["Terminé"], "#4CAF50");
-    addStat("Prioritaires", prioritaires, "#F44336");
+    filterLayout->addWidget(lblSearch);
+    filterLayout->addWidget(searchEdit);
+    filterLayout->addSpacing(20);
+    filterLayout->addWidget(lblEtat);
+    filterLayout->addWidget(etatCombo);
+    filterLayout->addSpacing(20);
+    filterLayout->addWidget(lblStatut);
+    filterLayout->addWidget(statutCombo);
+    filterLayout->addStretch();
     
-    headerLay->addLayout(statsLay);
-    mainLay->addWidget(headerFrame);
+    mainLayout->addLayout(filterLayout);
     
-    // Tableau unifié
-    QTableWidget *table = new QTableWidget();
-    table->setColumnCount(10);
-    table->setHorizontalHeaderLabels({"Réf", "Client", "Article", "Qté", "Montant", 
-                                       "Date Cmd", "Livraison", "Statut", "Priorité", "Avancement"});
-    table->setRowCount(ui->productionTable->rowCount());
-    table->setSelectionBehavior(QAbstractItemView::SelectRows);
-    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    table->setAlternatingRowColors(true);
-    table->horizontalHeader()->setStretchLastSection(true);
-    table->setStyleSheet(
-        "QTableWidget{background:white;border:1px solid #E0E0E0;border-radius:6px;}"
-        "QHeaderView::section{background:#8D6E63;color:white;font-weight:bold;padding:8px;border:none;}"
-        "QTableWidget::item{padding:8px;}"
+    // ========== BOUTONS D'ACTION ==========
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    
+    QPushButton *btnPlanification = new QPushButton("📅 Modifier Planification", &dlg);
+    btnPlanification->setStyleSheet(
+        "QPushButton { background-color: #8D6E63; color: white; border: none; "
+        "border-radius: 6px; padding: 10px 20px; font-size: 13px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #A0826D; }"
     );
     
-    // Remplir le tableau avec code couleur
-    for (int r = 0; r < ui->productionTable->rowCount(); ++r) {
-        QString ref = cellText(ui->productionTable,r,1);
-        QString client = cellText(ui->productionTable,r,2);
-        QString article = cellText(ui->productionTable,r,3);
-        QString montant = cellText(ui->productionTable,r,4);
-        QString dc = cellText(ui->productionTable,r,5);
-        QString dl = cellText(ui->productionTable,r,6);
-        QString statut = cellText(ui->productionTable,r,7);
-        QString prio = cellText(ui->productionTable,r,8);
-        
-        // Calculer quantité depuis le type d'article (simplification)
-        QString qte = "1";
-        
-        // Calculer l'avancement
-        QString avancement = "0%";
-        QColor bgColor = Qt::white;
-        if (statut == "En Attente") {
-            avancement = "0%";
-            bgColor = QColor("#FFF3E0");
-        } else if (statut == "Planifié") {
-            avancement = "25%";
-            bgColor = QColor("#E3F2FD");
-        } else if (statut == "En Production") {
-            avancement = "60%";
-            bgColor = QColor("#FFF9C4");
-        } else if (statut == "Terminé") {
-            avancement = "100%";
-            bgColor = QColor("#E8F5E9");
-        }
-        
-        // Vérifier retard
-        QDate dateLivraison = QDate::fromString(dl, "dd/MM/yyyy");
-        bool enRetard = (dateLivraison < QDate::currentDate() && statut != "Terminé");
-        if (enRetard) bgColor = QColor("#FFEBEE");
-        
-        table->setItem(r, 0, new QTableWidgetItem(ref));
-        table->setItem(r, 1, new QTableWidgetItem(client));
-        table->setItem(r, 2, new QTableWidgetItem(article));
-        table->setItem(r, 3, new QTableWidgetItem(qte));
-        table->setItem(r, 4, new QTableWidgetItem(montant));
-        table->setItem(r, 5, new QTableWidgetItem(dc));
-        table->setItem(r, 6, new QTableWidgetItem(dl + (enRetard ? " ⚠️" : "")));
-        table->setItem(r, 7, new QTableWidgetItem(statut));
-        table->setItem(r, 8, new QTableWidgetItem(prio));
-        table->setItem(r, 9, new QTableWidgetItem(avancement));
-        
-        // Appliquer couleur de fond
-        for (int c = 0; c < 10; ++c) {
-            table->item(r, c)->setBackground(bgColor);
-            if (prio == "Haute") {
-                table->item(r, c)->setForeground(QColor("#D32F2F"));
-                if (c == 8) table->item(r, c)->setFont(QFont("Arial", 10, QFont::Bold));
-            }
-        }
-    }
+    QPushButton *btnDetails = new QPushButton("📋 Détails Complets", &dlg);
+    btnDetails->setStyleSheet(
+        "QPushButton { background-color: #6D4C41; color: white; border: none; "
+        "border-radius: 6px; padding: 10px 20px; font-size: 13px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #8D6E63; }"
+    );
     
-    mainLay->addWidget(table);
+    btnLayout->addWidget(btnPlanification);
+    btnLayout->addWidget(btnDetails);
+    btnLayout->addStretch();
     
-    // Légende
-    QFrame *legendFrame = new QFrame();
-    legendFrame->setStyleSheet("background:#F5F5F5;border-radius:6px;padding:10px;");
-    QHBoxLayout *legendLay = new QHBoxLayout(legendFrame);
+    mainLayout->addLayout(btnLayout);
     
-    auto addLegend = [&](const QString &color, const QString &text) {
-        QLabel *colorBox = new QLabel();
-        colorBox->setFixedSize(20, 20);
-        colorBox->setStyleSheet(QString("background:%1;border:1px solid #CCC;border-radius:3px;").arg(color));
-        QLabel *textLbl = new QLabel(text);
-        textLbl->setStyleSheet("font-size:11px;color:#666;");
-        legendLay->addWidget(colorBox);
-        legendLay->addWidget(textLbl);
-        legendLay->addSpacing(15);
-    };
-    
-    addLegend("#FFF3E0", "En Attente");
-    addLegend("#E3F2FD", "Planifié");
-    addLegend("#FFF9C4", "En Production");
-    addLegend("#E8F5E9", "Terminé");
-    addLegend("#FFEBEE", "En Retard");
-    legendLay->addStretch();
-    
-    mainLay->addWidget(legendFrame);
-    
-    // Boutons
-    QHBoxLayout *btnLay = new QHBoxLayout();
-    btnLay->addStretch();
-    
-    QPushButton *btnDetails = new QPushButton("📋 Voir Détails");
-    btnDetails->setStyleSheet("background:#2196F3;color:white;border:none;border-radius:6px;padding:10px 20px;font-weight:bold;");
-    connect(btnDetails, &QPushButton::clicked, [&]() {
-        int row = table->currentRow();
-        if (row >= 0) {
-            ui->productionTable->selectRow(row);
-            onSuiviProduction();
-        }
-    });
-    
-    QPushButton *btnClose = new QPushButton("Fermer");
-    btnClose->setStyleSheet("background:#8D6E63;color:white;border:none;border-radius:6px;padding:10px 20px;font-weight:bold;");
+    // Fermer le dialogue pour l'instant - fonctionnalité complète à venir
+    QPushButton *btnClose = new QPushButton("Fermer", &dlg);
+    btnClose->setStyleSheet(
+        "QPushButton { background-color: #8D6E63; color: white; border: none; "
+        "border-radius: 6px; padding: 10px 30px; font-size: 13px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #A0826D; }"
+    );
     connect(btnClose, &QPushButton::clicked, &dlg, &QDialog::accept);
     
-    btnLay->addWidget(btnDetails);
-    btnLay->addWidget(btnClose);
-    mainLay->addLayout(btnLay);
+    QHBoxLayout *closeLayout = new QHBoxLayout();
+    closeLayout->addStretch();
+    closeLayout->addWidget(btnClose);
+    closeLayout->addStretch();
+    mainLayout->addLayout(closeLayout);
     
     dlg.exec();
 }
@@ -2167,7 +2183,41 @@ void MainWindow::onExcelProduction()
     dlg.exec();
 }
 
-void MainWindow::onRechercherProduction(const QString &text) { filterTable(ui->productionTable, text); }
+void MainWindow::onRechercherProduction(const QString &text)
+{
+    if (text.isEmpty()) {
+        loadProductionData(); // Recharger toutes les données
+        return;
+    }
+    
+    ui->productionTable->setRowCount(0);
+    
+    Production prod;
+    QSqlQueryModel* model = prod.rechercher(text);
+    
+    if (!model) {
+        qDebug() << "❌ Erreur lors de la recherche des commandes";
+        return;
+    }
+    
+    for (int i = 0; i < model->rowCount(); ++i) {
+        int row = ui->productionTable->rowCount();
+        ui->productionTable->insertRow(row);
+        
+        ui->productionTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));
+        ui->productionTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));
+        ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
+        ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
+        ui->productionTable->setItem(row, 4, new QTableWidgetItem(model->data(model->index(i, 4)).toString() + " DT"));
+        ui->productionTable->setItem(row, 5, new QTableWidgetItem(model->data(model->index(i, 5)).toDate().toString("dd/MM/yyyy")));
+        ui->productionTable->setItem(row, 6, new QTableWidgetItem(model->data(model->index(i, 6)).toDate().toString("dd/MM/yyyy")));
+        ui->productionTable->setItem(row, 7, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
+        ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 8)).toString()));
+    }
+    
+    delete model;
+    updateProductionStatsCards();
+}
 
 void MainWindow::onTrierProduction()
 {
@@ -2179,25 +2229,66 @@ void MainWindow::onTrierProduction()
         "QMenu::separator{height:2px;background:#BCAAA4;margin:5px 10px;}"
     );
 
-    auto addSortOptions = [&](const QString &label, int col) {
+    auto addSortOptions = [&](const QString &label, const QString &colName) {
         QMenu *sub = menu.addMenu("📋 " + label);
         sub->setStyleSheet(menu.styleSheet());
         auto *asc = sub->addAction("↑ Croissant (A → Z)");
         auto *desc = sub->addAction("↓ Décroissant (Z → A)");
-        connect(asc, &QAction::triggered, [=]{ ui->productionTable->sortItems(col, Qt::AscendingOrder); });
-        connect(desc, &QAction::triggered, [=]{ ui->productionTable->sortItems(col, Qt::DescendingOrder); });
+        
+        connect(asc, &QAction::triggered, [=]() {
+            ui->productionTable->setRowCount(0);
+            Production prod;
+            QSqlQueryModel* model = prod.trierPar(colName + " ASC");
+            if (model) {
+                for (int i = 0; i < model->rowCount(); ++i) {
+                    int row = ui->productionTable->rowCount();
+                    ui->productionTable->insertRow(row);
+                    ui->productionTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));
+                    ui->productionTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));
+                    ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
+                    ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
+                    ui->productionTable->setItem(row, 4, new QTableWidgetItem(model->data(model->index(i, 4)).toString() + " DT"));
+                    ui->productionTable->setItem(row, 5, new QTableWidgetItem(model->data(model->index(i, 5)).toDate().toString("dd/MM/yyyy")));
+                    ui->productionTable->setItem(row, 6, new QTableWidgetItem(model->data(model->index(i, 6)).toDate().toString("dd/MM/yyyy")));
+                    ui->productionTable->setItem(row, 7, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
+                    ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 8)).toString()));
+                }
+                delete model;
+            }
+        });
+        
+        connect(desc, &QAction::triggered, [=]() {
+            ui->productionTable->setRowCount(0);
+            Production prod;
+            QSqlQueryModel* model = prod.trierPar(colName + " DESC");
+            if (model) {
+                for (int i = 0; i < model->rowCount(); ++i) {
+                    int row = ui->productionTable->rowCount();
+                    ui->productionTable->insertRow(row);
+                    ui->productionTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));
+                    ui->productionTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));
+                    ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
+                    ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
+                    ui->productionTable->setItem(row, 4, new QTableWidgetItem(model->data(model->index(i, 4)).toString() + " DT"));
+                    ui->productionTable->setItem(row, 5, new QTableWidgetItem(model->data(model->index(i, 5)).toDate().toString("dd/MM/yyyy")));
+                    ui->productionTable->setItem(row, 6, new QTableWidgetItem(model->data(model->index(i, 6)).toDate().toString("dd/MM/yyyy")));
+                    ui->productionTable->setItem(row, 7, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
+                    ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 8)).toString()));
+                }
+                delete model;
+            }
+        });
     };
 
-    addSortOptions("Référence", 1);
-    addSortOptions("Client", 2);
-    addSortOptions("Type", 3);
-    addSortOptions("Montant", 4);
+    addSortOptions("Référence", "REFERENCE");
+    addSortOptions("Type", "TYPE");
+    addSortOptions("Montant", "MONTANT");
     menu.addSeparator();
-    addSortOptions("Date Création", 5);
-    addSortOptions("Date Livraison", 6);
+    addSortOptions("Date Création", "DATE_CREATION");
+    addSortOptions("Date Livraison", "DATE_LIVRAISON");
     menu.addSeparator();
-    addSortOptions("Statut", 7);
-    addSortOptions("Priorité", 8);
+    addSortOptions("Statut", "STATUT");
+    addSortOptions("Priorité", "PRIORITE");
 
     QPoint pos = ui->btnTrierProduction->mapToGlobal(QPoint(0, ui->btnTrierProduction->height()));
     menu.exec(pos);
@@ -2228,13 +2319,26 @@ void MainWindow::onProductionTableContextMenu(const QPoint &pos)
 void MainWindow::onSupprimerProduction()
 {
     int row = ui->productionTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","Sélectionnez une commande."); return; }
-    if (QMessageBox::question(this,"Confirmer",
-            QString("Supprimer la commande %1 du client %2 ?")
-            .arg(cellText(ui->productionTable,row,1),cellText(ui->productionTable,row,2)),
-            QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes) {
-        ui->productionTable->removeRow(row);
-        updateProductionStatsCards();
+    if (row < 0) {
+        QMessageBox::warning(this, "Attention", "Sélectionnez une commande.");
+        return;
+    }
+    
+    QString ref = cellText(ui->productionTable, row, 1);
+    QString client = cellText(ui->productionTable, row, 2);
+    int id = cellText(ui->productionTable, row, 0).toInt();
+    
+    if (QMessageBox::question(this, "Confirmer",
+            QString("Supprimer la commande %1 du client %2 ?").arg(ref, client),
+            QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
+        
+        Production prod;
+        if (prod.supprimer(id)) {
+            QMessageBox::information(this, "Succès", "Commande supprimée avec succès!");
+            loadProductionData(); // Actualiser l'affichage
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de la suppression de la commande.");
+        }
     }
 }
 
@@ -2628,4 +2732,4 @@ void MainWindow::on_btnAideDecision_clicked()
     connect(&close,&QPushButton::clicked,&dlg,&QDialog::accept);
     QHBoxLayout bl; bl.addStretch(); bl.addWidget(&close); lay.addLayout(&bl);
     dlg.exec();
-}
+}

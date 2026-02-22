@@ -5,6 +5,8 @@
 #include <QDate>
 #include <QList>
 #include <QMap>
+#include <QSqlQuery>
+#include <QSqlQueryModel>
 
 class ProductionData
 {
@@ -109,6 +111,14 @@ public:
     
     QStringList obtenirProblemes() const;
 
+    // ========== MÉTHODES CRUD ==========
+    bool ajouter();
+    bool modifier();
+    bool supprimer(int id);
+    QSqlQueryModel* afficher();
+    QSqlQueryModel* rechercher(const QString &terme);
+    QSqlQueryModel* trierPar(const QString &colonne);
+
 private:
     QString id;
     QString reference;
@@ -120,8 +130,36 @@ private:
     QString responsable;
     QString priorite;
     
+    // Attributs pour CRUD
+    double montantHT;
+    QDate dateCreation;
+    QDate dateLivraison;
+    QString type;
+    QString client;
+    
     // Helper pour convertir priorité en valeur numérique
     static int prioriteToInt(const QString &priorite);
+
+public:
+    // Getters/Setters pour CRUD
+    double getMontantHT() const { return montantHT; }
+    void setMontantHT(double value) { montantHT = value; }
+    QDate getDateCreation() const { return dateCreation; }
+    void setDateCreation(const QDate &value) { dateCreation = value; }
+    QDate getDateLivraison() const { return dateLivraison; }
+    void setDateLivraison(const QDate &value) { dateLivraison = value; }
+    QString getType() const { return type; }
+    void setType(const QString &value) { type = value; }
+    QString getClient() const { return client; }
+    void setClient(const QString &value) { client = value; }
+    
+    // Setter pour ID (pour modifier)
+    void setIdInt(int value) { id = QString::number(value); }
+    void setId(int value) { id = QString::number(value); }
+    int getIdInt() const { return id.toInt(); }
 };
+
+// Alias pour compatibilité
+using Production = ProductionData;
 
 #endif // PRODUCTION_H

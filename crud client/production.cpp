@@ -142,3 +142,184 @@ int ProductionData::prioriteToInt(const QString &p)
     if(p=="Basse"||p=="Faible") return 1;
     return 0;
 }
+
+
+// ========== IMPLÉMENTATION DES MÉTHODES CRUD ==========
+
+#include "connection.h"
+#include <QSqlError>
+#include <QDebug>
+
+bool ProductionData::ajouter()
+{
+    QSqlQuery query(Connection::instance()->getDatabase());
+    
+    query.prepare("INSERT INTO COMMANDES (REFERENCE, TYPE, MONTANT, "
+                  "DATE_CREATION, DATE_LIVRAISON, STATUT, PRIORITE) "
+                  "VALUES (:reference, :type, :montant, "
+                  "TO_DATE(:dateCreation, 'YYYY-MM-DD'), TO_DATE(:dateLivraison, 'YYYY-MM-DD'), "
+                  ":statut, :priorite)");
+    
+    query.bindValue(":reference", reference);
+    query.bindValue(":type", type);
+    query.bindValue(":montant", montantHT);
+    query.bindValue(":dateCreation", dateCreation.toString("yyyy-MM-dd"));
+    query.bindValue(":dateLivraison", dateLivraison.toString("yyyy-MM-dd"));
+    query.bindValue(":statut", statut);
+    query.bindValue(":priorite", priorite);
+    
+    if (!query.exec()) {
+        qDebug() << "❌ Erreur ajout commande:" << query.lastError().text();
+        return false;
+    }
+    
+    qDebug() << "✅ Commande ajoutée avec succès";
+    return true;
+}
+
+bool ProductionData::modifier()
+{
+    QSqlQuery query(Connection::instance()->getDatabase());
+    query.prepare("UPDATE COMMANDES SET "
+                  "REFERENCE = :reference, TYPE = :type, "
+                  "MONTANT = :montant, "
+                  "DATE_CREATION = TO_DATE(:dateCreation, 'YYYY-MM-DD'), "
+                  "DATE_LIVRAISON = TO_DATE(:dateLivraison, 'YYYY-MM-DD'), "
+                  "STATUT = :statut, PRIORITE = :priorite "
+                  "WHERE ID_COMMANDE = :id");
+    
+    query.bindValue(":id", id.toInt());
+    query.bindValue(":reference", reference);
+    query.bindValue(":type", type);
+    query.bindValue(":montant", montantHT);
+    query.bindValue(":dateCreation", dateCreation.toString("yyyy-MM-dd"));
+    query.bindValue(":dateLivraison", dateLivraison.toString("yyyy-MM-dd"));
+    query.bindValue(":statut", statut);
+    query.bindValue(":priorite", priorite);
+    
+    if (!query.exec()) {
+        qDebug() << "❌ Erreur modification commande:" << query.lastError().text();
+        return false;
+    }
+    
+    qDebug() << "✅ Commande modifiée avec succès";
+    return true;
+}
+
+bool ProductionData::supprimer(int id)
+{
+    QSqlQuery query(Connection::instance()->getDatabase());
+    query.prepare("DELETE FROM COMMANDES WHERE ID_COMMANDE = :id");
+    query.bindValue(":id", id);
+    
+    if (!query.exec()) {
+        qDebug() << "❌ Erreur suppression commande:" << query.lastError().text();
+        return false;
+    }
+    
+    qDebug() << "✅ Commande supprimée avec succès";
+    return true;
+}
+
+QSqlQueryModel* ProductionData::afficher()
+{
+    QSqlQueryModel* model = new QSqlQueryModel();
+    model->setQuery("SELECT C.ID_COMMANDE, C.REFERENCE, "
+                    "(CL.NOM || ' ' || CL.PRENOM) AS CLIENT, "
+                    "C.TYPE, C.MONTANT, "
+                    "C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE "
+                    "FROM COMMANDES C "
+                    "LEFT JOIN CLIENTS CL ON C.ID_CLIENT = CL.ID_CLIENT "
+                    "ORDER BY C.DATE_CREATION DESC", 
+                    Connection::instance()->getDatabase());
+    
+    if (model->lastError().isValid()) {
+        qDebug() << "❌ Erreur affichage commandes:" << model->lastError().text();
+        delete model;
+        return nullptr;
+    }
+    
+    model->setHeaderData(0, Qt::Horizontal, "ID");
+    model->setHeaderData(1, Qt::Horizontal, "Référence");
+    model->setHeaderData(2, Qt::Horizontal, "Client");
+    model->setHeaderData(3, Qt::Horizontal, "Type");
+    model->setHeaderData(4, Qt::Horizontal, "Montant");
+    model->setHeaderData(5, Qt::Horizontal, "Date Création");
+    model->setHeaderData(6, Qt::Horizontal, "Date Livraison");
+    model->setHeaderData(7, Qt::Horizontal, "Statut");
+    model->setHeaderData(8, Qt::Horizontal, "Priorité");
+    
+    return model;
+}
+
+QSqlQueryModel* ProductionData::rechercher(const QString &terme)
+{
+    QSqlQueryModel* model = new QSqlQueryModel();
+    
+    QString queryStr = QString(
+        "SELECT C.ID_COMMANDE, C.REFERENCE, "
+        "(CL.NOM || ' ' || CL.PRENOM) AS CLIENT, "
+        "C.TYPE, C.MONTANT, "
+        "C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE "
+        "FROM COMMANDES C "
+        "LEFT JOIN CLIENTS CL ON C.ID_CLIENT = CL.ID_CLIENT "
+        "WHERE UPPER(C.REFERENCE) LIKE UPPER('%%1%') "
+        "OR UPPER(C.TYPE) LIKE UPPER('%%1%') "
+        "OR UPPER(C.STATUT) LIKE UPPER('%%1%') "
+        "OR UPPER(C.PRIORITE) LIKE UPPER('%%1%') "
+        "OR UPPER(CL.NOM) LIKE UPPER('%%1%') "
+        "OR UPPER(CL.PRENOM) LIKE UPPER('%%1%') "
+        "ORDER BY C.DATE_CREATION DESC"
+    ).arg(terme);
+    
+    model->setQuery(queryStr, Connection::instance()->getDatabase());
+    
+    if (model->lastError().isValid()) {
+        qDebug() << "❌ Erreur recherche commandes:" << model->lastError().text();
+        delete model;
+        return nullptr;
+    }
+    
+    model->setHeaderData(0, Qt::Horizontal, "ID");
+    model->setHeaderData(1, Qt::Horizontal, "Référence");
+    model->setHeaderData(2, Qt::Horizontal, "Client");
+    model->setHeaderData(3, Qt::Horizontal, "Type");
+    model->setHeaderData(4, Qt::Horizontal, "Montant");
+    model->setHeaderData(5, Qt::Horizontal, "Date Création");
+    model->setHeaderData(6, Qt::Horizontal, "Date Livraison");
+    model->setHeaderData(7, Qt::Horizontal, "Statut");
+    model->setHeaderData(8, Qt::Horizontal, "Priorité");
+    
+    return model;
+}
+
+QSqlQueryModel* ProductionData::trierPar(const QString &colonne)
+{
+    QSqlQueryModel* model = new QSqlQueryModel();
+    
+    QString queryStr = QString("SELECT C.ID_COMMANDE, C.REFERENCE, "
+                               "(CL.NOM || ' ' || CL.PRENOM) AS CLIENT, "
+                               "C.TYPE, C.MONTANT, "
+                               "C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE "
+                               "FROM COMMANDES C "
+                               "LEFT JOIN CLIENTS CL ON C.ID_CLIENT = CL.ID_CLIENT "
+                               "ORDER BY %1").arg(colonne);
+    
+    model->setQuery(queryStr, Connection::instance()->getDatabase());
+    
+    if (model->lastError().isValid()) {
+        qDebug() << "❌ Erreur tri commandes:" << model->lastError().text();
+    }
+    
+    model->setHeaderData(0, Qt::Horizontal, "ID");
+    model->setHeaderData(1, Qt::Horizontal, "Référence");
+    model->setHeaderData(2, Qt::Horizontal, "Client");
+    model->setHeaderData(3, Qt::Horizontal, "Type");
+    model->setHeaderData(4, Qt::Horizontal, "Montant");
+    model->setHeaderData(5, Qt::Horizontal, "Date Création");
+    model->setHeaderData(6, Qt::Horizontal, "Date Livraison");
+    model->setHeaderData(7, Qt::Horizontal, "Statut");
+    model->setHeaderData(8, Qt::Horizontal, "Priorité");
+    
+    return model;
+}
