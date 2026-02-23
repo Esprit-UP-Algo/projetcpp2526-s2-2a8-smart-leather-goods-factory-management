@@ -152,28 +152,65 @@ int ProductionData::prioriteToInt(const QString &p)
 
 bool ProductionData::ajouter()
 {
-    QSqlQuery query(Connection::instance()->getDatabase());
+    QSqlDatabase db = Connection::instance()->getDatabase();
     
-    query.prepare("INSERT INTO COMMANDES (REFERENCE, TYPE, MONTANT, "
-                  "DATE_CREATION, DATE_LIVRAISON, STATUT, PRIORITE) "
-                  "VALUES (:reference, :type, :montant, "
-                  "TO_DATE(:dateCreation, 'YYYY-MM-DD'), TO_DATE(:dateLivraison, 'YYYY-MM-DD'), "
-                  ":statut, :priorite)");
-    
-    query.bindValue(":reference", reference);
-    query.bindValue(":type", type);
-    query.bindValue(":montant", montantHT);
-    query.bindValue(":dateCreation", dateCreation.toString("yyyy-MM-dd"));
-    query.bindValue(":dateLivraison", dateLivraison.toString("yyyy-MM-dd"));
-    query.bindValue(":statut", statut);
-    query.bindValue(":priorite", priorite);
-    
-    if (!query.exec()) {
-        qDebug() << "❌ Erreur ajout commande:" << query.lastError().text();
+    if (!db.isOpen()) {
+        qDebug() << "❌ Base de données non connectée!";
         return false;
     }
     
-    qDebug() << "✅ Commande ajoutée avec succès";
+    QSqlQuery query(db);
+    
+    // 1. Récupérer le prochain ID_COMMANDE disponible
+    query.exec("SELECT NVL(MAX(ID_COMMANDE), 0) + 1 FROM COMMANDES");
+    int idCommande = 1;
+    if (query.next()) {
+        idCommande = query.value(0).toInt();
+    }
+    qDebug() << "✅ Prochain ID_COMMANDE:" << idCommande;
+    
+    // 2. Récupérer le premier ID_EMPLOYE disponible
+    query.exec("SELECT ID_EMPLOYE FROM EMPLOYES WHERE ROWNUM = 1");
+    int idEmploye = 1;
+    if (query.next()) {
+        idEmploye = query.value(0).toInt();
+        qDebug() << "✅ ID_EMPLOYE trouvé:" << idEmploye;
+    } else {
+        qDebug() << "⚠ Aucun employé trouvé, utilisation de ID=1 par défaut";
+    }
+    
+    // 3. Préparer l'insertion AVEC ID_COMMANDE
+    QString sql = "INSERT INTO COMMANDES (ID_COMMANDE, REFERENCE, TYPE, MONTANT, "
+                  "DATE_CREATION, DATE_LIVRAISON, STATUT, PRIORITE, ETAT, ID_EMPLOYE) "
+                  "VALUES (:idCommande, :reference, :type, :montant, "
+                  ":dateCreation, :dateLivraison, "
+                  ":statut, :priorite, :etat, :idEmploye)";
+    
+    query.prepare(sql);
+    query.bindValue(":idCommande", idCommande);
+    query.bindValue(":reference", reference);
+    query.bindValue(":type", type);
+    query.bindValue(":montant", montantHT);
+    query.bindValue(":dateCreation", dateCreation);
+    query.bindValue(":dateLivraison", dateLivraison);
+    query.bindValue(":statut", statut);
+    query.bindValue(":priorite", priorite);
+    query.bindValue(":etat", "En cours");
+    query.bindValue(":idEmploye", idEmploye);
+    
+    qDebug() << "========== INSERTION ==========";
+    qDebug() << "  ID_COMMANDE:" << idCommande;
+    qDebug() << "  REFERENCE:" << reference;
+    qDebug() << "  TYPE:" << type;
+    qDebug() << "  MONTANT:" << montantHT;
+    qDebug() << "  ID_EMPLOYE:" << idEmploye;
+    
+    if (!query.exec()) {
+        qDebug() << "❌ ERREUR:" << query.lastError().text();
+        return false;
+    }
+    
+    qDebug() << "✅ COMMANDE AJOUTÉE AVEC SUCCÈS!";
     return true;
 }
 
@@ -225,11 +262,11 @@ QSqlQueryModel* ProductionData::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     model->setQuery("SELECT C.ID_COMMANDE, C.REFERENCE, "
-                    "(CL.NOM || ' ' || CL.PRENOM) AS CLIENT, "
+                    "(E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
                     "C.TYPE, C.MONTANT, "
                     "C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE "
                     "FROM COMMANDES C "
-                    "LEFT JOIN CLIENTS CL ON C.ID_CLIENT = CL.ID_CLIENT "
+                    "LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
                     "ORDER BY C.DATE_CREATION DESC", 
                     Connection::instance()->getDatabase());
     
@@ -241,7 +278,7 @@ QSqlQueryModel* ProductionData::afficher()
     
     model->setHeaderData(0, Qt::Horizontal, "ID");
     model->setHeaderData(1, Qt::Horizontal, "Référence");
-    model->setHeaderData(2, Qt::Horizontal, "Client");
+    model->setHeaderData(2, Qt::Horizontal, "Employé");
     model->setHeaderData(3, Qt::Horizontal, "Type");
     model->setHeaderData(4, Qt::Horizontal, "Montant");
     model->setHeaderData(5, Qt::Horizontal, "Date Création");
@@ -258,17 +295,17 @@ QSqlQueryModel* ProductionData::rechercher(const QString &terme)
     
     QString queryStr = QString(
         "SELECT C.ID_COMMANDE, C.REFERENCE, "
-        "(CL.NOM || ' ' || CL.PRENOM) AS CLIENT, "
+        "(E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
         "C.TYPE, C.MONTANT, "
         "C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE "
         "FROM COMMANDES C "
-        "LEFT JOIN CLIENTS CL ON C.ID_CLIENT = CL.ID_CLIENT "
+        "LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
         "WHERE UPPER(C.REFERENCE) LIKE UPPER('%%1%') "
         "OR UPPER(C.TYPE) LIKE UPPER('%%1%') "
         "OR UPPER(C.STATUT) LIKE UPPER('%%1%') "
         "OR UPPER(C.PRIORITE) LIKE UPPER('%%1%') "
-        "OR UPPER(CL.NOM) LIKE UPPER('%%1%') "
-        "OR UPPER(CL.PRENOM) LIKE UPPER('%%1%') "
+        "OR UPPER(E.NOM) LIKE UPPER('%%1%') "
+        "OR UPPER(E.PRENOM) LIKE UPPER('%%1%') "
         "ORDER BY C.DATE_CREATION DESC"
     ).arg(terme);
     
@@ -282,7 +319,7 @@ QSqlQueryModel* ProductionData::rechercher(const QString &terme)
     
     model->setHeaderData(0, Qt::Horizontal, "ID");
     model->setHeaderData(1, Qt::Horizontal, "Référence");
-    model->setHeaderData(2, Qt::Horizontal, "Client");
+    model->setHeaderData(2, Qt::Horizontal, "Employé");
     model->setHeaderData(3, Qt::Horizontal, "Type");
     model->setHeaderData(4, Qt::Horizontal, "Montant");
     model->setHeaderData(5, Qt::Horizontal, "Date Création");
@@ -298,11 +335,11 @@ QSqlQueryModel* ProductionData::trierPar(const QString &colonne)
     QSqlQueryModel* model = new QSqlQueryModel();
     
     QString queryStr = QString("SELECT C.ID_COMMANDE, C.REFERENCE, "
-                               "(CL.NOM || ' ' || CL.PRENOM) AS CLIENT, "
+                               "(E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
                                "C.TYPE, C.MONTANT, "
                                "C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE "
                                "FROM COMMANDES C "
-                               "LEFT JOIN CLIENTS CL ON C.ID_CLIENT = CL.ID_CLIENT "
+                               "LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
                                "ORDER BY %1").arg(colonne);
     
     model->setQuery(queryStr, Connection::instance()->getDatabase());
@@ -313,7 +350,7 @@ QSqlQueryModel* ProductionData::trierPar(const QString &colonne)
     
     model->setHeaderData(0, Qt::Horizontal, "ID");
     model->setHeaderData(1, Qt::Horizontal, "Référence");
-    model->setHeaderData(2, Qt::Horizontal, "Client");
+    model->setHeaderData(2, Qt::Horizontal, "Employé");
     model->setHeaderData(3, Qt::Horizontal, "Type");
     model->setHeaderData(4, Qt::Horizontal, "Montant");
     model->setHeaderData(5, Qt::Horizontal, "Date Création");

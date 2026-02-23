@@ -9,6 +9,7 @@
 #include "employe.h"
 #include "production.h"
 #include "connection.h"
+#include "productionview.h"
 #include <QTableWidgetItem>
 #include <QDebug>
 #include <QMessageBox>
@@ -1738,85 +1739,9 @@ void MainWindow::onSuiviProduction()
 
 void MainWindow::onPlanificationProduction()
 {
-    // Créer une fenêtre de planification complète avec tableau
-    QDialog dlg(this);
-    dlg.setWindowTitle("Planification & Suivi Production - Vue Complète");
-    dlg.setMinimumSize(1400, 750);
-    dlg.setStyleSheet("QDialog { background-color: #FAF5F0; }");
-    
-    QVBoxLayout *mainLayout = new QVBoxLayout(&dlg);
-    mainLayout->setContentsMargins(15, 15, 15, 15);
-    mainLayout->setSpacing(10);
-    
-    // ========== BARRE DE RECHERCHE ET FILTRES ==========
-    QHBoxLayout *filterLayout = new QHBoxLayout();
-    
-    QLabel *lblSearch = new QLabel("Recherche référence:", &dlg);
-    QLineEdit *searchEdit = new QLineEdit(&dlg);
-    searchEdit->setPlaceholderText("Entrez une référence...");
-    searchEdit->setMaximumWidth(250);
-    
-    QLabel *lblEtat = new QLabel("État production:", &dlg);
-    QComboBox *etatCombo = new QComboBox(&dlg);
-    etatCombo->addItems({"Tous", "Planifié", "En cours", "Bloqué", "Terminé"});
-    etatCombo->setMaximumWidth(150);
-    
-    QLabel *lblStatut = new QLabel("Statut livraison:", &dlg);
-    QComboBox *statutCombo = new QComboBox(&dlg);
-    statutCombo->addItems({"Tous", "Non expédiée", "En livraison", "Livrée"});
-    statutCombo->setMaximumWidth(150);
-    
-    filterLayout->addWidget(lblSearch);
-    filterLayout->addWidget(searchEdit);
-    filterLayout->addSpacing(20);
-    filterLayout->addWidget(lblEtat);
-    filterLayout->addWidget(etatCombo);
-    filterLayout->addSpacing(20);
-    filterLayout->addWidget(lblStatut);
-    filterLayout->addWidget(statutCombo);
-    filterLayout->addStretch();
-    
-    mainLayout->addLayout(filterLayout);
-    
-    // ========== BOUTONS D'ACTION ==========
-    QHBoxLayout *btnLayout = new QHBoxLayout();
-    
-    QPushButton *btnPlanification = new QPushButton("📅 Modifier Planification", &dlg);
-    btnPlanification->setStyleSheet(
-        "QPushButton { background-color: #8D6E63; color: white; border: none; "
-        "border-radius: 6px; padding: 10px 20px; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #A0826D; }"
-    );
-    
-    QPushButton *btnDetails = new QPushButton("📋 Détails Complets", &dlg);
-    btnDetails->setStyleSheet(
-        "QPushButton { background-color: #6D4C41; color: white; border: none; "
-        "border-radius: 6px; padding: 10px 20px; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #8D6E63; }"
-    );
-    
-    btnLayout->addWidget(btnPlanification);
-    btnLayout->addWidget(btnDetails);
-    btnLayout->addStretch();
-    
-    mainLayout->addLayout(btnLayout);
-    
-    // Fermer le dialogue pour l'instant - fonctionnalité complète à venir
-    QPushButton *btnClose = new QPushButton("Fermer", &dlg);
-    btnClose->setStyleSheet(
-        "QPushButton { background-color: #8D6E63; color: white; border: none; "
-        "border-radius: 6px; padding: 10px 30px; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #A0826D; }"
-    );
-    connect(btnClose, &QPushButton::clicked, &dlg, &QDialog::accept);
-    
-    QHBoxLayout *closeLayout = new QHBoxLayout();
-    closeLayout->addStretch();
-    closeLayout->addWidget(btnClose);
-    closeLayout->addStretch();
-    mainLayout->addLayout(closeLayout);
-    
-    dlg.exec();
+    ProductionView *view = new ProductionView(this);
+    view->setAttribute(Qt::WA_DeleteOnClose);
+    view->show();
 }
 
 void MainWindow::onFactureProduction()
@@ -2732,4 +2657,4 @@ void MainWindow::on_btnAideDecision_clicked()
     connect(&close,&QPushButton::clicked,&dlg,&QDialog::accept);
     QHBoxLayout bl; bl.addStretch(); bl.addWidget(&close); lay.addLayout(&bl);
     dlg.exec();
-}
+}

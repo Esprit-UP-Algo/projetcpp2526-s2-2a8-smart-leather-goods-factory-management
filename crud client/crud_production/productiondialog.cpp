@@ -3,6 +3,31 @@
 #include <QHBoxLayout>
 #include <QGridLayout>
 #include <QMessageBox>
+#include <QDate>
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPLÉMENTATION: ProductionCommande
+// ═══════════════════════════════════════════════════════════════════════════
+
+ProductionCommande::ProductionCommande()
+    : idCommande(0)
+    , ordrePassage(0)
+    , avancement(0)
+    , retard(false)
+{
+}
+
+int ProductionCommande::getJoursRetard() const
+{
+    if (!retard || !dateFinPrevue.isValid()) {
+        return 0;
+    }
+    return dateFinPrevue.daysTo(QDate::currentDate());
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IMPLÉMENTATION: ProductionDialog
+// ═══════════════════════════════════════════════════════════════════════════
 
 ProductionDialog::ProductionDialog(QWidget *parent, DialogMode mode)
     : QDialog(parent), m_mode(mode)

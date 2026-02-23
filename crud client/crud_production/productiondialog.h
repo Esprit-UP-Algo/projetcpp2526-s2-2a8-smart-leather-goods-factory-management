@@ -7,7 +7,51 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QDateEdit>
+#include <QString>
+#include <QDate>
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CLASSE: ProductionCommande - Données pour la vue complète
+// ═══════════════════════════════════════════════════════════════════════════
+class ProductionCommande
+{
+public:
+    ProductionCommande();
+    
+    // Identification
+    int idCommande;
+    QString reference;
+    QString priorite;
+    QDate dateLivraisonPrevue;
+    
+    // Planification (prévu)
+    QDate dateDebutPrevue;
+    QDate dateFinPrevue;
+    QString atelier;
+    int ordrePassage;
+    
+    // Suivi de production (réel)
+    QString etatProduction;  // Planifié, En cours, Bloqué, Terminé
+    QString etapeActuelle;
+    int avancement;  // en %
+    bool retard;
+    
+    // Livraison
+    QString societeLivraison;
+    QString numeroSuiviColis;
+    QDate dateExpeditionPrevue;
+    QDate dateExpeditionReelle;
+    QString statutLivraison;  // Non expédiée, En livraison, Livrée
+    
+    // Méthodes utilitaires
+    QString getRetardText() const { return retard ? "Oui" : "Non"; }
+    int getJoursRetard() const;
+    QString getAvancementText() const { return QString::number(avancement) + " %"; }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLASSE: ProductionDialog - Dialogue CRUD (Add/Edit/Delete)
+// ═══════════════════════════════════════════════════════════════════════════
 class ProductionDialog : public QDialog
 {
     Q_OBJECT
