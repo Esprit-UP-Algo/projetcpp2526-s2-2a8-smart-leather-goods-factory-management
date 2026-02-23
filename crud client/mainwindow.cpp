@@ -150,7 +150,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnSuggestion,  &QPushButton::clicked, this, &MainWindow::onSuggestionCommande);
     connect(ui->btnOptimisation,&QPushButton::clicked, this, &MainWindow::onOptimisationFIFO);
     connect(ui->btnRecherche,   &QPushButton::clicked, this, &MainWindow::onRechercheTriMatiere);
-    connect(ui->btnFournisseurs,&QPushButton::clicked, this, &MainWindow::onGestionFournisseurs);
+    connect(ui->btnStatistiques,&QPushButton::clicked, this, &MainWindow::onStatistiquesMatiere);
+    connect(ui->btnTri,         &QPushButton::clicked, this, &MainWindow::onTriMatiere);
     connect(ui->btnExportMatiere,&QPushButton::clicked, this, &MainWindow::onExportMatiere);
 
     // ── Client extra buttons ────────────────────────────────────────────────
@@ -691,15 +692,27 @@ void MainWindow::on_btnTriClient_clicked() {}
 // ── Raw Materials ─────────────────────────────────────────────────────────────
 void MainWindow::setupMatiereTable()
 {
-    const QList<QStringList> rows = {
-        {"Cuir Pleine Fleur","Peau de Veau","Peau de Veau","2.5 m²/jour","80","2028-05-31"},
-        {"Ficelinée","Peau de Vachette","Peau de Vachette","1.8 m²/jour","60","2028-05-31"},
-        {"LR-004","D-oci","Ficelinée","15 bobines/jour","50","2026-05-31"}
-    };
-    ui->matiereTable->setRowCount(rows.size());
-    for (int r = 0; r < rows.size(); ++r)
-        for (int c = 0; c < rows[r].size(); ++c)
-            ui->matiereTable->setItem(r, c, new QTableWidgetItem(rows[r][c]));
+    // Charger depuis Oracle
+    QSqlQuery query("SELECT nom, reference, type_matiere, quantite_actuelle, seuil, date_expiration FROM Matieres_premieres");
+    
+    ui->matiereTable->setRowCount(0); // Vider le tableau
+    
+    int row = 0;
+    while (query.next()) {
+        ui->matiereTable->insertRow(row);
+        ui->matiereTable->setItem(row, 0, new QTableWidgetItem(query.value(0).toString())); // nom
+        ui->matiereTable->setItem(row, 1, new QTableWidgetItem(query.value(1).toString())); // reference
+        ui->matiereTable->setItem(row, 2, new QTableWidgetItem(query.value(2).toString())); // type_matiere
+        ui->matiereTable->setItem(row, 3, new QTableWidgetItem(query.value(3).toString() + " m²/jour")); // quantite
+        ui->matiereTable->setItem(row, 4, new QTableWidgetItem(query.value(4).toString())); // seuil
+        ui->matiereTable->setItem(row, 5, new QTableWidgetItem(query.value(5).toDate().toString("yyyy-MM-dd"))); // date_expiration
+        row++;
+    }
+    
+    if (query.lastError().isValid()) {
+        qDebug() << "Erreur chargement matières:" << query.lastError().text();
+    }
+    
     ui->matiereTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     ui->matiereTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     updateMatiereStatistics();
@@ -736,15 +749,27 @@ void MainWindow::onAddMatiere()
 {
     MatiereDialog dlg(this, MatiereDialog::AddMode);
     if (dlg.exec() == QDialog::Accepted) {
-        int row = ui->matiereTable->rowCount();
-        ui->matiereTable->insertRow(row);
-        ui->matiereTable->setItem(row,0,new QTableWidgetItem(dlg.getModule()));
-        ui->matiereTable->setItem(row,1,new QTableWidgetItem(dlg.getReference()));
-        ui->matiereTable->setItem(row,2,new QTableWidgetItem(dlg.getType()));
-        ui->matiereTable->setItem(row,3,new QTableWidgetItem(dlg.getQuantite()));
-        ui->matiereTable->setItem(row,4,new QTableWidgetItem(dlg.getSeuil()));
-        ui->matiereTable->setItem(row,5,new QTableWidgetItem(dlg.getDateExpiration()));
-        updateMatiereStatistics();
+        // Insérer dans Oracle
+        QSqlQuery query;
+        query.prepare("INSERT INTO Matieres_premieres (id_matiere, nom, type_matiere, quantite_actuelle, seuil, date_expiration, reference, id_fournisseur) "
+                      "VALUES (seq_matieres.NEXTVAL, :nom, :type, :qte, :seuil, :date, :ref, 1)");
+        query.bindValue(":nom", dlg.getModule());
+        query.bindValue(":type", dlg.getType());
+        
+        // Extraire le nombre de la quantité (ex: "2.5 m²/jour" -> 2.5)
+        QString qteStr = dlg.getQuantite().split(" ").first();
+        query.bindValue(":qte", qteStr.toDouble());
+        
+        query.bindValue(":seuil", dlg.getSeuil().toInt());
+        query.bindValue(":date", QDate::fromString(dlg.getDateExpiration(), "yyyy-MM-dd"));
+        query.bindValue(":ref", dlg.getReference());
+        
+        if (query.exec()) {
+            QMessageBox::information(this, "Succès", "Matière ajoutée avec succès dans la base de données!");
+            setupMatiereTable(); // Recharger le tableau
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de l'ajout:\n" + query.lastError().text());
+        }
     }
 }
 
@@ -752,18 +777,38 @@ void MainWindow::onEditMatiere()
 {
     int row = ui->matiereTable->currentRow();
     if (row < 0) { QMessageBox::warning(this,"","Veuillez sélectionner une matière à modifier."); return; }
+    
+    // Récupérer l'ID de la matière (on doit l'ajouter au tableau)
+    QString reference = cellText(ui->matiereTable, row, 1);
+    
     MatiereDialog dlg(this, MatiereDialog::EditMode);
     dlg.setMatiereData(cellText(ui->matiereTable,row,0),cellText(ui->matiereTable,row,1),
                        cellText(ui->matiereTable,row,2),cellText(ui->matiereTable,row,3),
                        cellText(ui->matiereTable,row,4),cellText(ui->matiereTable,row,5));
     if (dlg.exec() == QDialog::Accepted) {
-        ui->matiereTable->item(row,0)->setText(dlg.getModule());
-        ui->matiereTable->item(row,1)->setText(dlg.getReference());
-        ui->matiereTable->item(row,2)->setText(dlg.getType());
-        ui->matiereTable->item(row,3)->setText(dlg.getQuantite());
-        ui->matiereTable->item(row,4)->setText(dlg.getSeuil());
-        ui->matiereTable->item(row,5)->setText(dlg.getDateExpiration());
-        updateMatiereStatistics();
+        // Mettre à jour dans Oracle
+        QSqlQuery query;
+        query.prepare("UPDATE Matieres_premieres SET nom=:nom, type_matiere=:type, quantite_actuelle=:qte, "
+                      "seuil=:seuil, date_expiration=:date, reference=:newref "
+                      "WHERE reference=:oldref");
+        query.bindValue(":nom", dlg.getModule());
+        query.bindValue(":type", dlg.getType());
+        
+        // Extraire le nombre de la quantité
+        QString qteStr = dlg.getQuantite().split(" ").first();
+        query.bindValue(":qte", qteStr.toDouble());
+        
+        query.bindValue(":seuil", dlg.getSeuil().toInt());
+        query.bindValue(":date", QDate::fromString(dlg.getDateExpiration(), "yyyy-MM-dd"));
+        query.bindValue(":newref", dlg.getReference());
+        query.bindValue(":oldref", reference);
+        
+        if (query.exec()) {
+            QMessageBox::information(this, "Succès", "Matière mise à jour avec succès!");
+            setupMatiereTable(); // Recharger le tableau
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de la modification:\n" + query.lastError().text());
+        }
     }
 }
 
@@ -771,13 +816,25 @@ void MainWindow::onDeleteMatiere()
 {
     int row = ui->matiereTable->currentRow();
     if (row < 0) { QMessageBox::warning(this,"","Veuillez sélectionner une matière à supprimer."); return; }
+    
+    QString reference = cellText(ui->matiereTable, row, 1);
+    
     MatiereDialog dlg(this, MatiereDialog::DeleteMode);
     dlg.setMatiereData(cellText(ui->matiereTable,row,0),cellText(ui->matiereTable,row,1),
                        cellText(ui->matiereTable,row,2),cellText(ui->matiereTable,row,3),
                        cellText(ui->matiereTable,row,4),cellText(ui->matiereTable,row,5));
     if (dlg.exec() == QDialog::Accepted) {
-        ui->matiereTable->removeRow(row);
-        updateMatiereStatistics();
+        // Supprimer de Oracle
+        QSqlQuery query;
+        query.prepare("DELETE FROM Matieres_premieres WHERE reference=:ref");
+        query.bindValue(":ref", reference);
+        
+        if (query.exec()) {
+            QMessageBox::information(this, "Succès", "Matière supprimée avec succès!");
+            setupMatiereTable(); // Recharger le tableau
+        } else {
+            QMessageBox::critical(this, "Erreur", "Erreur lors de la suppression:\n" + query.lastError().text());
+        }
     }
 }
 
@@ -839,6 +896,74 @@ void MainWindow::onExportMatiere()
     QMessageBox mb(this); mb.setWindowTitle("Export - Aperçu");
     mb.setText("Aperçu du rapport:"); mb.setDetailedText(txt);
     mb.setStyleSheet(MSGBOX_STYLE); mb.exec();
+}
+
+void MainWindow::onStatistiquesMatiere()
+{
+    int total = ui->matiereTable->rowCount();
+    int critique = 0, normal = 0, eleve = 0;
+    
+    for (int r = 0; r < total; ++r) {
+        QString quantiteStr = cellText(ui->matiereTable, r, 3).split(" ").first();
+        int quantite = quantiteStr.toInt();
+        int seuil = cellText(ui->matiereTable, r, 4).toInt();
+        
+        if (quantite < seuil * 0.5) critique++;
+        else if (quantite < seuil) normal++;
+        else eleve++;
+    }
+    
+    QString stats = "📊 STATISTIQUES DES MATIÈRES PREMIÈRES\n\n";
+    stats += QString("Total des matières: %1\n\n").arg(total);
+    stats += QString("Stock critique (< 50% seuil): %1\n").arg(critique);
+    stats += QString("Stock normal (50-100% seuil): %1\n").arg(normal);
+    stats += QString("Stock élevé (> seuil): %1\n\n").arg(eleve);
+    stats += QString("Taux de stock critique: %1%\n").arg(total > 0 ? (critique * 100 / total) : 0);
+    
+    showInfo(this, "Statistiques Matières", stats);
+}
+
+void MainWindow::onTriMatiere()
+{
+    QStringList options;
+    options << "Tri par Module (A-Z)" << "Tri par Module (Z-A)"
+            << "Tri par Type (A-Z)" << "Tri par Type (Z-A)"
+            << "Tri par Quantité (Croissant)" << "Tri par Quantité (Décroissant)"
+            << "Tri par Seuil (Croissant)" << "Tri par Seuil (Décroissant)"
+            << "Tri par Date d'expiration (Plus proche)" << "Tri par Date d'expiration (Plus lointaine)";
+    
+    bool ok;
+    QString choice = QInputDialog::getItem(this, "Tri des Matières", 
+                                          "Choisissez le critère de tri:", 
+                                          options, 0, false, &ok);
+    
+    if (ok && !choice.isEmpty()) {
+        int column = -1;
+        Qt::SortOrder order = Qt::AscendingOrder;
+        
+        if (choice.contains("Module")) {
+            column = 0;
+            order = choice.contains("Z-A") ? Qt::DescendingOrder : Qt::AscendingOrder;
+        } else if (choice.contains("Type")) {
+            column = 2;
+            order = choice.contains("Z-A") ? Qt::DescendingOrder : Qt::AscendingOrder;
+        } else if (choice.contains("Quantité")) {
+            column = 3;
+            order = choice.contains("Décroissant") ? Qt::DescendingOrder : Qt::AscendingOrder;
+        } else if (choice.contains("Seuil")) {
+            column = 4;
+            order = choice.contains("Décroissant") ? Qt::DescendingOrder : Qt::AscendingOrder;
+        } else if (choice.contains("Date")) {
+            column = 5;
+            order = choice.contains("lointaine") ? Qt::DescendingOrder : Qt::AscendingOrder;
+        }
+        
+        if (column >= 0) {
+            ui->matiereTable->sortItems(column, order);
+            QMessageBox::information(this, "Tri effectué", 
+                                   QString("Les matières ont été triées par: %1").arg(choice));
+        }
+    }
 }
 
 void MainWindow::onRechercheTriMatiere()
