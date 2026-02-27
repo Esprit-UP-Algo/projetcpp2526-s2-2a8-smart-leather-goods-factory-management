@@ -1,0 +1,22 @@
+# Large model files
+*.h5
+*.weights
+*.model
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Build directories
+build/
+*/build/
+
+# IDE files
+.vscode/
+*.user
+*.pro.user*
+
+# Virtual environment
+.venv/
+venv/

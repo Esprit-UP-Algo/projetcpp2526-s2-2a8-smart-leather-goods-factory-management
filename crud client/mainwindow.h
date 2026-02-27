@@ -4,6 +4,14 @@
 #include <QMainWindow>
 #include <QVector>
 #include <QPushButton>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
+#include <QFileDialog>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QLabel>
+#include <QProgressBar>
 #include "client.h"
 #include "matiere.h"
 #include "fournisseur.h"
@@ -77,6 +85,7 @@ private slots:
     void onRechercheTriMatiere();
     void onStatistiquesMatiere();
     void onTriMatiere();
+    void onDetectionDefauts();
     void onGestionFournisseurs();
     void onGenerateSuggestion();
     void onCloseSuggestion();
@@ -119,6 +128,12 @@ private:
     QList<Article> articles;
     bool isEditMode;
     int editingRow;
+    
+    // Détection de défauts - Mode API (Flask)
+    QNetworkAccessManager *networkManager;
+    QString apiUrl;
+    QLabel *detectionResultLabel;
+    QProgressBar *detectionProgress;
 
     // Navigation
     void switchPage(int index, QPushButton *activeBtn, const QString &title, bool showProfile);
@@ -148,6 +163,10 @@ private:
     QString getStockLevel(int current, int threshold);
     int calculateSuggestedQuantity(const QString &matiere);
     void updateMatiereStatistics();
+    
+    // Détection de défauts
+    void detectDefectsInImage(const QString &imagePath);
+    void showDetectionResults(const QJsonObject &results);
 
     // Suppliers
     void setupFournisseurTable();

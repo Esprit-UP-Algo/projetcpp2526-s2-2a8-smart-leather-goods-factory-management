@@ -9,6 +9,7 @@
 #include "employe.h"
 #include "production.h"
 #include "connection.h"
+
 #include <QTableWidgetItem>
 #include <QDebug>
 #include <QMessageBox>
@@ -28,6 +29,14 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QProgressBar>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonValue>
+#include <QFile>
+#include <QIODevice>
+#include <QByteArray>
 #include <QPrinter>
 #include <QPageLayout>
 #include <QPainter>
@@ -40,6 +49,7 @@
 #include <QStringConverter>
 #include <QScrollArea>
 #include <QTimer>
+#include <QCoreApplication>
 #include <algorithm>
 #include <QChart>
 #include <QChartView>
@@ -128,6 +138,12 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     setWindowTitle("CUIREA - Management System");
+    
+    // Initialiser la détection de défauts (Mode API)
+    networkManager = new QNetworkAccessManager(this);
+    apiUrl = "http://localhost:5000";
+    detectionResultLabel = nullptr;
+    detectionProgress = nullptr;
 
     // ── Employee table ──────────────────────────────────────────────────────
     ui->employeeTable->verticalHeader()->setVisible(false);
@@ -152,6 +168,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnRecherche,   &QPushButton::clicked, this, &MainWindow::onRechercheTriMatiere);
     connect(ui->btnStatistiques,&QPushButton::clicked, this, &MainWindow::onStatistiquesMatiere);
     connect(ui->btnTri,         &QPushButton::clicked, this, &MainWindow::onTriMatiere);
+    connect(ui->btnDetection,   &QPushButton::clicked, this, &MainWindow::onDetectionDefauts);
     connect(ui->btnExportMatiere,&QPushButton::clicked, this, &MainWindow::onExportMatiere);
 
     // ── Client extra buttons ────────────────────────────────────────────────
@@ -190,7 +207,10 @@ MainWindow::MainWindow(QWidget *parent)
     showMaximized();
 }
 
-MainWindow::~MainWindow() { delete ui; }
+MainWindow::~MainWindow() 
+{
+    delete ui; 
+}
 
 // ── Navigation helpers ────────────────────────────────────────────────────────
 void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &title, bool showProfile)
@@ -969,6 +989,174 @@ void MainWindow::onTriMatiere()
 void MainWindow::onRechercheTriMatiere()
 {
     showInfo(this,"Recherche & Tri","Fonctionnalité de recherche avancée disponible dans la prochaine version.");
+}
+
+void MainWindow::onDetectionDefauts()
+{
+    // Sélectionner une image
+    QString imagePath = QFileDialog::getOpenFileName(
+        this,
+        "Sélectionner une image de cuir",
+        "",
+        "Images (*.png *.jpg *.jpeg *.bmp *.tiff)"
+    );
+    
+    if (imagePath.isEmpty()) {
+        return;
+    }
+    
+    // Mode API: utiliser le serveur Flask
+    QNetworkRequest healthRequest(QUrl(apiUrl + "/health"));
+    QNetworkReply *healthReply = networkManager->get(healthRequest);
+    
+    connect(healthReply, &QNetworkReply::finished, [this, imagePath, healthReply]() {
+        healthReply->deleteLater();
+        
+        if (healthReply->error() != QNetworkReply::NoError) {
+            QMessageBox::critical(this, "Erreur de connexion",
+                "Impossible de se connecter au service de détection.\n"
+                "Assurez-vous que le serveur Python est démarré.\n\n"
+                "Commande: python leather_detection_api.py");
+            return;
+        }
+        
+        // L'API est accessible, procéder à la détection
+        detectDefectsInImage(imagePath);
+    });
+}
+
+void MainWindow::detectDefectsInImage(const QString &imagePath)
+{
+    // Créer une boîte de dialogue de progression
+    QDialog *progressDialog = new QDialog(this);
+    progressDialog->setWindowTitle("Détection en cours");
+    progressDialog->setModal(true);
+    progressDialog->setFixedSize(400, 150);
+    
+    QVBoxLayout *layout = new QVBoxLayout(progressDialog);
+    
+    QLabel *statusLabel = new QLabel("Analyse de l'image en cours...", progressDialog);
+    statusLabel->setAlignment(Qt::AlignCenter);
+    layout->addWidget(statusLabel);
+    
+    QProgressBar *progressBar = new QProgressBar(progressDialog);
+    progressBar->setRange(0, 0); // Mode indéterminé
+    layout->addWidget(progressBar);
+    
+    progressDialog->show();
+    
+    // Lire et encoder l'image en base64
+    QFile imageFile(imagePath);
+    if (!imageFile.open(QIODevice::ReadOnly)) {
+        progressDialog->close();
+        QMessageBox::critical(this, "Erreur", "Impossible de lire l'image");
+        return;
+    }
+    
+    QByteArray imageData = imageFile.readAll();
+    QString base64Image = imageData.toBase64();
+    
+    // Préparer la requête JSON
+    QJsonObject requestData;
+    requestData["image"] = "data:image/jpeg;base64," + base64Image;
+    
+    QJsonDocument doc(requestData);
+    QByteArray jsonData = doc.toJson();
+    
+    // Envoyer la requête à l'API
+    QNetworkRequest request(QUrl(apiUrl + "/predict"));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    
+    QNetworkReply *reply = networkManager->post(request, jsonData);
+    
+    connect(reply, &QNetworkReply::finished, [this, reply, progressDialog]() {
+        progressDialog->close();
+        reply->deleteLater();
+        
+        if (reply->error() != QNetworkReply::NoError) {
+            QMessageBox::critical(this, "Erreur", 
+                "Erreur de détection:\n" + reply->errorString());
+            return;
+        }
+        
+        // Traiter la réponse
+        QByteArray responseData = reply->readAll();
+        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData);
+        QJsonObject response = responseDoc.object();
+        
+        if (response["success"].toBool()) {
+            showDetectionResults(response);
+        } else {
+            QMessageBox::critical(this, "Erreur", 
+                "Échec de la détection:\n" + response["error"].toString());
+        }
+    });
+}
+
+void MainWindow::showDetectionResults(const QJsonObject &results)
+{
+    QJsonObject prediction = results["prediction"].toObject();
+    
+    QString className = prediction["class_name"].toString();
+    double confidence = prediction["confidence_percent"].toDouble();
+    
+    // Créer une boîte de dialogue pour afficher les résultats
+    QDialog *resultDialog = new QDialog(this);
+    resultDialog->setWindowTitle("Résultats de détection");
+    resultDialog->setModal(true);
+    resultDialog->setFixedSize(500, 400);
+    
+    QVBoxLayout *layout = new QVBoxLayout(resultDialog);
+    
+    // Titre
+    QLabel *titleLabel = new QLabel("Résultats d'analyse de qualité du cuir", resultDialog);
+    titleLabel->setAlignment(Qt::AlignCenter);
+    titleLabel->setStyleSheet("font-size: 16px; font-weight: bold; color: #8D6E63; margin: 10px;");
+    layout->addWidget(titleLabel);
+    
+    // Résultat principal
+    QString resultText = QString(
+        "Résultat principal:\n\n"
+        "🔍 %1\n\n"
+        "Niveau de confiance: %2%"
+    ).arg(className).arg(confidence, 0, 'f', 1);
+    
+    QLabel *resultLabel = new QLabel(resultText, resultDialog);
+    resultLabel->setAlignment(Qt::AlignCenter);
+    resultLabel->setStyleSheet("font-size: 14px; padding: 20px; background: #F5F5F5; border-radius: 8px;");
+    layout->addWidget(resultLabel);
+    
+    // Détails de toutes les prédictions
+    QLabel *detailsTitle = new QLabel("Détails de l'analyse:", resultDialog);
+    detailsTitle->setStyleSheet("font-weight: bold; margin-top: 10px;");
+    layout->addWidget(detailsTitle);
+    
+    QString detailsText;
+    QJsonArray allPredictions = results["all_predictions"].toArray();
+    
+    for (int i = 0; i < allPredictions.size(); ++i) {
+        QJsonObject predObj = allPredictions[i].toObject();
+        QString name = predObj["class_name"].toString();
+        double conf = predObj["confidence_percent"].toDouble();
+        
+        detailsText += QString("• %1: %2%\n").arg(name).arg(conf, 0, 'f', 1);
+    }
+    
+    QLabel *detailsLabel = new QLabel(detailsText, resultDialog);
+    detailsLabel->setStyleSheet("font-size: 12px; padding: 10px; background: #FAFAFA; border-radius: 4px;");
+    layout->addWidget(detailsLabel);
+    
+    // Bouton fermer
+    QPushButton *closeBtn = new QPushButton("Fermer", resultDialog);
+    closeBtn->setStyleSheet(
+        "QPushButton { background-color: #8D6E63; color: white; border: none; "
+        "border-radius: 6px; padding: 10px 20px; font-size: 12px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #A0826D; }"
+    );
+    connect(closeBtn, &QPushButton::clicked, resultDialog, &QDialog::accept);
+    layout->addWidget(closeBtn);
+    
+    resultDialog->exec();
 }
 
 void MainWindow::onGestionFournisseurs()
