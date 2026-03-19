@@ -1773,7 +1773,7 @@ QPushButton:hover {
                 </attribute>
                 <column>
                  <property name="text">
-                  <string>Nom</string>
+                  <string>Module</string>
                  </property>
                 </column>
                 <column>

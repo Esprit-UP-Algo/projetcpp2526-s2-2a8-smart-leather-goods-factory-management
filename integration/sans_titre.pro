@@ -1,8 +1,11 @@
-QT       += core gui charts printsupport sql network
+QT       += core gui charts printsupport sql network multimedia
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
+
+# Windows Speech API (SAPI)
+win32: LIBS += -lsapi -lole32 -loleaut32
 
 TARGET = CUIREA_Management
 TEMPLATE = app

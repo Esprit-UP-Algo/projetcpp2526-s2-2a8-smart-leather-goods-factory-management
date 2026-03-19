@@ -15,6 +15,19 @@
 #include <QLabel>
 #include <QProgressBar>
 #include <QPointer>
+#include <QThread>
+#include <QAudioSource>
+#include <QMediaDevices>
+#include <QAudioFormat>
+
+// Windows Speech API
+#ifdef Q_OS_WIN
+#define COBJMACROS
+#include <windows.h>
+#include <sapi.h>
+#include <sphelper.h>
+#endif
+
 #include "client.h"
 #include "matiere.h"
 #include "fournisseur.h"
@@ -103,6 +116,10 @@ private slots:
     void onCloseFournisseurs();
     void onExportMatiere();
 
+    // Voice
+    void onVoiceCommand();
+    void processVoiceCommand(const QString &cmd);
+
     // Suppliers
     void on_btnAddFournisseur_clicked();
     void on_btnEditFournisseur_clicked();
@@ -138,6 +155,17 @@ private:
     QString apiUrl;
     QLabel *detectionResultLabel;
     QProgressBar *detectionProgress;
+
+    // Voice recognition
+    bool voiceListening;
+    QLabel *voiceFeedbackLabel;
+#ifdef Q_OS_WIN
+    ISpRecognizer  *spRecognizer;
+    ISpRecoContext *spRecoContext;
+    ISpRecoGrammar *spGrammar;
+    void initSAPI();
+    void stopSAPI();
+#endif
 
     // Navigation
     void switchPage(int index, QPushButton *activeBtn, const QString &title, bool showProfile);

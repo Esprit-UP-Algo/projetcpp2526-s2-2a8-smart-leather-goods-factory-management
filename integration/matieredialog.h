@@ -30,6 +30,19 @@ public:
     QString getDateExpiration() const;
     QString getPhotoUrl()       const;
 
+    // Setters individuels pour modifications vocales
+    void setModule(const QString &m)    { if (txtModule) txtModule->setText(m); }
+    void setReference(const QString &r) { if (txtReference) txtReference->setText(r); }
+    void setTypeMatiere(const QString &t) { 
+        if (cmbType) {
+            int idx = cmbType->findText(t, Qt::MatchContains);
+            if (idx >= 0) cmbType->setCurrentIndex(idx);
+            else cmbType->setCurrentText(t);
+        }
+    }
+    void setQuantite(const QString &q)  { if (txtQuantite) txtQuantite->setText(q); }
+    void setSeuil(const QString &s)     { if (txtSeuil) txtSeuil->setText(s); }
+
 private slots:
     void onSaveClicked();
     void onDeleteConfirmed();

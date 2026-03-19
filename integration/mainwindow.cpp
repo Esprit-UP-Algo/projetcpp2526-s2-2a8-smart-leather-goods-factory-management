@@ -1,5 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include <QStatusBar>
+#include <QRegularExpression>
 #include "employeedialog.h"
 #include "clientmanagerdialog.h"
 #include "matieredialog.h"
@@ -181,9 +183,34 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnEditMatiere, &QPushButton::clicked, this, &MainWindow::onEditMatiere);
     connect(ui->btnDeleteMatiere, &QPushButton::clicked, this, &MainWindow::onDeleteMatiere);
     connect(ui->btnRecherche,   &QPushButton::clicked, this, &MainWindow::onRechercheTriMatiere);
+    connect(ui->searchBoxMatiere, &QLineEdit::textChanged, this, [this](const QString &text) {
+        QString lower = text.trimmed().toLower();
+        for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
+            bool match = lower.isEmpty();
+            if (!match) {
+                for (int c = 0; c < 3; ++c) { // Module, Ref, Type
+                    if (cellText(ui->matiereTable, r, c).toLower().contains(lower)) {
+                        match = true;
+                        break;
+                    }
+                }
+            }
+            ui->matiereTable->setRowHidden(r, !match);
+        }
+    });
     connect(ui->btnStatistiques,&QPushButton::clicked, this, &MainWindow::onStatistiquesMatiere);
     connect(ui->btnTri,         &QPushButton::clicked, this, &MainWindow::onTriMatiere);
     connect(ui->btnDetection,   &QPushButton::clicked, this, &MainWindow::onDetectionDefauts);
+    // Voice recognition init
+    voiceListening = false;
+    voiceFeedbackLabel = nullptr;
+#ifdef Q_OS_WIN
+    spRecognizer  = nullptr;
+    spRecoContext = nullptr;
+    spGrammar     = nullptr;
+    CoInitialize(nullptr);
+#endif
+    connect(ui->btnVoice, &QPushButton::clicked, this, &MainWindow::onVoiceCommand);
     connect(ui->btnExportMatiere,&QPushButton::clicked, this, &MainWindow::onExportMatiere);
 
     // ── Client extra buttons ────────────────────────────────────────────────
@@ -769,7 +796,7 @@ void MainWindow::setupMatiereTable()
     
     ui->matiereTable->setRowCount(0); // Vider le tableau
     ui->matiereTable->setColumnCount(7); // Ajouter colonne photo
-    ui->matiereTable->setHorizontalHeaderLabels({"NOM", "RÉFÉRENCE", "TYPE", "QUANTITÉ ACTUELLE", "SEUIL", "DATE D'EXPIRATION", "PHOTO"});
+    ui->matiereTable->setHorizontalHeaderLabels({"MODULE", "RÉFÉRENCE", "TYPE", "QUANTITÉ ACTUELLE", "SEUIL", "DATE D'EXPIRATION", "PHOTO"});
     
     for (int row = 0; row < model->rowCount(); ++row) {
         ui->matiereTable->insertRow(row);
@@ -974,43 +1001,469 @@ void MainWindow::onOptimisationFIFO()
 
 void MainWindow::onExportMatiere()
 {
-    QString txt = "RAPPORT DES MATIÈRES - " + QDate::currentDate().toString("dd/MM/yyyy") + "\n\n";
-    txt += QString("Total: %1  |  Stock critique: %2\n\n")
-           .arg(ui->matiereTable->rowCount())
-           .arg(ui->statsValueMatiere2->text());
-    for (int r = 0; r < ui->matiereTable->rowCount(); ++r)
-        txt += QString("%1. %2 | %3 | %4 | seuil: %5 | exp: %6\n").arg(r+1)
-               .arg(cellText(ui->matiereTable,r,0), cellText(ui->matiereTable,r,2),
-                    cellText(ui->matiereTable,r,3), cellText(ui->matiereTable,r,4),
-                    cellText(ui->matiereTable,r,5));
-    QMessageBox mb(this); mb.setWindowTitle("Export - Aperçu");
-    mb.setText("Aperçu du rapport:"); mb.setDetailedText(txt);
-    mb.setStyleSheet(MSGBOX_STYLE); mb.exec();
+    QString fileName = QFileDialog::getSaveFileName(this,
+        "Exporter en PDF",
+        QDir::homePath() + "/Rapport_Matieres_" + QDate::currentDate().toString("yyyy-MM-dd") + ".pdf",
+        "PDF Files (*.pdf)");
+
+    if (fileName.isEmpty()) return;
+
+    // ── Calcul des statistiques ───────────────────────────────
+    int total = ui->matiereTable->rowCount();
+    int critique = 0, normal = 0, eleve = 0, expires = 0, proche30j = 0;
+    QMap<QString, int> parType;
+
+    for (int r = 0; r < total; ++r) {
+        double qty   = cellText(ui->matiereTable, r, 3).remove(" m²").toDouble();
+        int    seuil = cellText(ui->matiereTable, r, 4).toInt();
+        QString type = cellText(ui->matiereTable, r, 2);
+
+        if      (qty < seuil * 0.5) critique++;
+        else if (qty < seuil)       normal++;
+        else                        eleve++;
+
+        parType[type]++;
+
+        QDate expDate = QDate::fromString(cellText(ui->matiereTable, r, 5), "yyyy-MM-dd");
+        int daysLeft  = QDate::currentDate().daysTo(expDate);
+        if      (daysLeft < 0)  expires++;
+        else if (daysLeft < 30) proche30j++;
+    }
+
+    int stockOK = normal + eleve;
+
+    // ── Construction HTML identique à l'image ─────────────────
+    QString html;
+    html += R"(
+    <html><head><meta charset="UTF-8">
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: Arial, sans-serif; background: #F5F0EB;
+             color: #2C2416; padding: 0; }
+      
+      .header { background: #4A3428; color: white; padding: 18px 30px;
+                display: flex; align-items: center; gap: 15px; }
+      .logo { width: 60px; height: 60px; background: rgba(255,255,255,0.15);
+              border-radius: 6px; display: flex; align-items: center;
+              justify-content: center; font-size: 10px; font-weight: 700;
+              text-align: center; line-height: 1.1; padding: 6px; }
+      .header-title { flex: 1; font-size: 28px; font-weight: 700;
+                      letter-spacing: 3px; text-transform: uppercase; }
+      
+      .subheader { background: #E8DED3; text-align: center; padding: 10px;
+                   font-size: 12px; color: #5D4037; font-weight: 500; }
+      
+      .content { padding: 20px 25px; }
+      
+      .section-title { font-size: 15px; font-weight: 700; color: #2C2416;
+                       margin: 20px 0 12px 0; text-transform: uppercase;
+                       letter-spacing: 0.5px; }
+      
+      .cards { display: grid; grid-template-columns: repeat(5, 1fr);
+               gap: 10px; margin-bottom: 20px; }
+      
+      .card { background: white; border-radius: 8px; padding: 14px;
+              text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+              border: 2px solid #E0D5CC; }
+      .card-icon { font-size: 24px; margin-bottom: 4px; }
+      .card-title { font-size: 9px; font-weight: 700; text-transform: uppercase;
+                    letter-spacing: 0.3px; margin-bottom: 4px; line-height: 1.2; }
+      .card-value { font-size: 32px; font-weight: 700; margin: 4px 0; }
+      .card-label { font-size: 10px; color: #666; font-weight: 500; }
+      
+      .card-total .card-title    { color: #2C2416; }
+      .card-total .card-value    { color: #2C2416; }
+      .card-critique .card-title { color: #D84315; }
+      .card-critique .card-value { color: #D84315; }
+      .card-expires .card-title  { color: #8B4513; }
+      .card-expires .card-value  { color: #8B4513; }
+      .card-proche .card-title   { color: #D4A574; }
+      .card-proche .card-value   { color: #D4A574; }
+      .card-ok .card-title       { color: #7B8A5C; }
+      .card-ok .card-value       { color: #7B8A5C; }
+      
+      .charts-row { display: grid; grid-template-columns: 1fr 0.7fr;
+                    gap: 15px; margin-bottom: 20px; }
+      
+      .chart-section { background: white; border-radius: 8px; padding: 16px;
+                       box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+      
+      .bar-chart { margin-top: 10px; }
+      .bar-row { display: flex; align-items: center; margin-bottom: 12px; }
+      .bar-label { width: 100px; font-size: 11px; font-weight: 500;
+                   color: #2C2416; }
+      .bar-container { flex: 1; background: #F0E6DA; height: 28px;
+                       border-radius: 4px; position: relative; overflow: hidden; }
+      .bar-fill { background: #5D4037; height: 100%; border-radius: 4px;
+                  display: flex; align-items: center; justify-content: flex-end;
+                  padding-right: 8px; color: white; font-size: 12px;
+                  font-weight: 700; }
+      
+      .summary-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      .summary-table th { background: #5D4037; color: white; padding: 8px;
+                          text-align: left; font-weight: 600; font-size: 10px; }
+      .summary-table td { padding: 8px; border-bottom: 1px solid #E8DED3; }
+      .summary-table tr:nth-child(even) td { background: #FAF7F4; }
+      
+      .detail-table { width: 100%; border-collapse: collapse; font-size: 10px;
+                      background: white; border-radius: 8px; overflow: hidden;
+                      box-shadow: 0 2px 5px rgba(0,0,0,0.08); }
+      .detail-table th { background: #5D4037; color: white; padding: 10px 8px;
+                         text-align: left; font-weight: 600; text-transform: uppercase;
+                         font-size: 10px; }
+      .detail-table td { padding: 8px; border-bottom: 1px solid #E8DED3; }
+      .detail-table tr:nth-child(even) td { background: #FAF7F4; }
+      .detail-table tr:last-child td { border-bottom: none; }
+      
+      .icon-leather { color: #8D6E63; font-size: 14px; margin-right: 4px; }
+      
+      .badge { display: inline-block; padding: 3px 10px; border-radius: 10px;
+               font-size: 9px; font-weight: 700; }
+      .badge-critique { background: #FDECEA; color: #C0392B; }
+      .badge-normal   { background: #FEF5E7; color: #E67E22; }
+      
+      .footer { font-size: 10px; color: #666; margin-top: 25px;
+                padding: 12px 0; border-top: 2px solid #E8DED3;
+                display: flex; justify-content: space-between; }
+      .footer-right { font-weight: 600; }
+    </style></head><body>
+    )";
+
+    // ── En-tête avec logo ─────────────────────────────────────
+    html += R"(
+    <div class="header">
+      <div class="logo">CUIREA</div>
+      <div class="header-title">RAPPORT DES MATIERES PREMIERES</div>
+    </div>
+    )";
+
+    html += QString(R"(
+    <div class="subheader">Genere le %1</div>
+    )").arg(QDateTime::currentDateTime().toString("dd/MM/yyyy 'pm' HH:mm"));
+
+    html += R"(<div class="content">)";
+
+    // ── Statistiques générales ────────────────────────────────
+    html += R"(<div class="section-title">STATISTIQUES GENERALES</div>)";
+    
+    html += QString(R"(
+    <div class="cards">
+      <div class="card card-total">
+        <div class="card-icon">📦</div>
+        <div class="card-title">Total<br>Matieres</div>
+        <div class="card-value">%1</div>
+        <div class="card-label">Actives</div>
+      </div>
+      <div class="card card-critique">
+        <div class="card-icon">⚠️</div>
+        <div class="card-title">Stock<br>Critique</div>
+        <div class="card-value">%2</div>
+        <div class="card-label">Items a reapprovisionner</div>
+      </div>
+      <div class="card card-expires">
+        <div class="card-icon">⏳</div>
+        <div class="card-title">Expires</div>
+        <div class="card-value">%3</div>
+        <div class="card-label">Expires</div>
+      </div>
+      <div class="card card-proche">
+        <div class="card-icon">🕐</div>
+        <div class="card-title">< 30 Jours</div>
+        <div class="card-value">%4</div>
+        <div class="card-label">A surveiller</div>
+      </div>
+      <div class="card card-ok">
+        <div class="card-icon">✓</div>
+        <div class="card-title">Stock<br>OK</div>
+        <div class="card-value">%5</div>
+        <div class="card-label">Stock OK</div>
+      </div>
+    </div>
+    )").arg(total).arg(critique).arg(expires).arg(proche30j).arg(stockOK);
+
+    // ── Répartition par type (graphique + tableau) ────────────
+    html += R"(<div class="section-title">REPARTITION PAR TYPE</div>)";
+    html += R"(<div class="charts-row">)";
+    
+    // Graphique à barres
+    html += R"(<div class="chart-section"><div class="bar-chart">)";
+    
+    int maxType = 0;
+    for (auto it = parType.begin(); it != parType.end(); ++it)
+        if (it.value() > maxType) maxType = it.value();
+    
+    for (auto it = parType.begin(); it != parType.end(); ++it) {
+        int width = maxType > 0 ? (it.value() * 100 / maxType) : 0;
+        html += QString(R"(
+          <div class="bar-row">
+            <div class="bar-label">%1</div>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: %2%%;">%3</div>
+            </div>
+          </div>
+        )").arg(it.key()).arg(width).arg(it.value());
+    }
+    
+    html += R"(</div></div>)";
+    
+    // Tableau récapitulatif
+    html += R"(
+      <div class="chart-section">
+        <table class="summary-table">
+          <tr><th>Type</th><th>Nombre de matieres</th></tr>
+    )";
+    
+    for (auto it = parType.begin(); it != parType.end(); ++it) {
+        html += QString("<tr><td>%1</td><td>%2</td></tr>")
+            .arg(it.key()).arg(it.value());
+    }
+    
+    html += R"(
+        </table>
+      </div>
+    </div>
+    )";
+
+    // ── Liste détaillée ───────────────────────────────────────
+    html += R"(<div class="section-title">LISTE DETAILLEE DES MATIERES</div>)";
+    html += R"(
+    <table class="detail-table">
+      <tr>
+        <th>Module</th><th>Reference</th><th>Type</th>
+        <th>Quantite</th><th>Seuil</th><th>Expiration</th><th>Statut</th>
+      </tr>
+    )";
+
+    for (int r = 0; r < total; ++r) {
+        double qty   = cellText(ui->matiereTable, r, 3).remove(" m²").toDouble();
+        int    seuil = cellText(ui->matiereTable, r, 4).toInt();
+        QString badge, label;
+        if      (qty < seuil * 0.5) { badge = "badge-critique"; label = "Critique"; }
+        else if (qty < seuil)       { badge = "badge-normal";   label = "Normal";   }
+
+        html += QString(R"(
+        <tr>
+          <td><span class="icon-leather">🐄</span>%1</td>
+          <td>%2</td><td>%3</td><td>%4</td><td>%5</td><td>%6</td>
+          <td><span class="%7">%8</span></td>
+        </tr>
+        )").arg(cellText(ui->matiereTable, r, 0))
+           .arg(cellText(ui->matiereTable, r, 1))
+           .arg(cellText(ui->matiereTable, r, 2))
+           .arg(cellText(ui->matiereTable, r, 3))
+           .arg(cellText(ui->matiereTable, r, 4))
+           .arg(cellText(ui->matiereTable, r, 5))
+           .arg(badge).arg(label);
+    }
+
+    html += R"(</table>)";
+
+    // ── Footer ────────────────────────────────────────────────
+    html += R"(
+    <div class="footer">
+      <div>CUIREA Management System — Rapport genere automatiquement</div>
+      <div class="footer-right">1 / 1</div>
+    </div>
+    )";
+
+    html += R"(</div></body></html>)";
+
+    // ── Génération PDF ────────────────────────────────────────
+    QPrinter printer(QPrinter::PrinterResolution);
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(fileName);
+    printer.setPageSize(QPageSize(QPageSize::A4));
+    printer.setPageOrientation(QPageLayout::Portrait);
+    printer.setPageMargins(QMarginsF(0, 0, 0, 0), QPageLayout::Millimeter);
+
+    QTextDocument doc;
+    doc.setHtml(html);
+    doc.setPageSize(printer.pageRect(QPrinter::DevicePixel).size());
+    doc.print(&printer);
+
+    QMessageBox::information(this, "Succes",
+        QString("PDF exporte avec succes !\n\n%1").arg(fileName));
 }
 
 void MainWindow::onStatistiquesMatiere()
 {
+    QDialog dlg(this);
+    dlg.setWindowTitle("Statistiques - Matières Premières");
+    dlg.setMinimumSize(950, 650);
+    dlg.setStyleSheet("QDialog { background-color: #F5F0EB; }");
+
+    QVBoxLayout mainLay(&dlg);
+    mainLay.setContentsMargins(25, 25, 25, 25);
+    mainLay.setSpacing(20);
+
+    // Titre
+    auto *title = new QLabel("📊 STATISTIQUES DES MATIÈRES PREMIÈRES");
+    title->setStyleSheet("font-size: 18px; font-weight: bold; color: #6D4C41; padding: 8px;");
+    title->setAlignment(Qt::AlignCenter);
+    mainLay.addWidget(title);
+
+    // Calcul des stats
     int total = ui->matiereTable->rowCount();
-    int critique = 0, normal = 0, eleve = 0;
-    
+    int critique = 0, normal = 0, eleve = 0, expires = 0, proche30j = 0;
+    QMap<QString, int> parType;
+
     for (int r = 0; r < total; ++r) {
-        QString quantiteStr = cellText(ui->matiereTable, r, 3).split(" ").first();
-        int quantite = quantiteStr.toInt();
+        double qty = cellText(ui->matiereTable, r, 3).remove(" m²").toDouble();
         int seuil = cellText(ui->matiereTable, r, 4).toInt();
+        QString type = cellText(ui->matiereTable, r, 2);
         
-        if (quantite < seuil * 0.5) critique++;
-        else if (quantite < seuil) normal++;
+        if (qty < seuil * 0.5) critique++;
+        else if (qty < seuil) normal++;
         else eleve++;
+
+        parType[type]++;
+
+        QString dateStr = cellText(ui->matiereTable, r, 5);
+        QDate expDate = QDate::fromString(dateStr, "yyyy-MM-dd");
+        int daysLeft = QDate::currentDate().daysTo(expDate);
+        if (daysLeft < 0) expires++;
+        else if (daysLeft < 30) proche30j++;
+    }
+
+    // Cards en haut (4 cartes seulement)
+    QHBoxLayout *cardsLay = new QHBoxLayout();
+    cardsLay->setSpacing(10);
+
+    auto createCard = [](const QString &label, const QString &value, const QString &color, const QString &borderColor) {
+        QFrame *card = new QFrame();
+        card->setStyleSheet(QString(
+            "QFrame { background: white; border: 2px solid %1; border-radius: 10px; }").arg(borderColor));
+        card->setFixedHeight(100);
+        card->setMinimumWidth(150);
+        
+        QVBoxLayout *lay = new QVBoxLayout(card);
+        lay->setSpacing(4);
+        lay->setContentsMargins(10, 12, 10, 12);
+        
+        auto *lbl = new QLabel(label);
+        lbl->setStyleSheet("font-size: 10px; color: #888; font-weight: 600;");
+        lbl->setAlignment(Qt::AlignCenter);
+        lbl->setWordWrap(false);
+        
+        auto *val = new QLabel(value);
+        val->setStyleSheet(QString("font-size: 36px; font-weight: bold; color: %1; margin-top: 4px;").arg(color));
+        val->setAlignment(Qt::AlignCenter);
+        
+        lay->addWidget(lbl);
+        lay->addWidget(val);
+        lay->addStretch();
+        return card;
+    };
+
+    cardsLay->addWidget(createCard("Total Matières", QString::number(total), "#2C2416", "#E0D5CC"));
+    cardsLay->addWidget(createCard("Stock Critique", QString::number(critique), "#C0392B", "#FDECEA"));
+    cardsLay->addWidget(createCard("Expirés", QString::number(expires), "#8B4513", "#FEF5E7"));
+    cardsLay->addWidget(createCard("< 30 jours", QString::number(proche30j), "#D4A574", "#FFF8E1"));
+    mainLay.addLayout(cardsLay);
+
+    // Graphiques
+    QHBoxLayout *chartsLay = new QHBoxLayout();
+    chartsLay->setSpacing(20);
+
+    // ── Donut Chart - Répartition stock (CRITICITÉ) ──────────
+    auto *pieSeries = new QPieSeries();
+    pieSeries->setHoleSize(0.5);  // Donut chart
+    
+    auto *sliceCrit = pieSeries->append("Critique", critique);
+    sliceCrit->setBrush(QColor("#B33A3A"));
+    sliceCrit->setLabelVisible(false);
+    
+    auto *sliceElev = pieSeries->append("Élevé", eleve);
+    sliceElev->setBrush(QColor("#E67E22"));
+    sliceElev->setLabelVisible(false);
+    
+    auto *sliceNorm = pieSeries->append("Normal", normal);
+    sliceNorm->setBrush(QColor("#95A472"));
+    sliceNorm->setLabelVisible(false);
+
+    auto *pieChart = new QChart();
+    pieChart->addSeries(pieSeries);
+    pieChart->setTitle("Répartition des Stocks (CRITICITÉ)");
+    pieChart->setTitleFont(QFont("Arial", 12, QFont::Bold));
+    pieChart->setBackgroundBrush(QColor("#FFFFFF"));
+    pieChart->setBackgroundRoundness(10);
+    
+    // Légende personnalisée
+    pieChart->legend()->setVisible(true);
+    pieChart->legend()->setAlignment(Qt::AlignRight);
+    pieChart->legend()->setFont(QFont("Arial", 10));
+    
+    // Ajouter le nombre total au centre
+    auto *centerLabel = new QLabel(QString::number(total));
+    centerLabel->setStyleSheet("font-size: 42px; font-weight: bold; color: #6D4C41;");
+    centerLabel->setAlignment(Qt::AlignCenter);
+    
+    auto *pieView = new QChartView(pieChart);
+    pieView->setRenderHint(QPainter::Antialiasing);
+    pieView->setMinimumHeight(280);
+    pieView->setStyleSheet("background: white; border-radius: 10px;");
+    chartsLay->addWidget(pieView);
+
+    // ── Bar chart - Par type ──────────────────────────────────
+    auto *barSet = new QBarSet("Quantité");
+    barSet->setColor(QColor("#6D4C41"));
+    QStringList categories;
+    for (auto it = parType.begin(); it != parType.end(); ++it) {
+        *barSet << it.value();
+        categories << it.key();
     }
     
-    QString stats = "📊 STATISTIQUES DES MATIÈRES PREMIÈRES\n\n";
-    stats += QString("Total des matières: %1\n\n").arg(total);
-    stats += QString("Stock critique (< 50% seuil): %1\n").arg(critique);
-    stats += QString("Stock normal (50-100% seuil): %1\n").arg(normal);
-    stats += QString("Stock élevé (> seuil): %1\n\n").arg(eleve);
-    stats += QString("Taux de stock critique: %1%\n").arg(total > 0 ? (critique * 100 / total) : 0);
+    auto *barSeries = new QBarSeries();
+    barSeries->append(barSet);
     
-    showInfo(this, "Statistiques Matières", stats);
+    auto *barChart = new QChart();
+    barChart->addSeries(barSeries);
+    barChart->setTitle("Répartition par Type");
+    barChart->setTitleFont(QFont("Arial", 12, QFont::Bold));
+    barChart->legend()->setVisible(false);
+    barChart->setBackgroundBrush(QColor("#FFFFFF"));
+    barChart->setBackgroundRoundness(10);
+    
+    auto *axisX = new QBarCategoryAxis();
+    axisX->append(categories);
+    axisX->setLabelsFont(QFont("Arial", 9));
+    barChart->addAxis(axisX, Qt::AlignBottom);
+    barSeries->attachAxis(axisX);
+    
+    auto *axisY = new QValueAxis();
+    axisY->setLabelFormat("%d");
+    axisY->setLabelsFont(QFont("Arial", 9));
+    barChart->addAxis(axisY, Qt::AlignLeft);
+    barSeries->attachAxis(axisY);
+    
+    auto *barView = new QChartView(barChart);
+    barView->setRenderHint(QPainter::Antialiasing);
+    barView->setMinimumHeight(280);
+    barView->setStyleSheet("background: white; border-radius: 10px;");
+    chartsLay->addWidget(barView);
+
+    mainLay.addLayout(chartsLay);
+
+    // Boutons
+    QHBoxLayout *btnLay = new QHBoxLayout();
+    auto *btnExport = new QPushButton("📄 Exporter PDF", &dlg);
+    btnExport->setStyleSheet("QPushButton { background: #6D4C41; color: white; border: none; "
+                             "border-radius: 8px; padding: 12px 24px; font-size: 12px; font-weight: bold; }"
+                             "QPushButton:hover { background: #8D6E63; }");
+    connect(btnExport, &QPushButton::clicked, [this]() { onExportMatiere(); });
+    
+    auto *btnClose = new QPushButton("Fermer", &dlg);
+    btnClose->setStyleSheet("QPushButton { background: #E7DDD1; color: #291C0E; border: 1px solid #BCAAA4; "
+                            "border-radius: 8px; padding: 12px 24px; font-size: 12px; font-weight: bold; }"
+                            "QPushButton:hover { background: #F0E6DA; }");
+    connect(btnClose, &QPushButton::clicked, &dlg, &QDialog::accept);
+    
+    btnLay->addStretch();
+    btnLay->addWidget(btnExport);
+    btnLay->addWidget(btnClose);
+    mainLay.addLayout(btnLay);
+
+    dlg.exec();
 }
 
 void MainWindow::onTriMatiere()
@@ -1058,7 +1511,142 @@ void MainWindow::onTriMatiere()
 
 void MainWindow::onRechercheTriMatiere()
 {
-    showInfo(this,"Recherche & Tri","Fonctionnalité de recherche avancée disponible dans la prochaine version.");
+    QDialog dlg(this);
+    dlg.setWindowTitle("Recherche Avancée");
+    dlg.setMinimumWidth(500);
+    dlg.setStyleSheet(DIALOG_STYLE);
+
+    QVBoxLayout lay(&dlg);
+    lay.setSpacing(12);
+    lay.setContentsMargins(20, 20, 20, 20);
+
+    auto *title = new QLabel("🔍 Recherche de Matières Premières");
+    title->setStyleSheet("font-size: 16px; font-weight: bold; color: #8D6E63;");
+    title->setAlignment(Qt::AlignCenter);
+
+    QFormLayout form;
+    
+    auto *txtNom = new QLineEdit(&dlg);
+    txtNom->setPlaceholderText("Ex: cuir, peau...");
+    
+    auto *txtRef = new QLineEdit(&dlg);
+    txtRef->setPlaceholderText("Ex: dd, aaaa...");
+    
+    auto *cmbType = new QComboBox(&dlg);
+    cmbType->addItems({"Tous", "Cuir", "Peau de Veau", "Ficelinée", "Quincaillerie"});
+    
+    auto *cmbStock = new QComboBox(&dlg);
+    cmbStock->addItems({"Tous", "Critique", "Normal", "Élevé"});
+    
+    auto *txtSeuil = new QLineEdit(&dlg);
+    txtSeuil->setPlaceholderText("Ex: 100, >50, <200");
+    
+    auto *cmbPeremption = new QComboBox(&dlg);
+    cmbPeremption->addItems({"Tous", "Expiré", "< 30 jours", "< 90 jours", "> 90 jours"});
+    
+    auto *cmbPhoto = new QComboBox(&dlg);
+    cmbPhoto->addItems({"Tous", "Avec photo", "Sans photo"});
+
+    form.addRow("Nom / Module :", txtNom);
+    form.addRow("Référence :", txtRef);
+    form.addRow("Type :", cmbType);
+    form.addRow("Niveau Stock :", cmbStock);
+    form.addRow("Seuil :", txtSeuil);
+    form.addRow("Péremption :", cmbPeremption);
+    form.addRow("Photo :", cmbPhoto);
+
+    QDialogButtonBox btns(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    connect(&btns, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(&btns, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+
+    lay.addWidget(title);
+    lay.addLayout(&form);
+    lay.addWidget(&btns);
+
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    // Appliquer les filtres
+    QString nomFilter = txtNom->text().trimmed().toLower();
+    QString refFilter = txtRef->text().trimmed().toLower();
+    QString typeFilter = cmbType->currentText();
+    QString stockFilter = cmbStock->currentText();
+    QString seuilFilter = txtSeuil->text().trimmed();
+    QString peremptionFilter = cmbPeremption->currentText();
+    QString photoFilter = cmbPhoto->currentText();
+
+    for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
+        bool match = true;
+
+        // Filtre nom
+        if (!nomFilter.isEmpty()) {
+            QString nom = cellText(ui->matiereTable, r, 0).toLower();
+            if (!nom.contains(nomFilter)) match = false;
+        }
+
+        // Filtre référence
+        if (!refFilter.isEmpty() && match) {
+            QString ref = cellText(ui->matiereTable, r, 1).toLower();
+            if (!ref.contains(refFilter)) match = false;
+        }
+
+        // Filtre type
+        if (typeFilter != "Tous" && match) {
+            QString type = cellText(ui->matiereTable, r, 2);
+            if (type != typeFilter) match = false;
+        }
+
+        // Filtre stock
+        if (stockFilter != "Tous" && match) {
+            int qty = cellText(ui->matiereTable, r, 3).remove(" m²").toDouble();
+            int seuil = cellText(ui->matiereTable, r, 4).toInt();
+            if (stockFilter == "Critique" && qty >= seuil) match = false;
+            if (stockFilter == "Normal" && (qty < seuil || qty > seuil * 2)) match = false;
+            if (stockFilter == "Élevé" && qty <= seuil * 2) match = false;
+        }
+
+        // Filtre seuil
+        if (!seuilFilter.isEmpty() && match) {
+            int seuil = cellText(ui->matiereTable, r, 4).toInt();
+            if (seuilFilter.startsWith(">")) {
+                int val = seuilFilter.mid(1).toInt();
+                if (seuil <= val) match = false;
+            } else if (seuilFilter.startsWith("<")) {
+                int val = seuilFilter.mid(1).toInt();
+                if (seuil >= val) match = false;
+            } else {
+                if (seuil != seuilFilter.toInt()) match = false;
+            }
+        }
+
+        // Filtre péremption
+        if (peremptionFilter != "Tous" && match) {
+            QString dateStr = cellText(ui->matiereTable, r, 5);
+            QDate expDate = QDate::fromString(dateStr, "yyyy-MM-dd");
+            int daysLeft = QDate::currentDate().daysTo(expDate);
+            
+            if (peremptionFilter == "Expiré" && daysLeft >= 0) match = false;
+            if (peremptionFilter == "< 30 jours" && (daysLeft < 0 || daysLeft >= 30)) match = false;
+            if (peremptionFilter == "< 90 jours" && (daysLeft < 0 || daysLeft >= 90)) match = false;
+            if (peremptionFilter == "> 90 jours" && daysLeft < 90) match = false;
+        }
+
+        // Filtre photo
+        if (photoFilter != "Tous" && match) {
+            auto *photoItem = ui->matiereTable->item(r, 6);
+            bool hasPhoto = photoItem && !photoItem->icon().isNull();
+            if (photoFilter == "Avec photo" && !hasPhoto) match = false;
+            if (photoFilter == "Sans photo" && hasPhoto) match = false;
+        }
+
+        ui->matiereTable->setRowHidden(r, !match);
+    }
+
+    int visibleCount = 0;
+    for (int r = 0; r < ui->matiereTable->rowCount(); ++r)
+        if (!ui->matiereTable->isRowHidden(r)) visibleCount++;
+
+    QMainWindow::statusBar()->showMessage(
+        QString("🔍 %1 matière(s) trouvée(s)").arg(visibleCount), 5000);
 }
 
 void MainWindow::onDetectionDefauts()
@@ -3766,4 +4354,359 @@ void MainWindow::on_btnAideDecision_clicked()
     connect(&close,&QPushButton::clicked,&dlg,&QDialog::accept);
     QHBoxLayout bl; bl.addStretch(); bl.addWidget(&close); lay.addLayout(&bl);
     dlg.exec();
+}
+
+// ── Voice Recognition (SAPI) ──────────────────────────────────────────────────
+#ifdef Q_OS_WIN
+
+void MainWindow::initSAPI()
+{
+    // Utiliser le recognizer partagé Windows (déjà configuré avec le micro système)
+    if (FAILED(CoCreateInstance(CLSID_SpSharedRecognizer, nullptr, CLSCTX_LOCAL_SERVER,
+                                IID_ISpRecognizer, (void**)&spRecognizer))) {
+        QMessageBox::critical(this, "Vocal", "Impossible d'initialiser SAPI.\nVérifiez que la reconnaissance vocale Windows est activée.");
+        spRecognizer = nullptr;
+        return;
+    }
+
+    if (FAILED(spRecognizer->CreateRecoContext(&spRecoContext))) {
+        spRecognizer->Release(); spRecognizer = nullptr;
+        return;
+    }
+
+    spRecoContext->SetInterest(SPFEI(SPEI_RECOGNITION), SPFEI(SPEI_RECOGNITION));
+    spRecoContext->SetNotifyWin32Event();
+
+    spRecoContext->CreateGrammar(1, &spGrammar);
+    spGrammar->LoadDictation(nullptr, SPLO_STATIC);
+    spGrammar->SetDictationState(SPRS_ACTIVE);
+}
+
+void MainWindow::stopSAPI()
+{
+    if (spGrammar)     { spGrammar->SetDictationState(SPRS_INACTIVE); spGrammar->Release();     spGrammar = nullptr; }
+    if (spRecoContext) { spRecoContext->Release(); spRecoContext = nullptr; }
+    if (spRecognizer)  { spRecognizer->Release();  spRecognizer  = nullptr; }
+}
+
+#endif
+
+void MainWindow::onVoiceCommand()
+{
+    // Dialog avec champ texte pour saisie vocale via Win+H
+    QDialog dlg(this);
+    dlg.setWindowTitle("Commande Vocale");
+    dlg.setMinimumWidth(420);
+    dlg.setStyleSheet(
+        "QDialog { background-color: #FAF5F0; }"
+        "QLabel { color: #291C0E; font-size: 13px; }"
+        "QLineEdit { background: white; border: 2px solid #8D6E63; border-radius: 8px; "
+        "padding: 10px; font-size: 14px; color: #291C0E; }"
+        "QPushButton { background-color: #8D6E63; color: white; border: none; "
+        "border-radius: 6px; padding: 8px 20px; font-size: 12px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #A0826D; }");
+
+    QVBoxLayout lay(&dlg);
+    lay.setSpacing(12);
+    lay.setContentsMargins(20, 20, 20, 20);
+
+    auto *info = new QLabel("🎤 Appuyez sur  Win + H  puis dites votre commande :", &dlg);
+    info->setWordWrap(true);
+
+    auto *hint = new QLabel(
+        "<small style='color:#8D6E63;'>"
+        "Commandes : <b>ajouter</b> · <b>modifier</b> · <b>supprimer</b> · "
+        "<b>statistiques</b> · <b>exporter</b> · <b>détection</b> · "
+        "<b>trier</b> · <b>rechercher [mot]</b>"
+        "</small>", &dlg);
+    hint->setWordWrap(true);
+    hint->setTextFormat(Qt::RichText);
+
+    auto *input = new QLineEdit(&dlg);
+    input->setPlaceholderText("La commande apparaîtra ici...");
+
+    QHBoxLayout btnLay;
+    auto *btnOk     = new QPushButton("✔ Exécuter", &dlg);
+    auto *btnCancel = new QPushButton("Annuler",    &dlg);
+    btnCancel->setStyleSheet(
+        "QPushButton { background-color: #E7DDD1; color: #291C0E; border: 1px solid #BCAAA4; "
+        "border-radius: 6px; padding: 8px 20px; }"
+        "QPushButton:hover { background-color: #F0E6DA; }");
+    btnLay.addStretch();
+    btnLay.addWidget(btnOk);
+    btnLay.addWidget(btnCancel);
+
+    lay.addWidget(info);
+    lay.addWidget(hint);
+    lay.addWidget(input);
+    lay.addLayout(&btnLay);
+
+    connect(btnOk,     &QPushButton::clicked, &dlg, &QDialog::accept);
+    connect(btnCancel, &QPushButton::clicked, &dlg, &QDialog::reject);
+    connect(input, &QLineEdit::returnPressed, &dlg, &QDialog::accept);
+
+    // Focus sur le champ et déclencher Win+H automatiquement
+    input->setFocus();
+    QTimer::singleShot(300, [&]() {
+#ifdef Q_OS_WIN
+        // Simuler Win+H pour ouvrir la saisie vocale Windows sur le champ
+        INPUT inputs[4] = {};
+        inputs[0].type = INPUT_KEYBOARD;
+        inputs[0].ki.wVk = VK_LWIN;
+        inputs[1].type = INPUT_KEYBOARD;
+        inputs[1].ki.wVk = 'H';
+        inputs[2].type = INPUT_KEYBOARD;
+        inputs[2].ki.wVk = 'H';
+        inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
+        inputs[3].type = INPUT_KEYBOARD;
+        inputs[3].ki.wVk = VK_LWIN;
+        inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
+        SendInput(4, inputs, sizeof(INPUT));
+#endif
+    });
+
+    if (dlg.exec() == QDialog::Accepted) {
+        QString cmd = input->text().trimmed().toLower();
+        if (!cmd.isEmpty())
+            processVoiceCommand(cmd);
+    }
+}
+
+void MainWindow::processVoiceCommand(const QString &rawCmd)
+{
+    // Normaliser : minuscules, supprimer ponctuation finale
+    QString cmd = rawCmd.toLower().trimmed();
+    cmd.remove(QRegularExpression("[.!?,;]$"));
+
+    QString feedback = "🎤 \"" + cmd + "\"";
+
+    // ── Ajouter ──────────────────────────────────────────────
+    if (cmd.contains("ajouter") || cmd.contains("ajoutez") || cmd.contains("ajoute") ||
+        cmd.contains("ajout")   || cmd.contains("créer")   || cmd.contains("créez")  ||
+        cmd.contains("creer")   || cmd.contains("cree")    || cmd.contains("créé")   ||
+        cmd.contains("nouvelle") || cmd.contains("nouveau") || cmd.contains("insérer") ||
+        cmd.contains("inserer") || cmd.contains("add")) {
+
+        // Extraire quantité : "quantité 2.9" / "quantite 5"
+        QRegularExpression reQty("(quantit[eé]|quantite)\\s+(\\d+[.,]?\\d*)");
+        auto mQty = reQty.match(cmd);
+        QString qty = mQty.hasMatch() ? mQty.captured(2).replace(",", ".") : "";
+
+        // Extraire nom : "nom aaa" / "nommée cuir" / "appelée cuir"
+        QRegularExpression reNom("(nom|nomm[eé]e?|appel[eé]e?)\\s+(\\w+)");
+        auto mNom = reNom.match(cmd);
+        QString nom = mNom.hasMatch() ? mNom.captured(2) : "";
+
+        // Extraire référence : "référence dd" / "ref dd"
+        QRegularExpression reRef("(r[eé]f[eé]rence|ref|r[eé]f)\\s+(\\w+)");
+        auto mRef = reRef.match(cmd);
+        QString ref = mRef.hasMatch() ? mRef.captured(2) : "";
+
+        // Extraire type : "type cuir" / "de type peau"
+        QRegularExpression reType("(type|de type)\\s+(\\w+(?:\\s+\\w+)?)");
+        auto mType = reType.match(cmd);
+        QString type = mType.hasMatch() ? mType.captured(2) : "";
+
+        // Extraire seuil : "seuil 100"
+        QRegularExpression reSeuil("(seuil)\\s+(\\d+)");
+        auto mSeuil = reSeuil.match(cmd);
+        QString seuil = mSeuil.hasMatch() ? mSeuil.captured(2) : "";
+
+        MatiereDialog dlg(this, MatiereDialog::AddMode);
+        if (!nom.isEmpty() || !qty.isEmpty() || !ref.isEmpty() || !seuil.isEmpty())
+            dlg.setMatiereData(nom, ref, type, qty, seuil, "");
+        if (dlg.exec() == QDialog::Accepted) {
+            Matiere m;
+            m.setNom(dlg.getModule());
+            m.setReference(dlg.getReference());
+            m.setType(dlg.getType());
+            m.setQuantite(dlg.getQuantite().toDouble());
+            m.setSeuil(dlg.getSeuil().toInt());
+            m.setDateExpiration(QDate::fromString(dlg.getDateExpiration(), "yyyy-MM-dd"));
+            m.setPhotoUrl(dlg.getPhotoUrl());
+            if (m.ajouter()) { setupMatiereTable(); updateMatiereStatistics(); }
+        }
+
+    // ── Modifier ─────────────────────────────────────────────
+    } else if (cmd.contains("modifier") || cmd.contains("modifiez") || cmd.contains("modifie") ||
+               cmd.contains("changer")  || cmd.contains("changez")  || cmd.contains("éditer") ||
+               cmd.contains("mettre à jour") || cmd.contains("première matière")) {
+
+        // Extraire nom pour sélectionner la ligne
+        QRegularExpression reNomCible("(mati[eè]re|matiere)\\s+(\\w+)");
+        auto mNomCible = reNomCible.match(cmd);
+        if (mNomCible.hasMatch()) {
+            QString nomCible = mNomCible.captured(2);
+            for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
+                if (cellText(ui->matiereTable, r, 0).toLower().contains(nomCible)) {
+                    ui->matiereTable->selectRow(r);
+                    break;
+                }
+            }
+        }
+
+        int row = ui->matiereTable->currentRow();
+        if (row < 0) {
+            QMessageBox::warning(this, "Modifier", "Veuillez sélectionner une matière à modifier.");
+            return;
+        }
+
+        // Extraire les modifications demandées
+        QRegularExpression reQty("(quantit[eé]|quantite)\\s+(\\d+[.,]?\\d*)");
+        auto mQty = reQty.match(cmd);
+        QString qty = mQty.hasMatch() ? mQty.captured(2).replace(",", ".") : "";
+        
+        QRegularExpression reSeuil("(seuil)\\s+(\\d+)");
+        auto mSeuil = reSeuil.match(cmd);
+        QString seuil = mSeuil.hasMatch() ? mSeuil.captured(2) : "";
+        
+        QRegularExpression reType("(type)\\s+(\\w+(?:\\s+\\w+)?)");
+        auto mType = reType.match(cmd);
+        QString type = mType.hasMatch() ? mType.captured(2) : "";
+
+        QRegularExpression reRef("(r[eé]f[eé]rence|ref)\\s+(\\w+)");
+        auto mRef = reRef.match(cmd);
+        QString ref = mRef.hasMatch() ? mRef.captured(2) : "";
+
+        QRegularExpression reNom("(nom)\\s+(\\w+)");
+        auto mNom = reNom.match(cmd);
+        QString nom = mNom.hasMatch() ? mNom.captured(2) : "";
+
+        // Ouvrir le dialog avec les données actuelles
+        MatiereDialog dlg(this, MatiereDialog::EditMode);
+        dlg.setMatiereData(
+            cellText(ui->matiereTable, row, 0),
+            cellText(ui->matiereTable, row, 1),
+            cellText(ui->matiereTable, row, 2),
+            cellText(ui->matiereTable, row, 3).remove(" m²"),
+            cellText(ui->matiereTable, row, 4),
+            cellText(ui->matiereTable, row, 5),
+            ""
+        );
+
+        // Appliquer les modifications vocales
+        if (!qty.isEmpty())   dlg.setQuantite(qty);
+        if (!seuil.isEmpty()) dlg.setSeuil(seuil);
+        if (!type.isEmpty())  dlg.setTypeMatiere(type);
+        if (!ref.isEmpty())   dlg.setReference(ref);
+        if (!nom.isEmpty())   dlg.setModule(nom);
+
+        if (dlg.exec() == QDialog::Accepted) {
+            Matiere m;
+            m.setId(cellText(ui->matiereTable, row, 0).toInt());
+            m.setNom(dlg.getModule());
+            m.setReference(dlg.getReference());
+            m.setType(dlg.getType());
+            m.setQuantite(dlg.getQuantite().toDouble());
+            m.setSeuil(dlg.getSeuil().toInt());
+            m.setDateExpiration(QDate::fromString(dlg.getDateExpiration(), "yyyy-MM-dd"));
+            m.setPhotoUrl(dlg.getPhotoUrl());
+            if (m.modifier()) { setupMatiereTable(); updateMatiereStatistics(); }
+        }
+
+    // ── Supprimer ─────────────────────────────────────────────
+    } else if (cmd.contains("supprimer") || cmd.contains("supprimez") || cmd.contains("supprime") ||
+               cmd.contains("effacer")   || cmd.contains("effacez")   || cmd.contains("enlever") ||
+               cmd.contains("retirer")   || cmd.contains("enlève")) {
+
+        QRegularExpression reNom("(mati[eè]re|matiere)\\s+(\\w+)");
+        auto mNom = reNom.match(cmd);
+        if (mNom.hasMatch()) {
+            QString nomCible = mNom.captured(2);
+            for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
+                if (cellText(ui->matiereTable, r, 0).toLower().contains(nomCible)) {
+                    ui->matiereTable->selectRow(r);
+                    break;
+                }
+            }
+        }
+        onDeleteMatiere();
+
+    // ── Rechercher ────────────────────────────────────────────
+    } else if (cmd.contains("rechercher") || cmd.contains("recherche") ||
+               cmd.contains("chercher")   || cmd.contains("trouver")   ||
+               cmd.contains("filtrer")    || cmd.contains("afficher")) {
+
+        // Extraire le terme : "rechercher cuir" / "chercher stock critique"
+        QString term = cmd;
+        for (const QString &kw : QStringList{"rechercher", "recherche", "chercher", "trouver",
+                                   "filtrer", "afficher", "la matière", "matière", "les matières"})
+            term.remove(kw);
+        term = term.trimmed();
+
+        // Détection de filtres spéciaux
+        if (term.contains("critique") || term.contains("stock critique")) {
+            // Filtrer stock critique
+            for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
+                int qty = cellText(ui->matiereTable, r, 3).remove(" m²").toInt();
+                int seuil = cellText(ui->matiereTable, r, 4).toInt();
+                ui->matiereTable->setRowHidden(r, qty >= seuil);
+            }
+            QMainWindow::statusBar()->showMessage("🔍 Affichage : stock critique", 3000);
+        } else if (term.contains("expiré") || term.contains("expire") || term.contains("périmé")) {
+            // Filtrer matières expirées
+            for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
+                QString dateStr = cellText(ui->matiereTable, r, 5);
+                QDate expDate = QDate::fromString(dateStr, "yyyy-MM-dd");
+                int daysLeft = QDate::currentDate().daysTo(expDate);
+                ui->matiereTable->setRowHidden(r, daysLeft >= 0);
+            }
+            QMainWindow::statusBar()->showMessage("🔍 Affichage : matières expirées", 3000);
+        } else if (!term.isEmpty()) {
+            // Recherche textuelle simple
+            QString lower = term.toLower();
+            for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
+                bool match = false;
+                for (int c = 0; c < 3; ++c) { // Nom, Ref, Type
+                    if (cellText(ui->matiereTable, r, c).toLower().contains(lower)) {
+                        match = true;
+                        break;
+                    }
+                }
+                ui->matiereTable->setRowHidden(r, !match);
+            }
+            QMainWindow::statusBar()->showMessage("🔍 Recherche : " + term, 3000);
+        } else {
+            // Ouvrir le dialog de recherche avancée
+            onRechercheTriMatiere();
+        }
+
+    // ── Statistiques ──────────────────────────────────────────
+    } else if (cmd.contains("statistique") || cmd.contains("stats") ||
+               cmd.contains("statistiques")) {
+        onStatistiquesMatiere();
+
+    // ── Exporter ──────────────────────────────────────────────
+    } else if (cmd.contains("export") || cmd.contains("exporter") ||
+               cmd.contains("exportez") || cmd.contains("pdf") ||
+               cmd.contains("rapport")) {
+        onExportMatiere();
+
+    // ── Détection ─────────────────────────────────────────────
+    } else if (cmd.contains("détection") || cmd.contains("detection") ||
+               cmd.contains("détecter")  || cmd.contains("analyser") ||
+               cmd.contains("défaut")    || cmd.contains("defaut")) {
+        onDetectionDefauts();
+
+    // ── Trier ─────────────────────────────────────────────────
+    } else if (cmd.contains("trier") || cmd.contains("trier") || cmd.contains("tri") ||
+               cmd.contains("trie")  || cmd.contains("classer") || cmd.contains("ordonner")) {
+        onTriMatiere();
+
+    } else {
+        QMessageBox::information(this, "Vocal",
+            "Commande non reconnue : \"" + cmd + "\"\n\n"
+            "Exemples :\n"
+            "• \"ajouter matière\"\n"
+            "• \"modifier la matière dd\"\n"
+            "• \"supprimer la matière cuir\"\n"
+            "• \"rechercher peau de veau\"\n"
+            "• \"statistiques\"\n"
+            "• \"exporter\"\n"
+            "• \"détection\"\n"
+            "• \"trier\"");
+        return;
+    }
+
+    QMainWindow::statusBar()->showMessage(feedback, 3000);
 }
