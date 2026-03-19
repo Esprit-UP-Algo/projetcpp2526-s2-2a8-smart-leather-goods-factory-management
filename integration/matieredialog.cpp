@@ -79,11 +79,13 @@ void MatiereDialog::setupUI()
     txtQuantite    = new QLineEdit(this); txtQuantite->setPlaceholderText("Ex: 2.5 ou 150");
     QDoubleValidator *quantiteValidator = new QDoubleValidator(0.0, 999999.99, 2, this);
     quantiteValidator->setNotation(QDoubleValidator::StandardNotation);
+    quantiteValidator->setLocale(QLocale::C); // Accepte le point comme séparateur décimal
     txtQuantite->setValidator(quantiteValidator);
     
     txtSeuil       = new QLineEdit(this); txtSeuil->setPlaceholderText("Ex: 80");
     QDoubleValidator *seuilValidator = new QDoubleValidator(0.0, 999999.99, 2, this);
     seuilValidator->setNotation(QDoubleValidator::StandardNotation);
+    seuilValidator->setLocale(QLocale::C); // Accepte le point comme séparateur décimal
     txtSeuil->setValidator(seuilValidator);
     
     dateExpiration = new QDateEdit(this);
