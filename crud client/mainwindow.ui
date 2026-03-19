@@ -252,7 +252,7 @@ QPushButton#btnAddClient:pressed, QPushButton#btnEditClient:pressed, QPushButton
 }
 
 /* Primary Action Buttons - Raw Materials Module */
-QPushButton#btnAddMatiere, QPushButton#btnEditMatiere, QPushButton#btnDeleteMatiere, QPushButton#btnExportMatiere, QPushButton#btnSuggestion, QPushButton#btnOptimisation, QPushButton#btnRecherche, QPushButton#btnStatistiques, QPushButton#btnTri, QPushButton#btnDetection {
+QPushButton#btnAddMatiere, QPushButton#btnEditMatiere, QPushButton#btnDeleteMatiere, QPushButton#btnExportMatiere, QPushButton#btnRecherche, QPushButton#btnStatistiques, QPushButton#btnTri, QPushButton#btnDetection {
     background-color: #8D6E63;
     color: white;
     border: none;
@@ -264,12 +264,12 @@ QPushButton#btnAddMatiere, QPushButton#btnEditMatiere, QPushButton#btnDeleteMati
     text-align: center;
 }
 
-QPushButton#btnAddMatiere:hover, QPushButton#btnEditMatiere:hover, QPushButton#btnDeleteMatiere:hover, QPushButton#btnExportMatiere:hover, QPushButton#btnSuggestion:hover, QPushButton#btnOptimisation:hover, QPushButton#btnRecherche:hover, QPushButton#btnStatistiques:hover, QPushButton#btnTri:hover, QPushButton#btnDetection:hover {
+QPushButton#btnAddMatiere:hover, QPushButton#btnEditMatiere:hover, QPushButton#btnDeleteMatiere:hover, QPushButton#btnExportMatiere:hover, QPushButton#btnRecherche:hover, QPushButton#btnStatistiques:hover, QPushButton#btnTri:hover, QPushButton#btnDetection:hover {
     background-color: #A0826D;
     border: none;
 }
 
-QPushButton#btnAddMatiere:pressed, QPushButton#btnEditMatiere:pressed, QPushButton#btnDeleteMatiere:pressed, QPushButton#btnExportMatiere:pressed, QPushButton#btnSuggestion:pressed, QPushButton#btnOptimisation:pressed, QPushButton#btnRecherche:pressed, QPushButton#btnStatistiques:pressed, QPushButton#btnTri:pressed, QPushButton#btnDetection:pressed {
+QPushButton#btnAddMatiere:pressed, QPushButton#btnEditMatiere:pressed, QPushButton#btnDeleteMatiere:pressed, QPushButton#btnExportMatiere:pressed, QPushButton#btnRecherche:pressed, QPushButton#btnStatistiques:pressed, QPushButton#btnTri:pressed, QPushButton#btnDetection:pressed {
     background-color: #6E473B;
     border: none;
     padding: 11px 20px 9px 20px;
@@ -1709,32 +1709,6 @@ QPushButton:hover {
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="btnSuggestion">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>❋ Suggestion Commande</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnOptimisation">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>✦ Optimisation FIFO</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
                   <widget class="QPushButton" name="btnStatistiques">
                    <property name="minimumSize">
                     <size>
@@ -1844,91 +1818,7 @@ QPushButton:hover {
                 </column>
                </widget>
               </item>
-              <item>
-               <widget class="QFrame" name="alertCardMatiere">
-                <property name="frameShape">
-                 <enum>QFrame::Shape::StyledPanel</enum>
-                </property>
-                <layout class="QVBoxLayout" name="verticalLayout_13">
-                 <property name="spacing">
-                  <number>10</number>
-                 </property>
-                 <property name="leftMargin">
-                  <number>15</number>
-                 </property>
-                 <property name="topMargin">
-                  <number>12</number>
-                 </property>
-                 <property name="rightMargin">
-                  <number>15</number>
-                 </property>
-                 <property name="bottomMargin">
-                  <number>12</number>
-                 </property>
-                 <item>
-                  <widget class="QLabel" name="alertTitleMatiere">
-                   <property name="styleSheet">
-                    <string notr="true">font-weight: bold; font-size: 13px; color: #8D6E63;</string>
-                   </property>
-                   <property name="text">
-                    <string>[!] Alertes Intelligentes de Stock</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QWidget" name="alertsContainer" native="true">
-                   <layout class="QVBoxLayout" name="verticalLayout_14">
-                    <property name="spacing">
-                     <number>8</number>
-                    </property>
-                    <property name="leftMargin">
-                     <number>0</number>
-                    </property>
-                    <property name="topMargin">
-                     <number>0</number>
-                    </property>
-                    <property name="rightMargin">
-                     <number>0</number>
-                    </property>
-                    <property name="bottomMargin">
-                     <number>0</number>
-                    </property>
-                    <item>
-                     <widget class="QLabel" name="alert1">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: #f7d9d9; padding: 8px; border-radius: 6px; color: #8B0000;</string>
-                      </property>
-                      <property name="text">
-                       <string>[!!!] Cuir Pleine Fleur : Stock critique - Réapprovisionnement urgent</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLabel" name="alert2">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: #f9e7c6; padding: 8px; border-radius: 6px; color: #8B6914;</string>
-                      </property>
-                      <property name="text">
-                       <string>[TIME] Ficelinée : Niveau d'alerte - Commande recommandée sous 7 jours</string>
-                      </property>
-                     </widget>
-                    </item>
-                    <item>
-                     <widget class="QLabel" name="alert3">
-                      <property name="styleSheet">
-                       <string notr="true">background-color: #e7f0d6; padding: 8px; border-radius: 6px; color: #2F5233;</string>
-                      </property>
-                      <property name="text">
-                       <string>[OK] LR-004 : Expire dans 30 jours - Planifier utilisation prioritaire</string>
-                      </property>
-                     </widget>
-                    </item>
-                   </layout>
-                  </widget>
-                 </item>
-                </layout>
-               </widget>
-              </item>
+
              </layout>
             </widget>
             <widget class="QWidget" name="suppliersPage">

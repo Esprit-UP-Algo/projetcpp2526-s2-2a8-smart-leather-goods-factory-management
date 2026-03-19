@@ -2,43 +2,67 @@
 #define CLIENT_H
 
 #include <QString>
-#include <QDate>
 #include <QSqlQueryModel>
 
 class Client {
-public:
-    Client() {}
-    int getId_client() const { return id_client; }
-    QString getNom() const { return nom; }
-    QString getPrenom() const { return prenom; }
-    QString getSexe() const { return sexe; }
-    QString getCin() const { return cin; }
-    QString getPays() const { return pays; }
-    QString getVille() const { return ville; }
-    QString getAdresse() const { return adresse; }
-    QString getEmail() const { return email; }
-    QDate getDateInscrit() const { return dateInscrit; }
-
-    void setId_client(int v) { id_client = v; }
-    void setNom(const QString &v) { nom = v; }
-    void setPrenom(const QString &v) { prenom = v; }
-    void setSexe(const QString &v) { sexe = v; }
-    void setCin(const QString &v) { cin = v; }
-    void setPays(const QString &v) { pays = v; }
-    void setVille(const QString &v) { ville = v; }
-    void setAdresse(const QString &v) { adresse = v; }
-    void setEmail(const QString &v) { email = v; }
-    void setDateInscrit(const QDate &v) { dateInscrit = v; }
-
-    bool ajouter();
-    bool modifier();
-    bool supprimer(int id_client);
-    QSqlQueryModel* afficherClients();
-
 private:
     int id_client;
-    QString nom, prenom, sexe, cin, pays, ville, adresse, email;
-    QDate dateInscrit;
+    QString nom;
+    QString prenom;
+    QString sexe;
+    QString cin;
+    QString pays;
+    QString ville;
+    QString adresse;
+    QString email;
+    QString date_inscription; // Format: "YYYY-MM-DD"
+    int id_employe;
+
+public:
+    // Constructeurs
+    Client();
+    Client(int id_client, const QString& nom, const QString& prenom,
+           const QString& sexe, const QString& cin,
+           const QString& pays, const QString& ville,
+           const QString& adresse, const QString& email,
+           const QString& date_inscription, int id_employe);
+
+    // Destructeur
+    ~Client();
+
+    // Getters
+    int getId_client() const;
+    QString getNom() const;
+    QString getPrenom() const;
+    QString getSexe() const;
+    QString getCin() const;
+    QString getPays() const;
+    QString getVille() const;
+    QString getAdresse() const;
+    QString getEmail() const;
+    QString getDate_inscription() const;
+    int getId_employe() const;
+
+    // Setters
+    void setId_client(int id);
+    void setNom(const QString& nom);
+    void setPrenom(const QString& prenom);
+    void setSexe(const QString& sexe);
+    void setCin(const QString& cin);
+    void setPays(const QString& pays);
+    void setVille(const QString& ville);
+    void setAdresse(const QString& adresse);
+    void setEmail(const QString& email);
+    void setDate_inscription(const QString& date);
+    void setId_employe(int id);
+
+    // ========================
+    // Méthodes CRUD (Qt/SQL)
+    // ========================
+    QSqlQueryModel* afficherClients();  // SELECT tous les clients → colonnes: id, nom, prenom, sexe, cin, pays, ville, adresse, email, date_inscription
+    bool ajouter();                     // INSERT avec les attributs de l'instance courante
+    bool modifier();                    // UPDATE basé sur id_client de l'instance courante
+    bool supprimer(int id);             // DELETE par id_client
 };
 
 #endif // CLIENT_H

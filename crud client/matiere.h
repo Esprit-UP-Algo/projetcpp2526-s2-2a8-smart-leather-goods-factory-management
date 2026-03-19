@@ -2,7 +2,10 @@
 #define MATIERE_H
 
 #include <QString>
+#include <QStringList>
 #include <QDate>
+#include <QSqlQuery>
+#include <QSqlQueryModel>
 
 struct Fournisseur {
     QString id;
@@ -48,32 +51,49 @@ struct MouvementStock {
 
 class Matiere
 {
+private:
+    int id;
+    QString nom;
+    QString reference;
+    QString type;
+    double quantite;
+    int seuil;
+    QDate dateExpiration;
+    int idFournisseur;
+    QString photoUrl;
+
 public:
     Matiere();
-    Matiere(const QString &module, const QString &reference, const QString &type,
-            const QString &quantite, const QString &seuil, const QDate &dateExp);
 
-    QString getModule() const { return m_module; }
-    QString getReference() const { return m_reference; }
-    QString getType() const { return m_type; }
-    QString getQuantite() const { return m_quantite; }
-    QString getSeuil() const { return m_seuil; }
-    QDate getDateExpiration() const { return m_dateExpiration; }
+    // Getters
+    int getId() const { return id; }
+    QString getNom() const { return nom; }
+    QString getReference() const { return reference; }
+    QString getType() const { return type; }
+    double getQuantite() const { return quantite; }
+    int getSeuil() const { return seuil; }
+    QDate getDateExpiration() const { return dateExpiration; }
+    int getIdFournisseur() const { return idFournisseur; }
+    QString getPhotoUrl() const { return photoUrl; }
 
-    void setModule(const QString &module) { m_module = module; }
-    void setReference(const QString &reference) { m_reference = reference; }
-    void setType(const QString &type) { m_type = type; }
-    void setQuantite(const QString &quantite) { m_quantite = quantite; }
-    void setSeuil(const QString &seuil) { m_seuil = seuil; }
-    void setDateExpiration(const QDate &date) { m_dateExpiration = date; }
+    // Setters
+    void setId(int value) { id = value; }
+    void setNom(const QString &value) { nom = value; }
+    void setReference(const QString &value) { reference = value; }
+    void setType(const QString &value) { type = value; }
+    void setQuantite(double value) { quantite = value; }
+    void setSeuil(int value) { seuil = value; }
+    void setDateExpiration(const QDate &value) { dateExpiration = value; }
+    void setIdFournisseur(int value) { idFournisseur = value; }
+    void setPhotoUrl(const QString &value) { photoUrl = value; }
 
-private:
-    QString m_module;
-    QString m_reference;
-    QString m_type;
-    QString m_quantite;
-    QString m_seuil;
-    QDate m_dateExpiration;
+    // Méthodes CRUD
+    bool ajouter();
+    bool modifier();
+    bool supprimer(int id);
+    QSqlQueryModel* afficher();
+    QSqlQueryModel* rechercher(const QString &terme);
+    QSqlQueryModel* trierPar(const QString &colonne);
 };
 
 #endif // MATIERE_H

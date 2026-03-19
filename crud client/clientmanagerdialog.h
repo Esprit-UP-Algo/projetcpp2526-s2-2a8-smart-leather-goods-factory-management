@@ -26,10 +26,32 @@ public:
     explicit ClientManagerDialog(QWidget *parent = nullptr, DialogMode mode = AddMode);
     ~ClientManagerDialog();
 
+    // Remplir les champs depuis un client existant (Edit / Delete)
     void setClientData(const QString &nom, const QString &prenom, const QString &sexe,
                        const QString &cin, const QString &pays, const QString &ville,
                        const QString &adresse, const QString &email);
+
+    // Récupère un Client construit à partir des champs du formulaire
     Client getClient() const;
+
+    // Getters individuels (même pattern que EmployeeDialog)
+    QString getNom()             const { return nomEdit     ? nomEdit->text().trimmed()     : ""; }
+    QString getPrenom()          const { return prenomEdit  ? prenomEdit->text().trimmed()  : ""; }
+    QString getSexe()            const { return sexeCombo   ? sexeCombo->currentText()      : ""; }
+    QString getCin()             const { return cinEdit     ? cinEdit->text().trimmed()     : ""; }
+    QString getPays()            const { return paysEdit    ? paysEdit->text().trimmed()    : ""; }
+    QString getVille()           const { return villeEdit   ? villeEdit->text().trimmed()   : ""; }
+    QString getAdresse()         const { return adresseEdit ? adresseEdit->text().trimmed() : ""; }
+    QString getEmail()           const { return emailEdit   ? emailEdit->text().trimmed()   : ""; }
+    QString getDateInscription() const { return dateInscrit
+                                                    ? dateInscrit->date().toString("yyyy-MM-dd") : ""; }
+
+    // Permet de passer l'id lors de l'édition ou suppression
+    void setEditingId(int id) { editingId = id; }
+    void setDeleteId(int id)  { deleteId  = id; }
+
+private slots:
+    void onAccepted();
 
 private:
     void setupAddEditUI();
@@ -39,8 +61,7 @@ private:
 
     DialogMode mode;
 
-    // Add/Edit fields
-
+    // ── Champs Add / Edit ──────────────────────────────────────
     QLineEdit *nomEdit;
     QLineEdit *prenomEdit;
     QComboBox *sexeCombo;
@@ -49,9 +70,9 @@ private:
     QLineEdit *villeEdit;
     QLineEdit *adresseEdit;
     QLineEdit *emailEdit;
-    QDateEdit *dateInscrit;
+    QDateEdit *dateInscrit;       // mapped → client.date_inscription
 
-    // Delete fields
+    // ── Données conservées pour le mode Delete ─────────────────
     QString deleteNom;
     QString deletePrenom;
     QString deleteSexe;
@@ -59,23 +80,25 @@ private:
     QString deletePays;
     QString deleteVille;
 
-    // Export fields
-    QComboBox *formatCombo;
-    QLineEdit *fileNameEdit;
-    QLineEdit *locationEdit;
-    QCheckBox *chkNom;
-    QCheckBox *chkPrenom;
-    QCheckBox *chkSexe;
-    QCheckBox *chkCIN;
-    QCheckBox *chkPays;
-    QCheckBox *chkVille;
-    QCheckBox *chkAdresse;
-    QCheckBox *chkEmail;
+    // ── Champs Export ──────────────────────────────────────────
+    QComboBox  *formatCombo;
+    QLineEdit  *fileNameEdit;
+    QLineEdit  *locationEdit;
+    QCheckBox  *chkNom;
+    QCheckBox  *chkPrenom;
+    QCheckBox  *chkSexe;
+    QCheckBox  *chkCIN;
+    QCheckBox  *chkPays;
+    QCheckBox  *chkVille;
+    QCheckBox  *chkAdresse;
+    QCheckBox  *chkEmail;
     QRadioButton *radioAll;
     QRadioButton *radioSelected;
     QRadioButton *radioFiltered;
-    int deleteId;       // <<< add this
-    int editingId;
+
+    // ── IDs ────────────────────────────────────────────────────
+    int deleteId;     // id du client à supprimer
+    int editingId;    // id du client en cours de modification
 };
 
 #endif // CLIENTMANAGERDIALOG_H

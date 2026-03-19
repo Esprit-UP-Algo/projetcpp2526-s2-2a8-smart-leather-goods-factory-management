@@ -1,262 +1,270 @@
 #include "clientmanagerdialog.h"
+
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
-#include <QGridLayout>
+#include <QGroupBox>
 #include <QDialogButtonBox>
 #include <QMessageBox>
 #include <QDate>
-#include <QGroupBox>
-#include <QCheckBox>
-#include <QRadioButton>
+
+// ============================================================
+// Constructeur
+// ============================================================
 
 ClientManagerDialog::ClientManagerDialog(QWidget *parent, DialogMode mode)
-    : QDialog(parent), mode(mode)
+    : QDialog(parent),
+    mode(mode),
+    nomEdit(nullptr), prenomEdit(nullptr), sexeCombo(nullptr),
+    cinEdit(nullptr), paysEdit(nullptr), villeEdit(nullptr),
+    adresseEdit(nullptr), emailEdit(nullptr), dateInscrit(nullptr),
+    formatCombo(nullptr), fileNameEdit(nullptr), locationEdit(nullptr),
+    chkNom(nullptr), chkPrenom(nullptr), chkSexe(nullptr), chkCIN(nullptr),
+    chkPays(nullptr), chkVille(nullptr), chkAdresse(nullptr), chkEmail(nullptr),
+    radioAll(nullptr), radioSelected(nullptr), radioFiltered(nullptr),
+    deleteId(-1), editingId(-1)
 {
-    if (mode == DeleteMode) {
-        setupDeleteUI();
-    } else if (mode == ExportMode) {
-        setupExportUI();
-    } else {
+    switch (mode) {
+    case AddMode:
+        setWindowTitle("Ajouter un client");
         setupAddEditUI();
+        break;
+    case EditMode:
+        setWindowTitle("Modifier un client");
+        setupAddEditUI();
+        break;
+    case DeleteMode:
+        setWindowTitle("Supprimer un client");
+        setupDeleteUI();
+        break;
+    case ExportMode:
+        setWindowTitle("Exporter les clients");
+        setupExportUI();
+        break;
     }
+
     applyStyles();
-
-    if (mode == AddMode) {
-        setWindowTitle("Créer Client - CUIREA");
-    } else if (mode == EditMode) {
-        setWindowTitle("Modifier Client - CUIREA");
-    } else if (mode == ExportMode) {
-        setWindowTitle("Exporter les Clients - CUIREA");
-    } else {
-        setWindowTitle("Supprimer Client - CUIREA");
-    }
-
-    if (mode == ExportMode) {
-        setMinimumSize(700, 550);
-    } else {
-        setMinimumSize(700, 450);
-    }
 }
 
 ClientManagerDialog::~ClientManagerDialog() {}
 
-// ------------------- Add/Edit UI -------------------
+// ============================================================
+// UI — Add / Edit
+// ============================================================
+
 void ClientManagerDialog::setupAddEditUI()
 {
-    QVBoxLayout *mainLay = new QVBoxLayout(this);
-    mainLay->setContentsMargins(28, 24, 28, 24);
-    mainLay->setSpacing(16);
+    QFormLayout *form = new QFormLayout();
 
-    QLabel *title = new QLabel(mode == AddMode ? "Nouveau client" : "Modifier le client");
-    title->setObjectName("dialogTitle");
-    mainLay->addWidget(title);
-
-    QHBoxLayout *columnsLayout = new QHBoxLayout();
-    columnsLayout->setSpacing(40);
-
-    QFormLayout *leftForm = new QFormLayout();
-    leftForm->setLabelAlignment(Qt::AlignRight);
-    leftForm->setHorizontalSpacing(14);
-    leftForm->setVerticalSpacing(12);
-
-    nomEdit = new QLineEdit();
-    nomEdit->setPlaceholderText("Obligatoire");
-
-    prenomEdit = new QLineEdit();
-    prenomEdit->setPlaceholderText("Obligatoire");
-
-    sexeCombo = new QComboBox();
-    sexeCombo->addItems({"Homme", "Femme"});
-
-    cinEdit = new QLineEdit();
-    cinEdit->setPlaceholderText("AB123456");
-
-    leftForm->addRow("Nom *:", nomEdit);
-    leftForm->addRow("Prénom *:", prenomEdit);
-    leftForm->addRow("Sexe *:", sexeCombo);
-    leftForm->addRow("CIN *:", cinEdit);
-
-    QFormLayout *rightForm = new QFormLayout();
-    rightForm->setLabelAlignment(Qt::AlignRight);
-    rightForm->setHorizontalSpacing(14);
-    rightForm->setVerticalSpacing(12);
-
-    paysEdit = new QLineEdit();
-    paysEdit->setPlaceholderText("Maroc");
-
-    villeEdit = new QLineEdit();
-    villeEdit->setPlaceholderText("Casablanca");
-
-    adresseEdit = new QLineEdit();
-    adresseEdit->setPlaceholderText("Adresse complète");
-
-    emailEdit = new QLineEdit();
-    emailEdit->setPlaceholderText("email@example.com");
-
-    dateInscrit = new QDateEdit(QDate::currentDate());
+    nomEdit     = new QLineEdit(this);
+    prenomEdit  = new QLineEdit(this);
+    sexeCombo   = new QComboBox(this);
+    cinEdit     = new QLineEdit(this);
+    paysEdit    = new QLineEdit(this);
+    villeEdit   = new QLineEdit(this);
+    adresseEdit = new QLineEdit(this);
+    emailEdit   = new QLineEdit(this);
+    dateInscrit = new QDateEdit(QDate::currentDate(), this);
     dateInscrit->setCalendarPopup(true);
-    dateInscrit->setDisplayFormat("dd/MM/yyyy");
+    dateInscrit->setDisplayFormat("yyyy-MM-dd");
 
-    rightForm->addRow("Pays *:", paysEdit);
-    rightForm->addRow("Ville *:", villeEdit);
-    rightForm->addRow("Adresse:", adresseEdit);
-    rightForm->addRow("Email *:", emailEdit);
-    rightForm->addRow("Date inscription *:", dateInscrit);
+    sexeCombo->addItems({"Homme", "Femme", "Autre"});
 
-    columnsLayout->addLayout(leftForm);
-    columnsLayout->addLayout(rightForm);
-    mainLay->addLayout(columnsLayout);
+    nomEdit->setPlaceholderText("Nom");
+    prenomEdit->setPlaceholderText("Prénom");
+    cinEdit->setPlaceholderText("ex: 12345678");
+    paysEdit->setPlaceholderText("Pays");
+    villeEdit->setPlaceholderText("Ville");
+    adresseEdit->setPlaceholderText("Adresse complète");
+    emailEdit->setPlaceholderText("exemple@mail.com");
 
-    QLabel *noteLabel = new QLabel("* Champs obligatoires", this);
-    noteLabel->setObjectName("noteLabel");
-    mainLay->addWidget(noteLabel);
+    form->addRow("Nom *",              nomEdit);
+    form->addRow("Prénom",             prenomEdit);
+    form->addRow("Sexe",               sexeCombo);
+    form->addRow("CIN",                cinEdit);
+    form->addRow("Pays",               paysEdit);
+    form->addRow("Ville",              villeEdit);
+    form->addRow("Adresse",            adresseEdit);
+    form->addRow("Email",              emailEdit);
+    form->addRow("Date d'inscription", dateInscrit);
 
-    QDialogButtonBox *btnBox = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel);
-    QPushButton *saveBtn = btnBox->button(QDialogButtonBox::Save);
-    saveBtn->setText("Enregistrer");
-    saveBtn->setObjectName("saveButton");
-    mainLay->addWidget(btnBox);
+    QDialogButtonBox *buttons = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    connect(buttons, &QDialogButtonBox::accepted, this, &ClientManagerDialog::onAccepted);
+    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    connect(btnBox, &QDialogButtonBox::accepted, this, [this]() {
-        Client c = getClient();
-
-        if (mode == AddMode) {
-            if (c.ajouter()) {
-                accept();
-            } else {
-                QMessageBox::critical(this, "Erreur", "Échec d'ajout du client !");
-            }
-        } else if (mode == EditMode) {
-            if (c.modifier ()) {
-                accept();
-            } else {
-                QMessageBox::critical(this, "Erreur", "Échec de modification du client !");
-            }
-        }
-    });
-    connect(btnBox, &QDialogButtonBox::rejected, this, &ClientManagerDialog::reject);
+    QVBoxLayout *main = new QVBoxLayout(this);
+    main->addLayout(form);
+    main->addWidget(buttons);
+    setLayout(main);
+    setMinimumWidth(400);
 }
 
-// ------------------- Delete UI -------------------
+// ============================================================
+// UI — Delete (confirmation avec résumé)
+// ============================================================
+
 void ClientManagerDialog::setupDeleteUI()
 {
-    QVBoxLayout *mainLay = new QVBoxLayout(this);
-    mainLay->setContentsMargins(40, 30, 40, 30);
-    mainLay->setSpacing(20);
+    QVBoxLayout *main = new QVBoxLayout(this);
 
-    setMinimumSize(500, 350);
+    QLabel *lbl = new QLabel(
+        QString("Voulez-vous vraiment supprimer le client :\n\n"
+                "  Nom    : %1 %2\n"
+                "  Sexe   : %3\n"
+                "  CIN    : %4\n"
+                "  Pays   : %5  —  Ville : %6")
+            .arg(deleteNom, deletePrenom, deleteSexe, deleteCIN, deletePays, deleteVille),
+        this);
+    lbl->setWordWrap(true);
 
-    QLabel *title = new QLabel("Confirmation de Suppression");
-    title->setObjectName("dialogTitle");
-    title->setAlignment(Qt::AlignCenter);
-    mainLay->addWidget(title);
+    QDialogButtonBox *buttons = new QDialogButtonBox(
+        QDialogButtonBox::Yes | QDialogButtonBox::No, this);
+    connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    QLabel *question = new QLabel("Êtes-vous sûr de vouloir supprimer ce client ?");
-    question->setObjectName("questionLabel");
-    question->setAlignment(Qt::AlignCenter);
-    question->setWordWrap(true);
-    mainLay->addWidget(question);
-
-    mainLay->addSpacing(10);
-
-    QLabel *infoLabel = new QLabel();
-    infoLabel->setObjectName("infoLabel");
-    infoLabel->setAlignment(Qt::AlignLeft);
-    infoLabel->setWordWrap(true);
-    mainLay->addWidget(infoLabel);
-
-    mainLay->addSpacing(10);
-
-    QLabel *warningLabel = new QLabel("Cette action est irréversible !");
-    warningLabel->setObjectName("warningLabel");
-    warningLabel->setAlignment(Qt::AlignCenter);
-    mainLay->addWidget(warningLabel);
-
-    mainLay->addStretch();
-
-    QHBoxLayout *btnLayout = new QHBoxLayout();
-    btnLayout->setSpacing(15);
-
-    QPushButton *cancelBtn = new QPushButton("Annuler");
-    cancelBtn->setObjectName("cancelButton");
-    cancelBtn->setMinimumSize(120, 40);
-
-    QPushButton *deleteBtn = new QPushButton("Supprimer");
-    deleteBtn->setObjectName("deleteButton");
-    deleteBtn->setMinimumSize(120, 40);
-
-    btnLayout->addStretch();
-    btnLayout->addWidget(cancelBtn);
-    btnLayout->addWidget(deleteBtn);
-    btnLayout->addStretch();
-
-    mainLay->addLayout(btnLayout);
-
-    connect(cancelBtn, &QPushButton::clicked, this, &ClientManagerDialog::reject);
-    connect(deleteBtn, &QPushButton::clicked, this, [this]() {
-        if (Client().supprimer(deleteId)) {
-            accept();
-        } else {
-            QMessageBox::critical(this, "Erreur", "Échec de suppression du client !");
-        }
-    });
+    main->addWidget(lbl);
+    main->addWidget(buttons);
+    setLayout(main);
+    setMinimumWidth(380);
 }
 
-// ------------------- Set client data -------------------
-void ClientManagerDialog::setClientData(const QString &nom, const QString &prenom, const QString &sexe,
-                                        const QString &cin, const QString &pays, const QString &ville,
+// ============================================================
+// UI — Export
+// ============================================================
+
+void ClientManagerDialog::setupExportUI()
+{
+    QVBoxLayout *main = new QVBoxLayout(this);
+
+    // Colonnes à exporter
+    QGroupBox *colGroup = new QGroupBox("Colonnes à exporter", this);
+    QHBoxLayout *colLayout = new QHBoxLayout(colGroup);
+    chkNom    = new QCheckBox("Nom",     colGroup); chkNom->setChecked(true);
+    chkPrenom = new QCheckBox("Prénom",  colGroup); chkPrenom->setChecked(true);
+    chkSexe   = new QCheckBox("Sexe",    colGroup);
+    chkCIN    = new QCheckBox("CIN",     colGroup);
+    chkPays   = new QCheckBox("Pays",    colGroup);
+    chkVille  = new QCheckBox("Ville",   colGroup);
+    chkAdresse= new QCheckBox("Adresse", colGroup);
+    chkEmail  = new QCheckBox("Email",   colGroup);
+    colLayout->addWidget(chkNom);    colLayout->addWidget(chkPrenom);
+    colLayout->addWidget(chkSexe);   colLayout->addWidget(chkCIN);
+    colLayout->addWidget(chkPays);   colLayout->addWidget(chkVille);
+    colLayout->addWidget(chkAdresse);colLayout->addWidget(chkEmail);
+
+    // Périmètre
+    QGroupBox *scopeGroup = new QGroupBox("Périmètre", this);
+    QHBoxLayout *scopeLayout = new QHBoxLayout(scopeGroup);
+    radioAll      = new QRadioButton("Tous",        scopeGroup); radioAll->setChecked(true);
+    radioSelected = new QRadioButton("Sélectionnés",scopeGroup);
+    radioFiltered = new QRadioButton("Filtrés",     scopeGroup);
+    scopeLayout->addWidget(radioAll);
+    scopeLayout->addWidget(radioSelected);
+    scopeLayout->addWidget(radioFiltered);
+
+    // Destination
+    QFormLayout *destForm = new QFormLayout();
+    formatCombo  = new QComboBox(this);
+    formatCombo->addItems({"CSV", "Excel (.xlsx)", "PDF"});
+    fileNameEdit = new QLineEdit(this); fileNameEdit->setPlaceholderText("clients_export");
+    locationEdit = new QLineEdit(this); locationEdit->setPlaceholderText("/chemin/vers/dossier");
+    destForm->addRow("Format",         formatCombo);
+    destForm->addRow("Nom du fichier", fileNameEdit);
+    destForm->addRow("Emplacement",    locationEdit);
+
+    QDialogButtonBox *buttons = new QDialogButtonBox(
+        QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
+    connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
+
+    main->addWidget(colGroup);
+    main->addWidget(scopeGroup);
+    main->addLayout(destForm);
+    main->addWidget(buttons);
+    setLayout(main);
+    setMinimumWidth(520);
+}
+
+
+// ============================================================
+// setClientData — pré-remplissage (EditMode / DeleteMode)
+// ============================================================
+
+void ClientManagerDialog::setClientData(const QString &nom, const QString &prenom,
+                                        const QString &sexe, const QString &cin,
+                                        const QString &pays, const QString &ville,
                                         const QString &adresse, const QString &email)
 {
-    if (mode == DeleteMode) {
-        deleteNom = nom;
-        deletePrenom = prenom;
-        deleteSexe = sexe;
-        deleteCIN = cin;
-        deletePays = pays;
-        deleteVille = ville;
-    } else if (mode == EditMode) {
-        nomEdit->setText(nom);
-        prenomEdit->setText(prenom);
-        sexeCombo->setCurrentText(sexe);
-        cinEdit->setText(cin);
-        paysEdit->setText(pays);
-        villeEdit->setText(ville);
-        adresseEdit->setText(adresse);
-        emailEdit->setText(email);
+    if (mode == AddMode || mode == EditMode) {
+        if (nomEdit)     nomEdit->setText(nom);
+        if (prenomEdit)  prenomEdit->setText(prenom);
+        if (sexeCombo) {
+            int idx = sexeCombo->findText(sexe);
+            if (idx >= 0) sexeCombo->setCurrentIndex(idx);
+        }
+        if (cinEdit)     cinEdit->setText(cin);
+        if (paysEdit)    paysEdit->setText(pays);
+        if (villeEdit)   villeEdit->setText(ville);
+        if (adresseEdit) adresseEdit->setText(adresse);
+        if (emailEdit)   emailEdit->setText(email);
     }
+
+    // Stockage pour le résumé DeleteMode
+    deleteNom    = nom;
+    deletePrenom = prenom;
+    deleteSexe   = sexe;
+    deleteCIN    = cin;
+    deletePays   = pays;
+    deleteVille  = ville;
 }
 
-// ------------------- Get client object -------------------
+// ============================================================
+// getClient — construit et retourne le Client depuis le form
+// ============================================================
+
 Client ClientManagerDialog::getClient() const
 {
     Client c;
-    if (mode != DeleteMode) {
-        c.setNom(nomEdit->text().trimmed());
-        c.setPrenom(prenomEdit->text().trimmed());
-        c.setSexe(sexeCombo->currentText());
-        c.setCin(cinEdit->text().trimmed());
-        c.setPays(paysEdit->text().trimmed());
-        c.setVille(villeEdit->text().trimmed());
-        c.setAdresse(adresseEdit->text().trimmed());
-        c.setEmail(emailEdit->text().trimmed());
-        c.setDateInscrit(dateInscrit->date());
-    }
+
+    // En mode Edit, on restaure l'id pour que modifier() cible le bon enregistrement
+    if (mode == EditMode && editingId > 0)
+        c.setId_client(editingId);
+
+    if (nomEdit)     c.setNom(nomEdit->text().trimmed());
+    if (prenomEdit)  c.setPrenom(prenomEdit->text().trimmed());
+    if (sexeCombo)   c.setSexe(sexeCombo->currentText());
+    if (cinEdit)     c.setCin(cinEdit->text().trimmed());
+    if (paysEdit)    c.setPays(paysEdit->text().trimmed());
+    if (villeEdit)   c.setVille(villeEdit->text().trimmed());
+    if (adresseEdit) c.setAdresse(adresseEdit->text().trimmed());
+    if (emailEdit)   c.setEmail(emailEdit->text().trimmed());
+
+    // ← correction : setDate_inscription (pas setDateInscritption)
+    if (dateInscrit)
+        c.setDate_inscription(dateInscrit->date().toString("yyyy-MM-dd"));
+
     return c;
 }
 
-// ------------------- Export UI -------------------
-void ClientManagerDialog::setupExportUI()
+// ============================================================
+// onAccepted — validation avant de fermer
+// ============================================================
+
+void ClientManagerDialog::onAccepted()
 {
-    QVBoxLayout *mainLay = new QVBoxLayout(this);
-    mainLay->setContentsMargins(28, 24, 28, 24);
-    mainLay->setSpacing(20);
-
-    QLabel *title = new QLabel("Exporter les données des clients");
-    title->setObjectName("dialogTitle");
-    mainLay->addWidget(title);
-
-    // ... same export UI as before ...
+    if (mode == AddMode || mode == EditMode) {
+        if (nomEdit && nomEdit->text().trimmed().isEmpty()) {
+            QMessageBox::warning(this, "Champ requis", "Le nom du client est obligatoire.");
+            return;
+        }
+        if (emailEdit && !emailEdit->text().isEmpty() &&
+            !emailEdit->text().contains('@')) {
+            QMessageBox::warning(this, "Email invalide", "Veuillez saisir un email valide.");
+            return;
+        }
+    }
+    accept();
 }
 
 

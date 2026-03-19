@@ -3,8 +3,10 @@
 
 #include <QMainWindow>
 #include <QVector>
+#include <QMap>
 #include <QPushButton>
 #include <QNetworkAccessManager>
+#include <QProcess>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QFileDialog>
@@ -12,6 +14,7 @@
 #include <QJsonObject>
 #include <QLabel>
 #include <QProgressBar>
+#include <QPointer>
 #include "client.h"
 #include "matiere.h"
 #include "fournisseur.h"
@@ -131,6 +134,7 @@ private:
     
     // Détection de défauts - Mode API (Flask)
     QNetworkAccessManager *networkManager;
+    QProcess *apiProcess;
     QString apiUrl;
     QLabel *detectionResultLabel;
     QProgressBar *detectionProgress;
@@ -165,8 +169,10 @@ private:
     void updateMatiereStatistics();
     
     // Détection de défauts
+    void startDetectionAnalysis(const QString &imagePath);
     void detectDefectsInImage(const QString &imagePath);
     void showDetectionResults(const QJsonObject &results);
+    QString translateDefectClass(const QString &englishName);
 
     // Suppliers
     void setupFournisseurTable();

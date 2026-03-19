@@ -3,18 +3,21 @@
 #include <QHBoxLayout>
 #include <QGridLayout>
 #include <QMessageBox>
+#include <QPixmap>
+#include <QFile>
 
 MatiereDialog::MatiereDialog(QWidget *parent, DialogMode mode)
     : QDialog(parent), m_mode(mode)
 {
     setupUI();
-    setMinimumSize(550, 380);
+    setMinimumSize(600, 480);
 
     bool readOnly = (mode == DeleteMode);
     for (auto *w : {(QWidget*)txtModule,(QWidget*)txtReference,(QWidget*)txtQuantite,(QWidget*)txtSeuil})
         w->setEnabled(!readOnly);
     cmbType->setEnabled(!readOnly);
     dateExpiration->setEnabled(!readOnly);
+    btnSelectPhoto->setEnabled(!readOnly);
 
     switch (mode) {
     case AddMode:
@@ -79,6 +82,23 @@ void MatiereDialog::setupUI()
     addRow(3,"Consommation :",txtQuantite);
     addRow(4,"Seuil :",       txtSeuil);
     addRow(5,"Expiration :",  dateExpiration);
+    
+    // Photo section
+    btnSelectPhoto = new QPushButton("📷 Sélectionner une Photo", this);
+    btnSelectPhoto->setStyleSheet(
+        "QPushButton{background:#6D4C41;color:white;border:none;border-radius:6px;padding:8px 16px;font-size:12px;}"
+        "QPushButton:hover{background:#8D6E63;}");
+    connect(btnSelectPhoto, &QPushButton::clicked, this, &MatiereDialog::onSelectPhoto);
+    form->addWidget(new QLabel("Photo :", this), 6, 0);
+    form->addWidget(btnSelectPhoto, 6, 1);
+    
+    lblPhotoPreview = new QLabel(this);
+    lblPhotoPreview->setFixedSize(120, 120);
+    lblPhotoPreview->setStyleSheet("background:#E0E0E0;border:2px dashed #BCAAA4;border-radius:8px;");
+    lblPhotoPreview->setAlignment(Qt::AlignCenter);
+    lblPhotoPreview->setText("Aucune\nphoto");
+    form->addWidget(lblPhotoPreview, 7, 1);
+    
     lay->addLayout(form);
 
     lblDeleteWarning = new QLabel(this);
@@ -113,7 +133,8 @@ void MatiereDialog::setupUI()
 }
 
 void MatiereDialog::setMatiereData(const QString &module, const QString &reference, const QString &type,
-                                   const QString &quantite, const QString &seuil, const QString &dateExp)
+                                   const QString &quantite, const QString &seuil, const QString &dateExp,
+                                   const QString &photoUrl)
 {
     txtModule->setText(module);
     txtReference->setText(reference);
@@ -122,6 +143,8 @@ void MatiereDialog::setMatiereData(const QString &module, const QString &referen
     txtQuantite->setText(quantite);
     txtSeuil->setText(seuil);
     dateExpiration->setDate(QDate::fromString(dateExp,"yyyy-MM-dd"));
+    m_photoUrl = photoUrl;
+    updatePhotoPreview();
 }
 
 QString MatiereDialog::getModule()         const { return txtModule->text(); }
@@ -130,6 +153,30 @@ QString MatiereDialog::getType()           const { return cmbType->currentText()
 QString MatiereDialog::getQuantite()       const { return txtQuantite->text(); }
 QString MatiereDialog::getSeuil()          const { return txtSeuil->text(); }
 QString MatiereDialog::getDateExpiration() const { return dateExpiration->date().toString("yyyy-MM-dd"); }
+QString MatiereDialog::getPhotoUrl()       const { return m_photoUrl; }
+
+void MatiereDialog::onSelectPhoto()
+{
+    QString filePath = QFileDialog::getOpenFileName(this, 
+        "Sélectionner une image", 
+        QString(), 
+        "Images (*.png *.jpg *.jpeg *.bmp *.gif)");
+    
+    if (!filePath.isEmpty()) {
+        m_photoUrl = filePath;
+        updatePhotoPreview();
+    }
+}
+
+void MatiereDialog::updatePhotoPreview()
+{
+    if (!m_photoUrl.isEmpty() && QFile::exists(m_photoUrl)) {
+        QPixmap pixmap(m_photoUrl);
+        lblPhotoPreview->setPixmap(pixmap.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    } else {
+        lblPhotoPreview->setText("Aucune\nphoto");
+    }
+}
 
 void MatiereDialog::onSaveClicked()
 {
