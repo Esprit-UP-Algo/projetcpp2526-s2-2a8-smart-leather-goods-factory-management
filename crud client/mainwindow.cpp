@@ -769,7 +769,7 @@ void MainWindow::setupMatiereTable()
     
     ui->matiereTable->setRowCount(0); // Vider le tableau
     ui->matiereTable->setColumnCount(7); // Ajouter colonne photo
-    ui->matiereTable->setHorizontalHeaderLabels({"MODULE", "RÉFÉRENCE", "TYPE", "CONSOMMATION MOY. JOURNALIER", "SEUIL", "DATE D'EXPIRATION", "PHOTO"});
+    ui->matiereTable->setHorizontalHeaderLabels({"NOM", "RÉFÉRENCE", "TYPE", "QUANTITÉ ACTUELLE", "SEUIL", "DATE D'EXPIRATION", "PHOTO"});
     
     for (int row = 0; row < model->rowCount(); ++row) {
         ui->matiereTable->insertRow(row);
@@ -975,10 +975,9 @@ void MainWindow::onOptimisationFIFO()
 void MainWindow::onExportMatiere()
 {
     QString txt = "RAPPORT DES MATIÈRES - " + QDate::currentDate().toString("dd/MM/yyyy") + "\n\n";
-    txt += QString("Total: %1  |  Stock critique: %2  |  Fournisseurs: %3\n\n")
+    txt += QString("Total: %1  |  Stock critique: %2\n\n")
            .arg(ui->matiereTable->rowCount())
-           .arg(ui->statsValueMatiere2->text())
-           .arg(ui->statsValueMatiere3->text());
+           .arg(ui->statsValueMatiere2->text());
     for (int r = 0; r < ui->matiereTable->rowCount(); ++r)
         txt += QString("%1. %2 | %3 | %4 | seuil: %5 | exp: %6\n").arg(r+1)
                .arg(cellText(ui->matiereTable,r,0), cellText(ui->matiereTable,r,2),
@@ -1718,7 +1717,6 @@ void MainWindow::updateMatiereStatistics()
             > cellText(ui->matiereTable,r,4).toInt()) ++critical;
     ui->statsValueMatiere1->setText(QString::number(total));
     ui->statsValueMatiere2->setText(QString::number(critical));
-    ui->statsValueMatiere3->setText("2");
 }
 
 // ── Suppliers ─────────────────────────────────────────────────────────────────
