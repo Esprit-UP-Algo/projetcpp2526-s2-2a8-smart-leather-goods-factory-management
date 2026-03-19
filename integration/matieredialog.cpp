@@ -76,7 +76,7 @@ void MatiereDialog::setupUI()
     cmbType        = new QComboBox(this);
     cmbType->addItems({"Cuir","Peau de Veau","Peau de Vachette","Ficelinée","Quincaillerie","Autre"});
     
-    txtQuantite    = new QLineEdit(this); txtQuantite->setPlaceholderText("Ex: 2.5 m²/jour");
+    txtQuantite    = new QLineEdit(this); txtQuantite->setPlaceholderText("Ex: 2.5 ou 150");
     QDoubleValidator *quantiteValidator = new QDoubleValidator(0.0, 999999.99, 2, this);
     quantiteValidator->setNotation(QDoubleValidator::StandardNotation);
     txtQuantite->setValidator(quantiteValidator);
@@ -92,12 +92,12 @@ void MatiereDialog::setupUI()
     dateExpiration->setMinimumDate(QDate(2000, 1, 1));
     dateExpiration->setMaximumDate(QDate(2099, 12, 31));
 
-    addRow(0,"Module :",      txtModule);
-    addRow(1,"Référence :",   txtReference);
-    addRow(2,"Type :",        cmbType);
-    addRow(3,"Consommation :",txtQuantite);
-    addRow(4,"Seuil :",       txtSeuil);
-    addRow(5,"Expiration :",  dateExpiration);
+    addRow(0,"Module :",           txtModule);
+    addRow(1,"Référence :",        txtReference);
+    addRow(2,"Type :",             cmbType);
+    addRow(3,"Quantité actuelle :",txtQuantite);
+    addRow(4,"Seuil :",            txtSeuil);
+    addRow(5,"Expiration :",       dateExpiration);
     
     // Photo section
     btnSelectPhoto = new QPushButton("📷 Sélectionner une Photo", this);
@@ -230,7 +230,7 @@ void MatiereDialog::onSaveClicked()
     // Validation de la quantité
     QString quantiteStr = txtQuantite->text().trimmed();
     if (quantiteStr.isEmpty()) {
-        QMessageBox::warning(this, "Champ obligatoire", "La quantité/consommation est obligatoire.");
+        QMessageBox::warning(this, "Champ obligatoire", "La quantité actuelle est obligatoire.");
         txtQuantite->setFocus();
         return;
     }
@@ -239,7 +239,9 @@ void MatiereDialog::onSaveClicked()
     double quantite = quantiteStr.toDouble(&ok);
     if (!ok) {
         QMessageBox::warning(this, "Format invalide", 
-            "La quantité doit être un nombre valide.\nExemple: 2.5 ou 100");
+            "⚠ La quantité doit être un nombre valide.\n"
+            "Exemple: 2.5 ou 150\n\n"
+            "❌ N'incluez pas d'unités (m², kg, etc.)");
         txtQuantite->setFocus();
         return;
     }
