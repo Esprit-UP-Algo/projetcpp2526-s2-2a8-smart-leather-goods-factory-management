@@ -23,8 +23,9 @@ SOURCES += \
     fournisseur.cpp \
     fournisseurdialog.cpp \
     production.cpp \
+    productiondao.cpp \
     productiondialog.cpp \
-    productionmanager.cpp \
+    productionview.cpp \
     article.cpp \
     articledialog.cpp \
     logindialog.cpp
@@ -41,8 +42,9 @@ HEADERS += \
     fournisseur.h \
     fournisseurdialog.h \
     production.h \
+    productiondao.h \
     productiondialog.h \
-    productionmanager.h \
+    productionview.h \
     article.h \
     articledialog.h \
     logindialog.h

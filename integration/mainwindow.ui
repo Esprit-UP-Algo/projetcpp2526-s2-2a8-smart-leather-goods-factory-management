@@ -2559,7 +2559,7 @@ QPushButton:hover {
                 </column>
                 <column>
                  <property name="text">
-                  <string>CLIENT</string>
+                  <string>EMPLOYÉ</string>
                  </property>
                 </column>
                 <column>
