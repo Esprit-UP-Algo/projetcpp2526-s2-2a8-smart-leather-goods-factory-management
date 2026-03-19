@@ -52,7 +52,7 @@ bool Employe::modifier()
                   "ADRESSE = :adresse, TELEPHONE = :telephone, EMAIL = :email, "
                   "POSTE = :poste, SPECIALITE = :specialite, DEPARTEMENT = :departement, "
                   "DATE_EMBAUCHE = :dateEmbauche, STATUT = :statut "
-                  "WHERE ID = :id");
+                  "WHERE ID_EMPLOYE = :id");
     
     query.bindValue(":id", id);
     query.bindValue(":matricule", matricule);
@@ -82,7 +82,7 @@ bool Employe::modifier()
 bool Employe::supprimer(int id)
 {
     QSqlQuery query(Connection::instance()->getDatabase());
-    query.prepare("DELETE FROM EMPLOYES WHERE ID = :id");
+    query.prepare("DELETE FROM EMPLOYES WHERE ID_EMPLOYE = :id");
     query.bindValue(":id", id);
     
     if (!query.exec()) {
@@ -97,7 +97,7 @@ bool Employe::supprimer(int id)
 QSqlQueryModel* Employe::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
-    model->setQuery("SELECT ID, MATRICULE, NOM, PRENOM, CIN, DATE_NAISSANCE, "
+    model->setQuery("SELECT ID_EMPLOYE, MATRICULE, NOM, PRENOM, CIN, DATE_NAISSANCE, "
                     "DEPARTEMENT, POSTE, TELEPHONE, EMAIL "
                     "FROM EMPLOYES ORDER BY MATRICULE", 
                     Connection::instance()->getDatabase());
@@ -127,7 +127,7 @@ QSqlQueryModel* Employe::rechercher(const QString &terme)
     QSqlQueryModel* model = new QSqlQueryModel();
     
     QString queryStr = QString(
-        "SELECT ID, MATRICULE, NOM, PRENOM, CIN, DATE_NAISSANCE, "
+        "SELECT ID_EMPLOYE, MATRICULE, NOM, PRENOM, CIN, DATE_NAISSANCE, "
         "DEPARTEMENT, POSTE, TELEPHONE, EMAIL "
         "FROM EMPLOYES "
         "WHERE UPPER(MATRICULE) LIKE UPPER('%%1%') "
@@ -165,7 +165,7 @@ QSqlQueryModel* Employe::trierPar(const QString &colonne)
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     
-    QString queryStr = QString("SELECT ID, MATRICULE, NOM, PRENOM, CIN, DATE_NAISSANCE, "
+    QString queryStr = QString("SELECT ID_EMPLOYE, MATRICULE, NOM, PRENOM, CIN, DATE_NAISSANCE, "
                                "DEPARTEMENT, POSTE, TELEPHONE, EMAIL "
                                "FROM EMPLOYES ORDER BY %1").arg(colonne);
     

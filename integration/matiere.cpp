@@ -18,11 +18,62 @@ Matiere::Matiere()
 bool Matiere::ajouter()
 {
     QSqlQuery query(Connection::instance()->getDatabase());
-    query.prepare("INSERT INTO MATIERES_PREMIERES (ID_MATIERE, NOM, TYPE_MATIERE, "
-                  "QUANTITE_ACTUELLE, SEUIL, DATE_EXPIRATION, REFERENCE, PHOTO_URL) "
-                  "VALUES (SEQ_MATIERES.NEXTVAL, :nom, :type, :quantite, :seuil, "
-                  ":dateExpiration, :reference, :photoUrl)");
     
+    // Trouver le prochain ID disponible
+    int newId = 0;
+    
+    // Méthode 1: Chercher le plus grand ID et ajouter 1
+    QSqlQuery maxQuery(Connection::instance()->getDatabase());
+    if (maxQuery.exec("SELECT NVL(MAX(ID_MATIERE), 0) FROM MATIERES_PREMIERES") && maxQuery.next()) {
+        int maxId = maxQuery.value(0).toInt();
+        newId = maxId + 1;
+        qDebug() << "📊 MAX ID actuel:" << maxId << "→ Nouvel ID:" << newId;
+    }
+    
+    // Vérification: cet ID existe-t-il déjà?
+    QSqlQuery checkQuery(Connection::instance()->getDatabase());
+    checkQuery.prepare("SELECT COUNT(*) FROM MATIERES_PREMIERES WHERE ID_MATIERE = :id");
+    checkQuery.bindValue(":id", newId);
+    
+    if (checkQuery.exec() && checkQuery.next()) {
+        int count = checkQuery.value(0).toInt();
+        if (count > 0) {
+            qDebug() << "⚠️ ID" << newId << "existe déjà! Recherche d'un ID libre...";
+            
+            // Chercher le premier gap dans les IDs
+            QSqlQuery gapQuery(Connection::instance()->getDatabase());
+            if (gapQuery.exec(
+                "SELECT MIN(ID_MATIERE) + 1 "
+                "FROM MATIERES_PREMIERES t1 "
+                "WHERE NOT EXISTS (SELECT 1 FROM MATIERES_PREMIERES t2 WHERE t2.ID_MATIERE = t1.ID_MATIERE + 1) "
+                "AND ID_MATIERE < (SELECT MAX(ID_MATIERE) FROM MATIERES_PREMIERES)") 
+                && gapQuery.next() && !gapQuery.value(0).isNull()) {
+                newId = gapQuery.value(0).toInt();
+                qDebug() << "✅ Gap trouvé, utilisation de l'ID:" << newId;
+            } else {
+                // Dernier recours: utiliser la séquence
+                QSqlQuery seqQuery(Connection::instance()->getDatabase());
+                if (seqQuery.exec("SELECT SEQ_MATIERES.NEXTVAL FROM DUAL") && seqQuery.next()) {
+                    newId = seqQuery.value(0).toInt();
+                    qDebug() << "🔄 Utilisation de la séquence, ID:" << newId;
+                }
+            }
+        }
+    }
+    
+    if (newId <= 0) {
+        qDebug() << "❌ Impossible de générer un ID valide";
+        return false;
+    }
+    
+    qDebug() << "✅ ID final sélectionné:" << newId;
+    
+    query.prepare("INSERT INTO MATIERES_PREMIERES (ID_MATIERE, NOM, TYPE_MATIERE, "
+                  "QUANTITE_ACTUELLE, SEUIL, DATE_EXPIRATION, REFERENCE, PHOTO_URL, ID_FOURNISSEUR) "
+                  "VALUES (:id, :nom, :type, :quantite, :seuil, "
+                  ":dateExpiration, :reference, :photoUrl, :idFournisseur)");
+    
+    query.bindValue(":id", newId);
     query.bindValue(":nom", nom);
     query.bindValue(":type", type);
     query.bindValue(":quantite", quantite);
@@ -30,9 +81,19 @@ bool Matiere::ajouter()
     query.bindValue(":dateExpiration", dateExpiration);
     query.bindValue(":reference", reference);
     query.bindValue(":photoUrl", photoUrl);
+    query.bindValue(":idFournisseur", idFournisseur);
+    
+    qDebug() << "🔍 DEBUG - Valeurs avant INSERT:";
+    qDebug() << "   ID:" << newId;
+    qDebug() << "   nom:" << nom;
+    qDebug() << "   type:" << type;
+    qDebug() << "   quantite:" << quantite;
+    qDebug() << "   seuil:" << seuil;
+    qDebug() << "   idFournisseur:" << idFournisseur;
     
     if (!query.exec()) {
         qDebug() << "❌ Erreur ajout matière:" << query.lastError().text();
+        qDebug() << "   Query:" << query.lastQuery();
         return false;
     }
     

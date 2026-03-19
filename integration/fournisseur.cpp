@@ -27,7 +27,7 @@ bool FournisseurData::ajouter()
 {
     QSqlQuery query(Connection::instance()->getDatabase());
     query.prepare("INSERT INTO FOURNISSEURS (NOM_ENTREPRISE, EMAIL, TELEPHONE, "
-                  "MATRICULE_FISCAL, TYPE_PRODUIT_FOURNIS, CONDITION_PAIEMENT, STATUT) "
+                  "MATRICULE_FISCAL, TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT) "
                   "VALUES (:nomEntreprise, :email, :telephone, :matriculeFiscal, "
                   ":typeProduit, :conditionPaiement, :statut)");
     
@@ -54,7 +54,7 @@ bool FournisseurData::modifier()
     query.prepare("UPDATE FOURNISSEURS SET "
                   "NOM_ENTREPRISE = :nomEntreprise, EMAIL = :email, "
                   "TELEPHONE = :telephone, MATRICULE_FISCAL = :matriculeFiscal, "
-                  "TYPE_PRODUIT_FOURNIS = :typeProduit, CONDITION_PAIEMENT = :conditionPaiement, "
+                  "TYPE_PRODUIT = :typeProduit, CONDITION_PAIEMENT = :conditionPaiement, "
                   "STATUT = :statut "
                   "WHERE ID_FOURNISSEUR = :id");
     
@@ -95,7 +95,7 @@ QSqlQueryModel* FournisseurData::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     model->setQuery("SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
-                    "TYPE_PRODUIT_FOURNIS, CONDITION_PAIEMENT, STATUT "
+                    "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT "
                     "FROM FOURNISSEURS ORDER BY NOM_ENTREPRISE", 
                     Connection::instance()->getDatabase());
     
@@ -123,13 +123,13 @@ QSqlQueryModel* FournisseurData::rechercher(const QString &terme)
     
     QString queryStr = QString(
         "SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
-        "TYPE_PRODUIT_FOURNIS, CONDITION_PAIEMENT, STATUT "
+        "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT "
         "FROM FOURNISSEURS "
         "WHERE UPPER(NOM_ENTREPRISE) LIKE UPPER('%%1%') "
         "OR UPPER(EMAIL) LIKE UPPER('%%1%') "
         "OR UPPER(TELEPHONE) LIKE UPPER('%%1%') "
         "OR UPPER(MATRICULE_FISCAL) LIKE UPPER('%%1%') "
-        "OR UPPER(TYPE_PRODUIT_FOURNIS) LIKE UPPER('%%1%') "
+        "OR UPPER(TYPE_PRODUIT) LIKE UPPER('%%1%') "
         "ORDER BY NOM_ENTREPRISE"
     ).arg(terme);
     
@@ -158,7 +158,7 @@ QSqlQueryModel* FournisseurData::trierPar(const QString &colonne)
     QSqlQueryModel* model = new QSqlQueryModel();
     
     QString queryStr = QString("SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
-                               "TYPE_PRODUIT_FOURNIS, CONDITION_PAIEMENT, STATUT "
+                               "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT "
                                "FROM FOURNISSEURS ORDER BY %1").arg(colonne);
     
     model->setQuery(queryStr, Connection::instance()->getDatabase());

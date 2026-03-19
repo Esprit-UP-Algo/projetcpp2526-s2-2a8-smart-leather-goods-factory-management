@@ -224,12 +224,9 @@ bool ProductionData::supprimer(int id)
 QSqlQueryModel* ProductionData::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
-    model->setQuery("SELECT C.ID_COMMANDE, C.REFERENCE, "
-                    "(CL.NOM || ' ' || CL.PRENOM) AS CLIENT, "
-                    "C.TYPE, C.MONTANT, "
+    model->setQuery("SELECT C.ID_COMMANDE, C.REFERENCE, C.TYPE, C.MONTANT, "
                     "C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE "
                     "FROM COMMANDES C "
-                    "LEFT JOIN CLIENTS CL ON C.ID_CLIENT = CL.ID_CLIENT "
                     "ORDER BY C.DATE_CREATION DESC", 
                     Connection::instance()->getDatabase());
     
@@ -241,13 +238,12 @@ QSqlQueryModel* ProductionData::afficher()
     
     model->setHeaderData(0, Qt::Horizontal, "ID");
     model->setHeaderData(1, Qt::Horizontal, "Référence");
-    model->setHeaderData(2, Qt::Horizontal, "Client");
-    model->setHeaderData(3, Qt::Horizontal, "Type");
-    model->setHeaderData(4, Qt::Horizontal, "Montant");
-    model->setHeaderData(5, Qt::Horizontal, "Date Création");
-    model->setHeaderData(6, Qt::Horizontal, "Date Livraison");
-    model->setHeaderData(7, Qt::Horizontal, "Statut");
-    model->setHeaderData(8, Qt::Horizontal, "Priorité");
+    model->setHeaderData(2, Qt::Horizontal, "Type");
+    model->setHeaderData(3, Qt::Horizontal, "Montant");
+    model->setHeaderData(4, Qt::Horizontal, "Date Création");
+    model->setHeaderData(5, Qt::Horizontal, "Date Livraison");
+    model->setHeaderData(6, Qt::Horizontal, "Statut");
+    model->setHeaderData(7, Qt::Horizontal, "Priorité");
     
     return model;
 }
@@ -257,18 +253,13 @@ QSqlQueryModel* ProductionData::rechercher(const QString &terme)
     QSqlQueryModel* model = new QSqlQueryModel();
     
     QString queryStr = QString(
-        "SELECT C.ID_COMMANDE, C.REFERENCE, "
-        "(CL.NOM || ' ' || CL.PRENOM) AS CLIENT, "
-        "C.TYPE, C.MONTANT, "
+        "SELECT C.ID_COMMANDE, C.REFERENCE, C.TYPE, C.MONTANT, "
         "C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE "
         "FROM COMMANDES C "
-        "LEFT JOIN CLIENTS CL ON C.ID_CLIENT = CL.ID_CLIENT "
         "WHERE UPPER(C.REFERENCE) LIKE UPPER('%%1%') "
         "OR UPPER(C.TYPE) LIKE UPPER('%%1%') "
         "OR UPPER(C.STATUT) LIKE UPPER('%%1%') "
         "OR UPPER(C.PRIORITE) LIKE UPPER('%%1%') "
-        "OR UPPER(CL.NOM) LIKE UPPER('%%1%') "
-        "OR UPPER(CL.PRENOM) LIKE UPPER('%%1%') "
         "ORDER BY C.DATE_CREATION DESC"
     ).arg(terme);
     
@@ -282,13 +273,12 @@ QSqlQueryModel* ProductionData::rechercher(const QString &terme)
     
     model->setHeaderData(0, Qt::Horizontal, "ID");
     model->setHeaderData(1, Qt::Horizontal, "Référence");
-    model->setHeaderData(2, Qt::Horizontal, "Client");
-    model->setHeaderData(3, Qt::Horizontal, "Type");
-    model->setHeaderData(4, Qt::Horizontal, "Montant");
-    model->setHeaderData(5, Qt::Horizontal, "Date Création");
-    model->setHeaderData(6, Qt::Horizontal, "Date Livraison");
-    model->setHeaderData(7, Qt::Horizontal, "Statut");
-    model->setHeaderData(8, Qt::Horizontal, "Priorité");
+    model->setHeaderData(2, Qt::Horizontal, "Type");
+    model->setHeaderData(3, Qt::Horizontal, "Montant");
+    model->setHeaderData(4, Qt::Horizontal, "Date Création");
+    model->setHeaderData(5, Qt::Horizontal, "Date Livraison");
+    model->setHeaderData(6, Qt::Horizontal, "Statut");
+    model->setHeaderData(7, Qt::Horizontal, "Priorité");
     
     return model;
 }
@@ -297,12 +287,9 @@ QSqlQueryModel* ProductionData::trierPar(const QString &colonne)
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     
-    QString queryStr = QString("SELECT C.ID_COMMANDE, C.REFERENCE, "
-                               "(CL.NOM || ' ' || CL.PRENOM) AS CLIENT, "
-                               "C.TYPE, C.MONTANT, "
+    QString queryStr = QString("SELECT C.ID_COMMANDE, C.REFERENCE, C.TYPE, C.MONTANT, "
                                "C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE "
                                "FROM COMMANDES C "
-                               "LEFT JOIN CLIENTS CL ON C.ID_CLIENT = CL.ID_CLIENT "
                                "ORDER BY %1").arg(colonne);
     
     model->setQuery(queryStr, Connection::instance()->getDatabase());
@@ -313,13 +300,12 @@ QSqlQueryModel* ProductionData::trierPar(const QString &colonne)
     
     model->setHeaderData(0, Qt::Horizontal, "ID");
     model->setHeaderData(1, Qt::Horizontal, "Référence");
-    model->setHeaderData(2, Qt::Horizontal, "Client");
-    model->setHeaderData(3, Qt::Horizontal, "Type");
-    model->setHeaderData(4, Qt::Horizontal, "Montant");
-    model->setHeaderData(5, Qt::Horizontal, "Date Création");
-    model->setHeaderData(6, Qt::Horizontal, "Date Livraison");
-    model->setHeaderData(7, Qt::Horizontal, "Statut");
-    model->setHeaderData(8, Qt::Horizontal, "Priorité");
+    model->setHeaderData(2, Qt::Horizontal, "Type");
+    model->setHeaderData(3, Qt::Horizontal, "Montant");
+    model->setHeaderData(4, Qt::Horizontal, "Date Création");
+    model->setHeaderData(5, Qt::Horizontal, "Date Livraison");
+    model->setHeaderData(6, Qt::Horizontal, "Statut");
+    model->setHeaderData(7, Qt::Horizontal, "Priorité");
     
     return model;
 }
