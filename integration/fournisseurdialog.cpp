@@ -294,28 +294,64 @@ QString FournisseurDialog::getStatut() const
 
 void FournisseurDialog::onSaveClicked()
 {
-    // Validation
-    if (txtNomEntreprise->text().isEmpty()) {
-        QMessageBox::warning(this, "Champ requis", "Le nom de l'entreprise est obligatoire.");
+    QStringList errors;
+
+    // Nom Entreprise
+    if (txtNomEntreprise->text().trimmed().isEmpty()) {
+        errors << "- Le nom de l'entreprise est obligatoire";
+        txtNomEntreprise->setStyleSheet("border: 2px solid red;");
+    } else {
+        txtNomEntreprise->setStyleSheet("");
+    }
+
+    // Email
+    if (txtEmail->text().trimmed().isEmpty()) {
+        errors << "- L'email est obligatoire";
+        txtEmail->setStyleSheet("border: 2px solid red;");
+    } else if (!txtEmail->text().contains("@") || !txtEmail->text().contains(".")) {
+        errors << "- L'email doit être valide (contenir @ et .)";
+        txtEmail->setStyleSheet("border: 2px solid red;");
+    } else {
+        txtEmail->setStyleSheet("");
+    }
+
+    // Téléphone
+    if (txtTelephone->text().trimmed().isEmpty()) {
+        errors << "- Le téléphone est obligatoire";
+        txtTelephone->setStyleSheet("border: 2px solid red;");
+    } else if (txtTelephone->text().trimmed().length() != 8) {
+        errors << "- Le téléphone doit contenir exactement 8 chiffres";
+        txtTelephone->setStyleSheet("border: 2px solid red;");
+    } else {
+        txtTelephone->setStyleSheet("");
+    }
+
+    // Matricule Fiscal (optionnel mais si renseigné, format basique)
+    if (!txtMatriculeFiscal->text().trimmed().isEmpty() &&
+        txtMatriculeFiscal->text().trimmed().length() < 5) {
+        errors << "- Le matricule fiscal semble invalide (trop court)";
+        txtMatriculeFiscal->setStyleSheet("border: 2px solid red;");
+    } else {
+        txtMatriculeFiscal->setStyleSheet("");
+    }
+
+    if (!errors.isEmpty()) {
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle("Validation");
+        msgBox.setText("Veuillez corriger les erreurs suivantes :");
+        msgBox.setInformativeText(errors.join("\n"));
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setStyleSheet(
+            "QMessageBox { background-color: #FAF5F0; }"
+            "QMessageBox QLabel { color: #291C0E; font-size: 12px; }"
+            "QPushButton { background-color: #8D6E63; color: white; border: none; "
+            "border-radius: 6px; padding: 8px 20px; font-size: 11px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #A0826D; }"
+        );
+        msgBox.exec();
         return;
     }
-    
-    if (txtEmail->text().isEmpty()) {
-        QMessageBox::warning(this, "Champ requis", "L'email est obligatoire.");
-        return;
-    }
-    
-    if (txtTelephone->text().isEmpty()) {
-        QMessageBox::warning(this, "Champ requis", "Le téléphone est obligatoire.");
-        return;
-    }
-    
-    // Success message
-    QString message = (m_mode == AddMode) 
-        ? "Le fournisseur a été ajouté avec succès !" 
-        : "Le fournisseur a été mis à jour avec succès !";
-    
-    QMessageBox::information(this, "Succès", message);
+
     accept();
 }
 

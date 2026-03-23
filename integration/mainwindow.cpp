@@ -6,6 +6,7 @@
 #include "clientmanagerdialog.h"
 #include "matieredialog.h"
 #include "fournisseurdialog.h"
+#include "smsfournisseurdialog.h"
 #include "productiondialog.h"
 #include "productiondao.h"
 #include "productionview.h"
@@ -2553,6 +2554,21 @@ void MainWindow::on_btnDeleteFournisseur_clicked()
                        "Vérifiez que la table FOURNISSEURS existe dans la base de données.").arg(id));
         }
     }
+}
+
+void MainWindow::on_btnSmsFournisseur_clicked()
+{
+    int row = ui->fournisseurTable->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "", "Veuillez sélectionner un fournisseur pour envoyer un SMS.");
+        return;
+    }
+
+    QString nomEntreprise = ui->fournisseurTable->item(row, 1) ? ui->fournisseurTable->item(row, 1)->text() : "";
+    QString telephone     = ui->fournisseurTable->item(row, 3) ? ui->fournisseurTable->item(row, 3)->text() : "";
+
+    SmsFournisseurDialog dlg(nomEntreprise, telephone, this);
+    dlg.exec();
 }
 
 void MainWindow::on_btnExportFournisseur_clicked()

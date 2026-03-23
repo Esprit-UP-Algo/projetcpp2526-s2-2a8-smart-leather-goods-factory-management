@@ -22,6 +22,7 @@ SOURCES += \
     matieredialog.cpp \
     fournisseur.cpp \
     fournisseurdialog.cpp \
+    smsfournisseurdialog.cpp \
     production.cpp \
     productiondao.cpp \
     productiondialog.cpp \
@@ -41,6 +42,7 @@ HEADERS += \
     matieredialog.h \
     fournisseur.h \
     fournisseurdialog.h \
+    smsfournisseurdialog.h \
     production.h \
     productiondao.h \
     productiondialog.h \
