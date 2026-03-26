@@ -3984,11 +3984,13 @@ void MainWindow::afficherStatistiquesModernes()
         prioCnt[query.value(0).toString()] = query.value(1).toInt();
     }
 
-    QDialog dlg(this); dlg.setWindowTitle("Statistiques de Production"); dlg.setMinimumSize(1000,700);
+    QDialog dlg(this); dlg.setWindowTitle("Statistiques de Production"); dlg.setMinimumSize(1100,750);
+    dlg.setStyleSheet("QDialog{background:#F8F9FA;} QGroupBox{border:none;}");
     QScrollArea *scroll = new QScrollArea(&dlg);
     scroll->setWidgetResizable(true);
+    scroll->setStyleSheet("QScrollArea{border:none;background:#F8F9FA;}");
     QWidget *inner = new QWidget; QVBoxLayout *lay = new QVBoxLayout(inner);
-    lay->setSpacing(15); lay->setContentsMargins(20,20,20,20);
+    lay->setSpacing(18); lay->setContentsMargins(24,24,24,24);
 
     // KPI row
     auto makeKPI = [](const QString &icon, const QString &val, const QString &lbl, const QString &color) {
@@ -4012,54 +4014,93 @@ void MainWindow::afficherStatistiquesModernes()
     // Charts
     auto *chartsRow = new QWidget; auto *chartsLay = new QHBoxLayout(chartsRow); chartsLay->setSpacing(12);
 
+    // ── Camembert Statuts (avec AllAnimations + hover comme les stats clients) ──
     auto *pie = new QPieSeries();
     QMap<QString,QColor> clrs;
-    clrs["Terminé"] = QColor("#4CAF50");
+    clrs["Terminé"]       = QColor("#4CAF50");
     clrs["En Production"] = QColor("#FF9800");
-    clrs["Planifié"] = QColor("#2196F3");
-    clrs["En Attente"] = QColor("#FFC107");
+    clrs["Planifié"]      = QColor("#2196F3");
+    clrs["En Attente"]    = QColor("#FFC107");
+    clrs["Annulé"]        = QColor("#F44336");
+    clrs["Suspendu"]      = QColor("#9E9E9E");
     for (auto it = statCnt.begin(); it != statCnt.end(); ++it) {
         auto *sl = pie->append(it.key(), it.value());
-        sl->setLabelVisible(true);
-        sl->setLabel(QString("%1: %2").arg(it.key()).arg(it.value()));
+        sl->setLabel(QString("%1\n%2%")
+            .arg(it.key())
+            .arg(QString::number(sl->percentage()*100,'f',1)));
+        sl->setLabelColor(Qt::black);
         if (clrs.contains(it.key())) sl->setColor(clrs[it.key()]);
+        // Effet hover : explode + label visible comme les stats clients
+        QObject::connect(sl, &QPieSlice::hovered, [sl](bool state){
+            sl->setExploded(state);
+            sl->setLabelVisible(state);
+        });
     }
-    auto *pc = new QChart(); pc->addSeries(pie); pc->setTitle("Répartition Statuts");
-    pc->setAnimationOptions(QChart::SeriesAnimations); pc->setBackgroundBrush(Qt::white);
+    pie->setLabelsVisible(true);
+    pie->setLabelsPosition(QPieSlice::LabelOutside);
+    auto *pc = new QChart(); pc->addSeries(pie);
+    pc->setTitle("Répartition Statuts");
+    pc->setTitleFont(QFont("Arial", 13, QFont::Bold));
+    pc->setAnimationOptions(QChart::AllAnimations); // AllAnimations comme les stats clients
+    pc->setTheme(QChart::ChartThemeLight);
+    pc->legend()->setAlignment(Qt::AlignBottom);
     auto *pv = new QChartView(pc); pv->setRenderHint(QPainter::Antialiasing); pv->setMinimumHeight(300);
     chartsLay->addWidget(pv);
 
-    auto *bs = new QBarSet("Commandes"); bs->setColor(QColor("#8D6E63"));
-    QStringList cats;
+    // ── Barres Priorités — un QBarSet par priorité pour une couleur distincte ──
+    QMap<QString,QColor> prioClrs;
+    prioClrs["Urgente"] = QColor("#F44336");
+    prioClrs["Haute"]   = QColor("#FF9800");
+    prioClrs["Normale"] = QColor("#2196F3");
+    prioClrs["Basse"]   = QColor("#4CAF50");
     QStringList priorites = {"Urgente", "Haute", "Normale", "Basse"};
+
+    auto *bar = new QBarSeries();
+    bar->setLabelsVisible(true);
+    bar->setLabelsPosition(QAbstractBarSeries::LabelsOutsideEnd);
+    QStringList cats;
+
     for (const QString &p : priorites) {
-        if (prioCnt.contains(p)) { 
-            *bs << prioCnt[p]; 
-            cats << p; 
+        if (!prioCnt.contains(p)) continue;
+        auto *set = new QBarSet(p);
+        set->setColor(prioClrs.value(p, QColor("#8D6E63")));
+        set->setLabelColor(Qt::black);
+        // Remplir avec 0 pour toutes les catégories sauf la sienne
+        // (chaque set a une seule valeur, les autres à 0)
+        for (const QString &pp : priorites) {
+            if (prioCnt.contains(pp))
+                *set << (pp == p ? prioCnt[p] : 0);
         }
+        bar->append(set);
+        cats << p;
     }
-    
-    // Si aucune priorité standard n'est trouvée, utiliser toutes les priorités disponibles
+    // Fallback si aucune priorité standard
     if (cats.isEmpty()) {
         for (auto it = prioCnt.begin(); it != prioCnt.end(); ++it) {
-            *bs << it.value();
+            auto *set = new QBarSet(it.key());
+            set->setColor(QColor("#8D6E63"));
+            *set << it.value();
+            bar->append(set);
             cats << it.key();
         }
     }
-    
-    auto *bar = new QBarSeries(); bar->append(bs);
-    auto *bc = new QChart(); bc->addSeries(bar); bc->setTitle("Répartition Priorités");
-    bc->setAnimationOptions(QChart::SeriesAnimations); bc->setBackgroundBrush(Qt::white);
+
+    auto *bc = new QChart(); bc->addSeries(bar);
+    bc->setTitle("Répartition Priorités");
+    bc->setTitleFont(QFont("Arial", 13, QFont::Bold));
+    bc->setAnimationOptions(QChart::AllAnimations);
+    bc->setTheme(QChart::ChartThemeLight);
     auto *axX = new QBarCategoryAxis(); axX->append(cats); bc->addAxis(axX,Qt::AlignBottom); bar->attachAxis(axX);
     auto *axY = new QValueAxis(); axY->setLabelFormat("%d"); bc->addAxis(axY,Qt::AlignLeft); bar->attachAxis(axY);
-    bc->legend()->setVisible(false);
+    bc->legend()->setAlignment(Qt::AlignBottom);
     auto *bv = new QChartView(bc); bv->setRenderHint(QPainter::Antialiasing); bv->setMinimumHeight(300);
     chartsLay->addWidget(bv);
 
     lay->addWidget(chartsRow);
 
-    QPushButton exportBtn("Exporter CSV",inner), closeBtn("Fermer",inner);
-    closeBtn.setStyleSheet("QPushButton{background:#95877C;}");
+    QPushButton exportBtn("📥  Exporter CSV",inner), closeBtn("✖  Fermer",inner);
+    exportBtn.setStyleSheet("QPushButton{background:#2196F3;color:white;border:none;border-radius:7px;padding:9px 22px;font-size:13px;font-weight:bold;}QPushButton:hover{background:#1976D2;}");
+    closeBtn.setStyleSheet("QPushButton{background:#95877C;color:white;border:none;border-radius:7px;padding:9px 22px;font-size:13px;font-weight:bold;}QPushButton:hover{background:#7D6B61;}");
     connect(&exportBtn,&QPushButton::clicked,[&]{ onExcelProduction(); });
     connect(&closeBtn,&QPushButton::clicked,&dlg,&QDialog::accept);
     QHBoxLayout btnRow; btnRow.addStretch(); btnRow.addWidget(&exportBtn); btnRow.addWidget(&closeBtn);

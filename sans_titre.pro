@@ -4,7 +4,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 CONFIG += c++17
 
-# Windows Speech API (SAPI)
+# Windows Speech API (SAPI) — utilisé par mainwindow.cpp pour les commandes vocales
 win32: LIBS += -lsapi -lole32 -loleaut32
 
 TARGET = CUIREA_Management
