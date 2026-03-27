@@ -9,6 +9,7 @@
 #include "matieredialog.h"
 #include "fournisseurdialog.h"
 #include "smsfournisseurdialog.h"
+#include "qrfournisseurdialog.h"
 #include "productionview.h"
 #include "articledialog.h"
 #include "employe.h"
@@ -2773,6 +2774,23 @@ void MainWindow::on_btnSmsFournisseur_clicked()
     QString telephone     = ui->fournisseurTable->item(row, 3) ? ui->fournisseurTable->item(row, 3)->text() : "";
 
     SmsFournisseurDialog dlg(nomEntreprise, telephone, this);
+    dlg.exec();
+}
+
+void MainWindow::on_btnQrFournisseur_clicked()
+{
+    int row = ui->fournisseurTable->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "", "Veuillez sélectionner un fournisseur pour générer le QR code.");
+        return;
+    }
+
+    QString nomEntreprise  = ui->fournisseurTable->item(row, 1) ? ui->fournisseurTable->item(row, 1)->text() : "";
+    QString email          = ui->fournisseurTable->item(row, 2) ? ui->fournisseurTable->item(row, 2)->text() : "";
+    QString telephone      = ui->fournisseurTable->item(row, 3) ? ui->fournisseurTable->item(row, 3)->text() : "";
+    QString typeProduit    = ui->fournisseurTable->item(row, 5) ? ui->fournisseurTable->item(row, 5)->text() : "";
+
+    QrFournisseurDialog dlg(nomEntreprise, email, telephone, typeProduit, this);
     dlg.exec();
 }
 
