@@ -68,10 +68,27 @@ bool Matiere::ajouter()
     
     qDebug() << "✅ ID final sélectionné:" << newId;
     
-    query.prepare("INSERT INTO MATIERES_PREMIERES (ID_MATIERE, NOM, TYPE_MATIERE, "
-                  "QUANTITE_ACTUELLE, SEUIL, DATE_EXPIRATION, REFERENCE, PHOTO_URL, ID_FOURNISSEUR) "
-                  "VALUES (:id, :nom, :type, :quantite, :seuil, "
-                  ":dateExpiration, :reference, :photoUrl, :idFournisseur)");
+    // Vérifier si la colonne ID_FOURNISSEUR existe
+    QSqlQuery checkColumnQuery(Connection::instance()->getDatabase());
+    bool hasIdFournisseur = false;
+    if (checkColumnQuery.exec("SELECT column_name FROM user_tab_columns WHERE table_name = 'MATIERES_PREMIERES' AND column_name = 'ID_FOURNISSEUR'")) {
+        hasIdFournisseur = checkColumnQuery.next();
+    }
+    
+    QString insertQuery;
+    if (hasIdFournisseur) {
+        insertQuery = "INSERT INTO MATIERES_PREMIERES (ID_MATIERE, NOM, TYPE_MATIERE, "
+                      "QUANTITE_ACTUELLE, SEUIL, DATE_EXPIRATION, REFERENCE, PHOTO_URL, ID_FOURNISSEUR) "
+                      "VALUES (:id, :nom, :type, :quantite, :seuil, "
+                      ":dateExpiration, :reference, :photoUrl, :idFournisseur)";
+    } else {
+        insertQuery = "INSERT INTO MATIERES_PREMIERES (ID_MATIERE, NOM, TYPE_MATIERE, "
+                      "QUANTITE_ACTUELLE, SEUIL, DATE_EXPIRATION, REFERENCE, PHOTO_URL) "
+                      "VALUES (:id, :nom, :type, :quantite, :seuil, "
+                      ":dateExpiration, :reference, :photoUrl)";
+    }
+    
+    query.prepare(insertQuery);
     
     query.bindValue(":id", newId);
     query.bindValue(":nom", nom);
@@ -81,7 +98,9 @@ bool Matiere::ajouter()
     query.bindValue(":dateExpiration", dateExpiration);
     query.bindValue(":reference", reference);
     query.bindValue(":photoUrl", photoUrl);
-    query.bindValue(":idFournisseur", idFournisseur);
+    if (hasIdFournisseur) {
+        query.bindValue(":idFournisseur", idFournisseur);
+    }
     
     qDebug() << "🔍 DEBUG - Valeurs avant INSERT:";
     qDebug() << "   ID:" << newId;
@@ -172,16 +191,27 @@ QSqlQueryModel* Matiere::rechercher(const QString &terme)
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     
-    QString queryStr = QString(
+    QSqlQuery query(Connection::instance()->getDatabase());
+    query.prepare(
         "SELECT ID_MATIERE, NOM, REFERENCE, TYPE_MATIERE, QUANTITE_ACTUELLE, "
         "SEUIL, DATE_EXPIRATION, PHOTO_URL FROM MATIERES_PREMIERES "
-        "WHERE UPPER(NOM) LIKE UPPER('%%1%') "
-        "OR UPPER(REFERENCE) LIKE UPPER('%%1%') "
-        "OR UPPER(TYPE_MATIERE) LIKE UPPER('%%1%') "
+        "WHERE UPPER(NOM) LIKE UPPER(:terme) "
+        "OR UPPER(REFERENCE) LIKE UPPER(:terme) "
+        "OR UPPER(TYPE_MATIERE) LIKE UPPER(:terme) "
         "ORDER BY NOM"
-    ).arg(terme);
+    );
     
-    model->setQuery(queryStr, Connection::instance()->getDatabase());
+    // Protection SQL injection: utiliser bindValue au lieu de .arg()
+    QString searchTerm = "%" + terme + "%";
+    query.bindValue(":terme", searchTerm);
+    
+    if (!query.exec()) {
+        qDebug() << "❌ Erreur recherche matières:" << query.lastError().text();
+        delete model;
+        return nullptr;
+    }
+    
+    model->setQuery(query);
     
     if (model->lastError().isValid()) {
         qDebug() << "❌ Erreur recherche matières:" << model->lastError().text();
@@ -205,10 +235,20 @@ QSqlQueryModel* Matiere::trierPar(const QString &colonne)
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     
+    // Liste blanche des colonnes autorisées pour éviter SQL injection
+    QStringList colonnesAutorisees = {"ID_MATIERE", "NOM", "REFERENCE", "TYPE_MATIERE", 
+                                      "QUANTITE_ACTUELLE", "SEUIL", "DATE_EXPIRATION"};
+    
+    QString colonneSecurisee = colonne;
+    if (!colonnesAutorisees.contains(colonne)) {
+        qDebug() << "⚠️ Colonne non autorisée pour le tri:" << colonne;
+        colonneSecurisee = "NOM"; // Valeur par défaut sécurisée
+    }
+    
     QString queryStr = QString(
         "SELECT ID_MATIERE, NOM, REFERENCE, TYPE_MATIERE, QUANTITE_ACTUELLE, "
         "SEUIL, DATE_EXPIRATION, PHOTO_URL FROM MATIERES_PREMIERES ORDER BY %1"
-    ).arg(colonne);
+    ).arg(colonneSecurisee);
     
     model->setQuery(queryStr, Connection::instance()->getDatabase());
     

@@ -802,11 +802,13 @@ void MainWindow::setupMatiereTable()
     }
     
     ui->matiereTable->setRowCount(0); // Vider le tableau
-    ui->matiereTable->setColumnCount(7); // Ajouter colonne photo
+    ui->matiereTable->setColumnCount(7); // 7 colonnes avec photo
     ui->matiereTable->setHorizontalHeaderLabels({"MODULE", "RÉFÉRENCE", "TYPE", "QUANTITÉ ACTUELLE", "SEUIL", "DATE D'EXPIRATION", "PHOTO"});
     
     for (int row = 0; row < model->rowCount(); ++row) {
         ui->matiereTable->insertRow(row);
+        
+        // Colonnes de données
         ui->matiereTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(row, 1)).toString())); // nom
         ui->matiereTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(row, 2)).toString())); // reference
         ui->matiereTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(row, 3)).toString())); // type_matiere
@@ -817,12 +819,26 @@ void MainWindow::setupMatiereTable()
         // Photo - afficher une miniature ou icône
         QString photoPath = model->data(model->index(row, 7)).toString();
         QTableWidgetItem* photoItem = new QTableWidgetItem();
+        
+        qDebug() << "📷 Photo path pour ligne" << row << ":" << photoPath;
+        
         if (!photoPath.isEmpty() && QFile::exists(photoPath)) {
             QPixmap pixmap(photoPath);
-            photoItem->setIcon(QIcon(pixmap.scaled(40, 40, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
-            photoItem->setToolTip(photoPath);
+            if (!pixmap.isNull()) {
+                QIcon icon(pixmap.scaled(40, 40, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+                photoItem->setIcon(icon);
+                photoItem->setText(""); // Enlever le texte si l'icône est présente
+                photoItem->setToolTip(photoPath);
+                qDebug() << "✅ Photo chargée avec succès";
+            } else {
+                photoItem->setText("❌");
+                photoItem->setToolTip("Erreur de chargement");
+                qDebug() << "❌ Erreur chargement pixmap";
+            }
         } else {
             photoItem->setText("—");
+            photoItem->setToolTip("Aucune photo");
+            qDebug() << "⚠️ Pas de photo ou fichier introuvable";
         }
         ui->matiereTable->setItem(row, 6, photoItem);
         
@@ -833,41 +849,21 @@ void MainWindow::setupMatiereTable()
     
     delete model; // Libérer la mémoire
     
-    ui->matiereTable->setRowHeight(0, 50); // Ajuster la hauteur pour les icônes
+    // Ajuster la hauteur des lignes pour les icônes
     for (int i = 0; i < ui->matiereTable->rowCount(); ++i) {
         ui->matiereTable->setRowHeight(i, 50);
     }
+    
+    // Ajuster la largeur des colonnes
     ui->matiereTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    ui->matiereTable->setColumnWidth(6, 80); // Colonne photo plus petite
+    ui->matiereTable->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Fixed);
+    
     ui->matiereTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    ui->matiereTable->setIconSize(QSize(40, 40)); // Taille des icônes
+    
     updateMatiereStatistics();
 }
-
-// Empty stubs no longer needed – these were only called indirectly
-void MainWindow::setupSuggestionTable() {}
-void MainWindow::setupHistoriqueTable() {}
-void MainWindow::showForm(bool) {}
-void MainWindow::hideForm() {}
-void MainWindow::clearForm() {}
-void MainWindow::hideAllPanels() {}
-void MainWindow::addMatiereToTable(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&) {}
-void MainWindow::onSaveMatiere() {}
-void MainWindow::onCancelForm() {}
-void MainWindow::onGenerateSuggestion() { onSuggestionCommande(); }
-void MainWindow::onCloseSuggestion() {}
-void MainWindow::onAnalyzeFIFO()       { onOptimisationFIFO(); }
-void MainWindow::onCloseOptimisation() {}
-void MainWindow::onAppliquerRecherche(){ onRechercheTriMatiere(); }
-void MainWindow::onResetRecherche()    {}
-void MainWindow::onCloseRecherche()    {}
-void MainWindow::onAddFournisseur()    { showInfo(this,"Ajouter","Fonctionnalité en développement"); }
-void MainWindow::onEditFournisseur()   { showInfo(this,"Modifier","Fonctionnalité en développement"); }
-void MainWindow::onDeleteFournisseur() { showInfo(this,"Supprimer","Fonctionnalité en développement"); }
-void MainWindow::onCloseFournisseurs() {}
-void MainWindow::loadFournisseurs()    {}
-void MainWindow::saveFournisseurs()    {}
-void MainWindow::updateFournisseursList() {}
-void MainWindow::updateHistoriqueTable()  {}
-void MainWindow::updateConsommationChart(){}
 
 void MainWindow::onAddMatiere()
 {
@@ -2317,27 +2313,6 @@ void MainWindow::updateMatiereStatistics()
 // ── Suppliers ─────────────────────────────────────────────────────────────────
 void MainWindow::setupFournisseurTable()
 {
-    fournisseursData.clear();
-    // 15 sample records (condensed)
-    const struct { const char *id,*nom,*email,*tel,*mat,*type,*pay,*stat; } data[] = {
-        {"F001","Leather Masters SA","contact@leathermasters.tn","+216 71 234 567","1234567/A/M/000","Cuir","Chèque","Actif"},
-        {"F002","Textile Excellence","info@textileex.tn","+216 71 345 678","2345678/B/M/000","Tissus","Virement","Actif"},
-        {"F003","Fashion Accessories Ltd","sales@fashionacc.tn","+216 71 456 789","3456789/C/M/000","Accessoires","Carte Bancaire","Actif"},
-        {"F004","Premium Bags Co","contact@premiumbags.tn","+216 71 567 890","4567890/D/M/000","Sacs","Crédit 30 jours","Actif"},
-        {"F005","Style Clothing","info@styleclothing.tn","+216 71 678 901","5678901/E/M/000","Vêtements","Virement","Actif"},
-        {"F006","Quality Leather Supply","sales@qualityleather.tn","+216 71 789 012","6789012/F/M/000","Cuir","Espèces","Suspendu"},
-        {"F007","Modern Textiles","contact@moderntex.tn","+216 71 890 123","7890123/G/M/000","Tissus","Crédit 60 jours","Actif"},
-        {"F008","Elite Accessories","info@eliteacc.tn","+216 71 901 234","8901234/H/M/000","Accessoires","Chèque","Actif"},
-        {"F009","Luxury Bags Import","sales@luxurybags.tn","+216 71 012 345","9012345/I/M/000","Sacs","Virement","Actif"},
-        {"F010","Fashion Forward","contact@fashionforward.tn","+216 71 123 456","0123456/J/M/000","Vêtements","Carte Bancaire","Actif"},
-        {"F011","Artisan Leather Works","info@artisanleather.tn","+216 71 234 567","1234568/K/M/000","Cuir","Crédit 30 jours","Actif"},
-        {"F012","Fabric World","sales@fabricworld.tn","+216 71 345 679","2345679/L/M/000","Tissus","Chèque","Actif"},
-        {"F013","Trendy Accessories","contact@trendyacc.tn","+216 71 456 790","3456790/M/M/000","Accessoires","Virement","Suspendu"},
-        {"F014","Designer Bags Plus","info@designerbags.tn","+216 71 567 891","4567891/N/M/000","Sacs","Carte Bancaire","Actif"},
-        {"F015","Urban Clothing Co","sales@urbanclothing.tn","+216 71 678 902","5678902/O/M/000","Vêtements","Espèces","Actif"},
-    };
-    for (const auto &d : data)
-        fournisseursData.append(FournisseurData(d.id,d.nom,d.email,d.tel,d.mat,d.type,d.pay,d.stat));
     ui->fournisseurTable->setColumnHidden(0, true);
     refreshFournisseurTable();
     updateFournisseurStatistics();
@@ -2349,26 +2324,8 @@ void MainWindow::refreshFournisseurTable()
     FournisseurData f;
     QSqlQueryModel* model = f.afficher();
     
-    // Si la requête a échoué ou retourne 0 lignes, utiliser les données statiques
-    if (!model || model->rowCount() == 0) {
-        qDebug() << "⚠️ Utilisation des données statiques fournisseurs (BD vide ou erreur)";
-        
-        // Utiliser fournisseursData si disponible
-        ui->fournisseurTable->setRowCount(fournisseursData.size());
-        for (int i = 0; i < fournisseursData.size(); ++i) {
-            const auto &fournisseur = fournisseursData[i];
-            ui->fournisseurTable->setItem(i,0,new QTableWidgetItem(fournisseur.getId()));
-            ui->fournisseurTable->setItem(i,1,new QTableWidgetItem(fournisseur.getNomEntreprise()));
-            ui->fournisseurTable->setItem(i,2,new QTableWidgetItem(fournisseur.getEmail()));
-            ui->fournisseurTable->setItem(i,3,new QTableWidgetItem(fournisseur.getTelephone()));
-            ui->fournisseurTable->setItem(i,4,new QTableWidgetItem(fournisseur.getMatriculeFiscal()));
-            ui->fournisseurTable->setItem(i,5,new QTableWidgetItem(fournisseur.getTypeProduit()));
-            ui->fournisseurTable->setItem(i,6,new QTableWidgetItem(fournisseur.getConditionPaiement()));
-            ui->fournisseurTable->setItem(i,7,new QTableWidgetItem(fournisseur.getStatut()));
-        }
-        
-        if (model) delete model;
-        updateFournisseurStatistics();
+    if (!model) {
+        qDebug() << "❌ Erreur chargement fournisseurs";
         return;
     }
     
@@ -2389,12 +2346,19 @@ void MainWindow::refreshFournisseurTable()
 
 void MainWindow::updateFournisseurStatistics()
 {
-    int actifs = 0; QSet<QString> types;
-    for (const auto &f : fournisseursData) {
-        if (f.getStatut() == "Actif") ++actifs;
-        types.insert(f.getTypeProduit());
+    int total = ui->fournisseurTable->rowCount();
+    int actifs = 0;
+    QSet<QString> types;
+    
+    for (int i = 0; i < total; ++i) {
+        QString statut = ui->fournisseurTable->item(i, 7) ? ui->fournisseurTable->item(i, 7)->text() : "";
+        QString type = ui->fournisseurTable->item(i, 5) ? ui->fournisseurTable->item(i, 5)->text() : "";
+        
+        if (statut == "Actif") ++actifs;
+        if (!type.isEmpty()) types.insert(type);
     }
-    ui->statsValueFournisseur1->setText(QString::number(fournisseursData.size()));
+    
+    ui->statsValueFournisseur1->setText(QString::number(total));
     ui->statsValueFournisseur2->setText(QString::number(actifs));
     ui->statsValueFournisseur3->setText(QString::number(types.size()));
 }
@@ -2405,30 +2369,7 @@ void MainWindow::on_btnAddFournisseur_clicked()
     if (dlg.exec() == QDialog::Accepted) {
         FournisseurData f;
         
-        // Vérifier si on est en mode BD ou mode statique
-        QSqlQueryModel* testModel = f.afficher();
-        
-        if (!testModel || testModel->rowCount() == 0) {
-            // Mode statique - ajouter directement dans la table
-            qDebug() << "⚠️ Mode statique - ajout dans le tableau uniquement";
-            int row = ui->fournisseurTable->rowCount();
-            ui->fournisseurTable->insertRow(row);
-            ui->fournisseurTable->setItem(row, 0, new QTableWidgetItem(QString::number(row + 100)));
-            ui->fournisseurTable->setItem(row, 1, new QTableWidgetItem(dlg.getNomEntreprise()));
-            ui->fournisseurTable->setItem(row, 2, new QTableWidgetItem(dlg.getEmail()));
-            ui->fournisseurTable->setItem(row, 3, new QTableWidgetItem(dlg.getTelephone()));
-            ui->fournisseurTable->setItem(row, 4, new QTableWidgetItem(dlg.getMatriculeFiscal()));
-            ui->fournisseurTable->setItem(row, 5, new QTableWidgetItem(dlg.getTypeProduit()));
-            ui->fournisseurTable->setItem(row, 6, new QTableWidgetItem(dlg.getConditionPaiement()));
-            ui->fournisseurTable->setItem(row, 7, new QTableWidgetItem(dlg.getStatut()));
-            QMessageBox::information(this, "Succès", "Fournisseur ajouté");
-            if (testModel) delete testModel;
-            return;
-        }
-        
-        delete testModel;
-        
-        // Mode BD
+        // Toujours sauvegarder dans la BD
         f.setNomEntreprise(dlg.getNomEntreprise());
         f.setEmail(dlg.getEmail());
         f.setTelephone(dlg.getTelephone());
@@ -2439,7 +2380,7 @@ void MainWindow::on_btnAddFournisseur_clicked()
         
         if (f.ajouter()) {
             refreshFournisseurTable();
-            QMessageBox::information(this, "Succès", "Fournisseur ajouté avec succès !");
+            QMessageBox::information(this, "Succès", "Fournisseur ajouté avec succès dans la base de données!");
         } else {
             QMessageBox::critical(this, "Erreur", 
                 "Impossible d'ajouter le fournisseur.\n"
@@ -2468,27 +2409,7 @@ void MainWindow::on_btnEditFournisseur_clicked()
     if (dlg.exec() == QDialog::Accepted) {
         FournisseurData f;
         
-        // Vérifier si on est en mode BD ou mode statique
-        QSqlQueryModel* testModel = f.afficher();
-        
-        if (!testModel || testModel->rowCount() == 0) {
-            // Mode statique - modifier directement dans la table
-            qDebug() << "⚠️ Mode statique - modification dans le tableau uniquement";
-            ui->fournisseurTable->item(row, 1)->setText(dlg.getNomEntreprise());
-            ui->fournisseurTable->item(row, 2)->setText(dlg.getEmail());
-            ui->fournisseurTable->item(row, 3)->setText(dlg.getTelephone());
-            ui->fournisseurTable->item(row, 4)->setText(dlg.getMatriculeFiscal());
-            ui->fournisseurTable->item(row, 5)->setText(dlg.getTypeProduit());
-            ui->fournisseurTable->item(row, 6)->setText(dlg.getConditionPaiement());
-            ui->fournisseurTable->item(row, 7)->setText(dlg.getStatut());
-            QMessageBox::information(this, "Succès", "Fournisseur modifié");
-            if (testModel) delete testModel;
-            return;
-        }
-        
-        delete testModel;
-        
-        // Mode BD
+        // Toujours sauvegarder dans la BD
         f.setId(id);
         f.setNomEntreprise(dlg.getNomEntreprise());
         f.setEmail(dlg.getEmail());
@@ -2500,7 +2421,7 @@ void MainWindow::on_btnEditFournisseur_clicked()
         
         if (f.modifier()) {
             refreshFournisseurTable();
-            QMessageBox::information(this, "Succès", "Fournisseur modifié avec succès !");
+            QMessageBox::information(this, "Succès", "Fournisseur modifié avec succès!");
         } else {
             QMessageBox::critical(this, "Erreur", 
                 "Impossible de modifier le fournisseur.\n"
@@ -2527,25 +2448,12 @@ void MainWindow::on_btnDeleteFournisseur_clicked()
     dlg.setFournisseurData(id, nomEntreprise, email, telephone, typeProduit, conditionPaiement, matriculeFiscal, statut);
     
     if (dlg.exec() == QDialog::Accepted) {
-        // Vérifier si on est en mode BD ou mode statique
         FournisseurData f;
-        QSqlQueryModel* testModel = f.afficher();
         
-        if (!testModel || testModel->rowCount() == 0) {
-            // Mode statique - supprimer directement de la table
-            qDebug() << "⚠️ Mode statique - suppression de la ligne du tableau";
-            ui->fournisseurTable->removeRow(row);
-            QMessageBox::information(this, "Succès", "Fournisseur supprimé (mode statique)");
-            if (testModel) delete testModel;
-            return;
-        }
-        
-        delete testModel;
-        
-        // Mode BD - utiliser la méthode supprimer
+        // Toujours supprimer de la BD
         if (f.supprimer(id)) {
             refreshFournisseurTable();
-            QMessageBox::information(this, "Succès", "Fournisseur supprimé avec succès !");
+            QMessageBox::information(this, "Succès", "Fournisseur supprimé avec succès!");
         } else {
             QMessageBox::critical(this, "Erreur", 
                 QString("Impossible de supprimer le fournisseur.\n"
