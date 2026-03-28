@@ -156,6 +156,7 @@ public:
     QPushButton *btnStatsFournisseur;
     QPushButton *btnTriFournisseur;
     QPushButton *btnSmsFournisseur;
+    QPushButton *btnQrFournisseur;
     QTableWidget *fournisseurTable;
     QWidget *productionPage;
     QVBoxLayout *verticalLayout_production;
@@ -211,18 +212,21 @@ public:
     QLabel *statsValueArticle3;
     QSpacerItem *horizontalSpacer_statsArticle;
     QWidget *articlesToolbar;
-    QHBoxLayout *horizontalLayout_articles;
+    QVBoxLayout *verticalLayout_articlesToolbar;
+    QHBoxLayout *articlesRow1;
     QLineEdit *searchBoxArticle;
-    QSpacerItem *horizontalSpacer_articles;
     QPushButton *btnAddArticle;
     QPushButton *btnEditArticle;
     QPushButton *btnDeleteArticle;
     QPushButton *btnViewArticle;
-    QPushButton *btnExportPdfArticle;
+    QPushButton *btnView3DArticle;
+    QHBoxLayout *articlesRow2;
     QPushButton *btnTriArticle;
+    QPushButton *btnExportPdfArticle;
+    QPushButton *btnStatistiquesArticle;
     QPushButton *btnAnalyseRentabilite;
     QPushButton *btnAideDecision;
-    QPushButton *btnStatistiquesArticle;
+    QSpacerItem *spacerArticlesRow2;
     QTableWidget *articleTable;
     QFrame *profilePanel;
     QVBoxLayout *verticalLayout_7;
@@ -534,33 +538,33 @@ public:
 "}\n"
 "\n"
 "/* Primary Action Buttons - Suppliers Module */\n"
-"QPushButton#btnAddFournisseur, QPushButton#btnEditFournisseur, QPushButton#btnDeleteFournisseur, QPushButton#btnExportFournisseur, QPushButton#btnStatsFournisseur, QPushButton#btnTriFournisseur, QPushButton#btnSmsFournisseur {\n"
+"QPushButton#btnAddFournisseur, QPushButton#btnEditFournisseur, QPushButton#btnDeleteFournisseur, QPushButton#btnExportFournisseur, QPushButton#btnStatsFournisseur, QPushButton#btnTriFournisseur, QPushButton#btnSmsFournisseur, QPushButton#btnQrFournisseur {\n"
 "    background-color: #8D6E63;\n"
 "    color: white;\n"
 "    border: none;\n"
 "    border-radius: 10px;\n"
-"    padding: 10px 20px;\n"
-"    font-family: Ari"
-                        "al, sans-serif;\n"
+"    padding: 10px "
+                        "20px;\n"
+"    font-family: Arial, sans-serif;\n"
 "    font-size: 12px;\n"
 "    font-weight: bold;\n"
 "    text-align: center;\n"
 "}\n"
 "\n"
-"QPushButton#btnAddFournisseur:hover, QPushButton#btnEditFournisseur:hover, QPushButton#btnDeleteFournisseur:hover, QPushButton#btnExportFournisseur:hover, QPushButton#btnStatsFournisseur:hover, QPushButton#btnTriFournisseur:hover, QPushButton#btnSmsFournisseur:hover {\n"
+"QPushButton#btnAddFournisseur:hover, QPushButton#btnEditFournisseur:hover, QPushButton#btnDeleteFournisseur:hover, QPushButton#btnExportFournisseur:hover, QPushButton#btnStatsFournisseur:hover, QPushButton#btnTriFournisseur:hover, QPushButton#btnSmsFournisseur:hover, QPushButton#btnQrFournisseur:hover {\n"
 "    background-color: #A0826D;\n"
 "    border: none;\n"
 "}\n"
 "\n"
-"QPushButton#btnAddFournisseur:pressed, QPushButton#btnEditFournisseur:pressed, QPushButton#btnDeleteFournisseur:pressed, QPushButton#btnExportFournisseur:pressed, QPushButton#btnStatsFournisseur:pressed, QPushButton#btnTriFournisseur:pressed, QPushButton#btnSmsFournisseur:pressed {\n"
+"QPushButton#btnAddFournisseur:pressed, QPushButton#btnEditFournisseur:pressed, QPushButton#btnDeleteFournisseur:pressed, QPushButton#btnExportFournisseur:pressed, QPushButton#btnStatsFournisseur:pressed, QPushButton#btnTriFournisseur:pressed, QPushButton#btnSmsFournisseur:pressed, QPushButton#btnQrFournisseur:pressed {\n"
 "    background-color: #6E473B;\n"
 "    border: none;\n"
 "    padding: 11px 20px 9px 20px;\n"
 "}\n"
 "\n"
 "/* Primary Action Buttons - Production Module */\n"
-"QPushButton#btnCreerProduction, QPushButton#btnModifierProduction, QPushButton#btnSupprimerProduction, QPushButton#btnFacturePro"
-                        "duction, QPushButton#btnExcelProduction, QPushButton#btnTrierProduction, QPushButton#btnStatistiquesProduction {\n"
+"QPushButton#btnCreerProd"
+                        "uction, QPushButton#btnModifierProduction, QPushButton#btnSupprimerProduction, QPushButton#btnFactureProduction, QPushButton#btnExcelProduction, QPushButton#btnTrierProduction, QPushButton#btnStatistiquesProduction {\n"
 "    background-color: #8D6E63;\n"
 "    color: white;\n"
 "    border: none;\n"
@@ -577,15 +581,15 @@ public:
 "    border: none;\n"
 "}\n"
 "\n"
-"QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:pressed, QPushButton#btnSupprimerProduction:pressed, QPushButton#btnFactureProduction:pressed, QPushButton#btnExcelProduction:pressed, QPushButton#btnTrierProduction:pressed, QPushButton#btnStatistiquesProduction"
-                        ":pressed {\n"
+"QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:pressed, QPushButton#btnSupprimerProduction:pressed, QPushButton#btnFactureProduction:pressed, QPushButton#b"
+                        "tnExcelProduction:pressed, QPushButton#btnTrierProduction:pressed, QPushButton#btnStatistiquesProduction:pressed {\n"
 "    background-color: #6E473B;\n"
 "    border: none;\n"
 "    padding: 11px 20px 9px 20px;\n"
 "}\n"
 "\n"
 "/* Primary Action Buttons - Articles Module */\n"
-"QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArticle, QPushButton#btnViewArticle, QPushButton#btnExportPdfArticle, QPushButton#btnAnalyseRentabilite, QPushButton#btnAideDecision, QPushButton#btnStatistiquesArticle, QPushButton#btnTriArticle {\n"
+"QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArticle, QPushButton#btnViewArticle, QPushButton#btnView3DArticle, QPushButton#btnExportPdfArticle, QPushButton#btnAnalyseRentabilite, QPushButton#btnAideDecision, QPushButton#btnStatistiquesArticle, QPushButton#btnTriArticle {\n"
 "    background-color: #8D6E63;\n"
 "    color: white;\n"
 "    border: none;\n"
@@ -597,13 +601,13 @@ public:
 "    text-align: center;\n"
 "}\n"
 "\n"
-"QPushButton#btnAddArticle:hover, QPushButton#btnEditArticle:hover, QPushButton#btnDeleteArticle:hover, QPushButton#btnViewArticle:hover, QPushButton#btnExportPdfArticle:hover, QPushButton#btnAnalyseRentabilite:hover, QPushButton#btnAideDecision:hover, QPushButton#btnStatistiquesArticle:hover, QPushButton#btn"
-                        "TriArticle:hover {\n"
+"QPushButton#btnAddArticle:hover, QPushButton#btnEditArticle:hover, QPushButton#btnDeleteArticle:hover, QPushButton#btnViewArticle:hover, QPushButton#btnView3DArticle:hover, QP"
+                        "ushButton#btnExportPdfArticle:hover, QPushButton#btnAnalyseRentabilite:hover, QPushButton#btnAideDecision:hover, QPushButton#btnStatistiquesArticle:hover, QPushButton#btnTriArticle:hover {\n"
 "    background-color: #A0826D;\n"
 "    border: none;\n"
 "}\n"
 "\n"
-"QPushButton#btnAddArticle:pressed, QPushButton#btnEditArticle:pressed, QPushButton#btnDeleteArticle:pressed, QPushButton#btnViewArticle:pressed, QPushButton#btnExportPdfArticle:pressed, QPushButton#btnAnalyseRentabilite:pressed, QPushButton#btnAideDecision:pressed, QPushButton#btnStatistiquesArticle:pressed, QPushButton#btnTriArticle:pressed {\n"
+"QPushButton#btnAddArticle:pressed, QPushButton#btnEditArticle:pressed, QPushButton#btnDeleteArticle:pressed, QPushButton#btnViewArticle:pressed, QPushButton#btnView3DArticle:pressed, QPushButton#btnExportPdfArticle:pressed, QPushButton#btnAnalyseRentabilite:pressed, QPushButton#btnAideDecision:pressed, QPushButton#btnStatistiquesArticle:pressed, QPushButton#btnTriArticle:pressed {\n"
 "    background-color: #6E473B;\n"
 "    border: none;\n"
 "    padding: 11px 20px 9px 20px;\n"
@@ -615,13 +619,13 @@ public:
 "    color: #291C0E;\n"
 "    border: 2px solid #A78D78;\n"
 "    border-radius: 6px;\n"
-"    padding: 8px;\n"
+"    padding:"
+                        " 8px;\n"
 "    font-family: Arial, sans-serif;\n"
 "    font-size: 11px;\n"
 "}\n"
 "\n"
-"#searchBox::placeholder, #searchBoxClient::placeholder, #searchBoxMatiere::placeholder, #searchBoxFournisseur::placeholder"
-                        ", #searchBoxProduction::placeholder, #searchBoxArticle::placeholder {\n"
+"#searchBox::placeholder, #searchBoxClient::placeholder, #searchBoxMatiere::placeholder, #searchBoxFournisseur::placeholder, #searchBoxProduction::placeholder, #searchBoxArticle::placeholder {\n"
 "    color: #A78D78;\n"
 "}\n"
 "\n"
@@ -646,12 +650,12 @@ public:
 "    margin: 2px 8px;\n"
 "    font-family: Arial, sans-serif;\n"
 "    font-size: 12px;\n"
-"    font-weight: bold;\n"
+"    font-weight:"
+                        " bold;\n"
 "}\n"
 "\n"
 "QPushButton#btnEmployees:hover, QPushButton#btnClients:hover, QPushButton#btnProducts:hover,\n"
-"QPushButton#btnRawMaterials:hover, QPushButton#btnSuppliers:hover, QPushButton#btnProduct"
-                        "ion:hover {\n"
+"QPushButton#btnRawMaterials:hover, QPushButton#btnSuppliers:hover, QPushButton#btnProduction:hover {\n"
 "    background-color: rgba(255, 255, 255, 0.2);\n"
 "    color: #FFFFFF;\n"
 "    border-left: 3px solid #FFFFFF;\n"
@@ -666,12 +670,12 @@ public:
 "/* Statistics Cards */\n"
 "#statsCard, #statsCard_2, #statsCard_3, #statsCardMatiere1, #statsCardMatiere2, #statsCardMatiere3, #statsCardFournisseur1, #statsCardFournisseur2, #statsCardFournisseur3, #statsCardArticle1, #statsCardArticle2, #statsCardArticle3, #statsCardProduction1, #statsCardProduction2, #statsCardProduction3, #statsCardProduction4 {\n"
 "    background-color: #FFF8F0;\n"
-"    border: 1px solid #BCAAA4;\n"
+""
+                        "    border: 1px solid #BCAAA4;\n"
 "    border-radius: 8px;\n"
 "}\n"
 "\n"
-"#statsLabel, #statsLabel_2, #statsLabel_3, #statsLabelMatiere1, #statsLabelMatiere2, #statsLabelMatiere3, #statsLabelFournisseur1, #s"
-                        "tatsLabelFournisseur2, #statsLabelFournisseur3, #statsLabelArticle1, #statsLabelArticle2, #statsLabelArticle3, #statsLabelProduction1, #statsLabelProduction2, #statsLabelProduction3, #statsLabelProduction4 {\n"
+"#statsLabel, #statsLabel_2, #statsLabel_3, #statsLabelMatiere1, #statsLabelMatiere2, #statsLabelMatiere3, #statsLabelFournisseur1, #statsLabelFournisseur2, #statsLabelFournisseur3, #statsLabelArticle1, #statsLabelArticle2, #statsLabelArticle3, #statsLabelProduction1, #statsLabelProduction2, #statsLabelProduction3, #statsLabelProduction4 {\n"
 "    color: #291C0E;\n"
 "    font-family: Arial, sans-serif;\n"
 "    font-size: 10px;\n"
@@ -685,7 +689,8 @@ public:
 "}\n"
 "\n"
 "/* Alert Card */\n"
-"#alertCardMatiere {\n"
+"#alert"
+                        "CardMatiere {\n"
 "    background-color: #FFF8F0;\n"
 "    border: 1px solid #BCAAA4;\n"
 "    border-radius: 8px;\n"
@@ -693,8 +698,7 @@ public:
 "\n"
 "#listTitle {\n"
 "    color: #291C0E;\n"
-"    font-family: 'Times New Roman', ser"
-                        "if;\n"
+"    font-family: 'Times New Roman', serif;\n"
 "    font-size: 22px;\n"
 "    font-weight: bold;\n"
 "}\n"
@@ -1523,6 +1527,12 @@ public:
 
         horizontalLayout_10->addWidget(btnSmsFournisseur);
 
+        btnQrFournisseur = new QPushButton(fournisseurButtonsWidget);
+        btnQrFournisseur->setObjectName("btnQrFournisseur");
+        btnQrFournisseur->setMinimumSize(QSize(100, 32));
+
+        horizontalLayout_10->addWidget(btnQrFournisseur);
+
 
         verticalLayout_15->addWidget(fournisseurButtonsWidget);
 
@@ -1872,75 +1882,84 @@ public:
 
         articlesToolbar = new QWidget(articlesPage);
         articlesToolbar->setObjectName("articlesToolbar");
-        articlesToolbar->setMinimumSize(QSize(0, 42));
-        articlesToolbar->setMaximumSize(QSize(16777215, 42));
-        horizontalLayout_articles = new QHBoxLayout(articlesToolbar);
-        horizontalLayout_articles->setSpacing(10);
-        horizontalLayout_articles->setObjectName("horizontalLayout_articles");
-        horizontalLayout_articles->setContentsMargins(0, 0, 0, 0);
+        articlesToolbar->setMinimumSize(QSize(0, 80));
+        articlesToolbar->setMaximumSize(QSize(16777215, 90));
+        verticalLayout_articlesToolbar = new QVBoxLayout(articlesToolbar);
+        verticalLayout_articlesToolbar->setSpacing(4);
+        verticalLayout_articlesToolbar->setObjectName("verticalLayout_articlesToolbar");
+        verticalLayout_articlesToolbar->setContentsMargins(0, 0, 0, 0);
+        articlesRow1 = new QHBoxLayout();
+        articlesRow1->setSpacing(6);
+        articlesRow1->setObjectName("articlesRow1");
         searchBoxArticle = new QLineEdit(articlesToolbar);
         searchBoxArticle->setObjectName("searchBoxArticle");
-        searchBoxArticle->setMinimumSize(QSize(300, 0));
+        searchBoxArticle->setMinimumSize(QSize(150, 0));
+        searchBoxArticle->setMaximumSize(QSize(250, 16777215));
 
-        horizontalLayout_articles->addWidget(searchBoxArticle);
-
-        horizontalSpacer_articles = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
-
-        horizontalLayout_articles->addItem(horizontalSpacer_articles);
+        articlesRow1->addWidget(searchBoxArticle);
 
         btnAddArticle = new QPushButton(articlesToolbar);
         btnAddArticle->setObjectName("btnAddArticle");
-        btnAddArticle->setMinimumSize(QSize(100, 32));
 
-        horizontalLayout_articles->addWidget(btnAddArticle);
+        articlesRow1->addWidget(btnAddArticle);
 
         btnEditArticle = new QPushButton(articlesToolbar);
         btnEditArticle->setObjectName("btnEditArticle");
-        btnEditArticle->setMinimumSize(QSize(100, 32));
 
-        horizontalLayout_articles->addWidget(btnEditArticle);
+        articlesRow1->addWidget(btnEditArticle);
 
         btnDeleteArticle = new QPushButton(articlesToolbar);
         btnDeleteArticle->setObjectName("btnDeleteArticle");
-        btnDeleteArticle->setMinimumSize(QSize(100, 32));
 
-        horizontalLayout_articles->addWidget(btnDeleteArticle);
+        articlesRow1->addWidget(btnDeleteArticle);
 
         btnViewArticle = new QPushButton(articlesToolbar);
         btnViewArticle->setObjectName("btnViewArticle");
-        btnViewArticle->setMinimumSize(QSize(100, 32));
 
-        horizontalLayout_articles->addWidget(btnViewArticle);
+        articlesRow1->addWidget(btnViewArticle);
+
+        btnView3DArticle = new QPushButton(articlesToolbar);
+        btnView3DArticle->setObjectName("btnView3DArticle");
+
+        articlesRow1->addWidget(btnView3DArticle);
+
+
+        verticalLayout_articlesToolbar->addLayout(articlesRow1);
+
+        articlesRow2 = new QHBoxLayout();
+        articlesRow2->setSpacing(6);
+        articlesRow2->setObjectName("articlesRow2");
+        btnTriArticle = new QPushButton(articlesToolbar);
+        btnTriArticle->setObjectName("btnTriArticle");
+
+        articlesRow2->addWidget(btnTriArticle);
 
         btnExportPdfArticle = new QPushButton(articlesToolbar);
         btnExportPdfArticle->setObjectName("btnExportPdfArticle");
-        btnExportPdfArticle->setMinimumSize(QSize(120, 32));
 
-        horizontalLayout_articles->addWidget(btnExportPdfArticle);
-
-        btnTriArticle = new QPushButton(articlesToolbar);
-        btnTriArticle->setObjectName("btnTriArticle");
-        btnTriArticle->setMinimumSize(QSize(85, 32));
-
-        horizontalLayout_articles->addWidget(btnTriArticle);
-
-        btnAnalyseRentabilite = new QPushButton(articlesToolbar);
-        btnAnalyseRentabilite->setObjectName("btnAnalyseRentabilite");
-        btnAnalyseRentabilite->setMinimumSize(QSize(160, 32));
-
-        horizontalLayout_articles->addWidget(btnAnalyseRentabilite);
-
-        btnAideDecision = new QPushButton(articlesToolbar);
-        btnAideDecision->setObjectName("btnAideDecision");
-        btnAideDecision->setMinimumSize(QSize(140, 32));
-
-        horizontalLayout_articles->addWidget(btnAideDecision);
+        articlesRow2->addWidget(btnExportPdfArticle);
 
         btnStatistiquesArticle = new QPushButton(articlesToolbar);
         btnStatistiquesArticle->setObjectName("btnStatistiquesArticle");
-        btnStatistiquesArticle->setMinimumSize(QSize(140, 32));
 
-        horizontalLayout_articles->addWidget(btnStatistiquesArticle);
+        articlesRow2->addWidget(btnStatistiquesArticle);
+
+        btnAnalyseRentabilite = new QPushButton(articlesToolbar);
+        btnAnalyseRentabilite->setObjectName("btnAnalyseRentabilite");
+
+        articlesRow2->addWidget(btnAnalyseRentabilite);
+
+        btnAideDecision = new QPushButton(articlesToolbar);
+        btnAideDecision->setObjectName("btnAideDecision");
+
+        articlesRow2->addWidget(btnAideDecision);
+
+        spacerArticlesRow2 = new QSpacerItem(40, 20, QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Minimum);
+
+        articlesRow2->addItem(spacerArticlesRow2);
+
+
+        verticalLayout_articlesToolbar->addLayout(articlesRow2);
 
 
         verticalLayout_articles->addWidget(articlesToolbar);
@@ -2297,6 +2316,7 @@ public:
         btnStatsFournisseur->setText(QCoreApplication::translate("MainWindow", "\342\230\206 Statistiques", nullptr));
         btnTriFournisseur->setText(QCoreApplication::translate("MainWindow", "\342\207\205 Trier", nullptr));
         btnSmsFournisseur->setText(QCoreApplication::translate("MainWindow", "\342\234\211 Envoyer SMS", nullptr));
+        btnQrFournisseur->setText(QCoreApplication::translate("MainWindow", "\342\254\233 Scan QR", nullptr));
         QTableWidgetItem *___qtablewidgetitem24 = fournisseurTable->horizontalHeaderItem(0);
         ___qtablewidgetitem24->setText(QCoreApplication::translate("MainWindow", "ID", nullptr));
         QTableWidgetItem *___qtablewidgetitem25 = fournisseurTable->horizontalHeaderItem(1);
@@ -2358,16 +2378,17 @@ public:
         statsValueArticle2->setText(QCoreApplication::translate("MainWindow", "0", nullptr));
         statsLabelArticle3->setText(QCoreApplication::translate("MainWindow", "En Production", nullptr));
         statsValueArticle3->setText(QCoreApplication::translate("MainWindow", "0", nullptr));
-        searchBoxArticle->setPlaceholderText(QCoreApplication::translate("MainWindow", "\342\214\225 Rechercher par r\303\251f\303\251rence, nom, cat\303\251gorie...", nullptr));
+        searchBoxArticle->setPlaceholderText(QCoreApplication::translate("MainWindow", "\342\214\225 Rechercher...", nullptr));
         btnAddArticle->setText(QCoreApplication::translate("MainWindow", "+ Ajouter", nullptr));
         btnEditArticle->setText(QCoreApplication::translate("MainWindow", "~ Modifier", nullptr));
         btnDeleteArticle->setText(QCoreApplication::translate("MainWindow", "\342\234\227 Supprimer", nullptr));
         btnViewArticle->setText(QCoreApplication::translate("MainWindow", "\342\227\216 Consulter", nullptr));
-        btnExportPdfArticle->setText(QCoreApplication::translate("MainWindow", "\342\226\244 Catalogue", nullptr));
+        btnView3DArticle->setText(QCoreApplication::translate("MainWindow", "\360\237\216\256 Vue 3D", nullptr));
         btnTriArticle->setText(QCoreApplication::translate("MainWindow", "\342\207\205 Trier", nullptr));
-        btnAnalyseRentabilite->setText(QCoreApplication::translate("MainWindow", "\342\212\225 Analyse Rentabilit\303\251", nullptr));
-        btnAideDecision->setText(QCoreApplication::translate("MainWindow", "\342\210\206 Aide D\303\251cision", nullptr));
+        btnExportPdfArticle->setText(QCoreApplication::translate("MainWindow", "\342\226\244 Catalogue PDF", nullptr));
         btnStatistiquesArticle->setText(QCoreApplication::translate("MainWindow", "\360\237\223\212 Statistiques", nullptr));
+        btnAnalyseRentabilite->setText(QCoreApplication::translate("MainWindow", "\342\212\225 Analyse Rentabilit\303\251", nullptr));
+        btnAideDecision->setText(QCoreApplication::translate("MainWindow", "\342\210\206 Aide D\303\251cision IA", nullptr));
         QTableWidgetItem *___qtablewidgetitem42 = articleTable->horizontalHeaderItem(0);
         ___qtablewidgetitem42->setText(QCoreApplication::translate("MainWindow", "ID", nullptr));
         QTableWidgetItem *___qtablewidgetitem43 = articleTable->horizontalHeaderItem(1);

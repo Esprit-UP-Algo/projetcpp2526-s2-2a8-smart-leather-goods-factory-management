@@ -1,4 +1,5 @@
 debug/aichatwidget.o
+debug/articleviewer3d.o
 debug/bilandialog.o
 debug/client.o
 debug/connection.o
@@ -13,6 +14,7 @@ debug/matieredialog.o
 debug/fournisseur.o
 debug/fournisseurdialog.o
 debug/smsfournisseurdialog.o
+debug/qrfournisseurdialog.o
 debug/production.o
 debug/productionview.o
 debug/article.o
@@ -21,6 +23,7 @@ debug/logindialog.o
 debug/notificationwidget.o
 debug/qrc_resources.o
 debug/moc_aichatwidget.o
+debug/moc_articleviewer3d.o
 debug/moc_bilandialog.o
 debug/moc_email.o
 debug/moc_mainwindow.o
@@ -29,6 +32,7 @@ debug/moc_clientmanagerdialog.o
 debug/moc_matieredialog.o
 debug/moc_fournisseurdialog.o
 debug/moc_smsfournisseurdialog.o
+debug/moc_qrfournisseurdialog.o
 debug/moc_productionview.o
 debug/moc_articledialog.o
 debug/moc_logindialog.o

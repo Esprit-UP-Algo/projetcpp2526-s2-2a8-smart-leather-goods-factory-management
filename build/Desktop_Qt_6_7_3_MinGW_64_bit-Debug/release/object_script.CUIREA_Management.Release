@@ -1,4 +1,5 @@
 release/aichatwidget.o
+release/articleviewer3d.o
 release/bilandialog.o
 release/client.o
 release/connection.o
@@ -13,6 +14,7 @@ release/matieredialog.o
 release/fournisseur.o
 release/fournisseurdialog.o
 release/smsfournisseurdialog.o
+release/qrfournisseurdialog.o
 release/production.o
 release/productionview.o
 release/article.o
@@ -21,6 +23,7 @@ release/logindialog.o
 release/notificationwidget.o
 release/qrc_resources.o
 release/moc_aichatwidget.o
+release/moc_articleviewer3d.o
 release/moc_bilandialog.o
 release/moc_email.o
 release/moc_mainwindow.o
@@ -29,6 +32,7 @@ release/moc_clientmanagerdialog.o
 release/moc_matieredialog.o
 release/moc_fournisseurdialog.o
 release/moc_smsfournisseurdialog.o
+release/moc_qrfournisseurdialog.o
 release/moc_productionview.o
 release/moc_articledialog.o
 release/moc_logindialog.o
