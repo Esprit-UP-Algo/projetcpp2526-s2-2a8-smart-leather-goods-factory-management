@@ -50,8 +50,17 @@ CREATE TABLE Articles (
     nom                VARCHAR2(100),
     categorie          VARCHAR2(100),
     type               VARCHAR2(50),
-    couleur            VARCHAR2(50),
-    dimension          VARCHAR2(50),
+
+    modele_3d          VARCHAR2(100),
+
+    couleur_r          NUMBER,
+    couleur_g          NUMBER,
+    couleur_b          NUMBER,
+
+    largeur            NUMBER,
+    hauteur            NUMBER,
+    profondeur         NUMBER,
+
     prix_unitaire      NUMBER(10,2),
     cout_fabrication   NUMBER(10,2),
     statut             VARCHAR2(50),
