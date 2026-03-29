@@ -33,6 +33,7 @@
 #include "matiere.h"
 #include "fournisseur.h"
 #include "article.h"
+#include "articleviewer3d.h"
 #include "aichatwidget.h"
 #include "notificationwidget.h"
 
@@ -137,6 +138,7 @@ private slots:
     void on_btnStatsFournisseur_clicked();
     void on_btnTriFournisseur_clicked();
     void on_btnSmsFournisseur_clicked();
+    void on_btnQrFournisseur_clicked();
     void on_searchBoxFournisseur_textChanged(const QString &text);
 
     // Articles
@@ -149,6 +151,7 @@ private slots:
     void on_btnStatistiquesArticle_clicked();
     void on_btnAnalyseRentabilite_clicked();
     void on_btnAideDecision_clicked();
+    void on_btnView3DArticle_clicked();
     void on_searchBoxArticle_textChanged(const QString &text);
 
 private:

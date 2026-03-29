@@ -12,6 +12,7 @@ TEMPLATE = app
 
 SOURCES += \
     aichatwidget.cpp \
+    articleviewer3d.cpp \
     bilandialog.cpp \
     client.cpp \
     connection.cpp \
@@ -26,6 +27,7 @@ SOURCES += \
     fournisseur.cpp \
     fournisseurdialog.cpp \
     smsfournisseurdialog.cpp \
+    qrfournisseurdialog.cpp \
     production.cpp \
     productionview.cpp \
     article.cpp \
@@ -35,6 +37,7 @@ SOURCES += \
 
 HEADERS += \
     aichatwidget.h \
+    articleviewer3d.h \
     bilandialog.h \
     email.h \
     envloader.h \
@@ -49,6 +52,7 @@ HEADERS += \
     fournisseur.h \
     fournisseurdialog.h \
     smsfournisseurdialog.h \
+    qrfournisseurdialog.h \
     production.h \
     productionview.h \
     article.h \

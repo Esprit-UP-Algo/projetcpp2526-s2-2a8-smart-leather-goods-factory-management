@@ -203,3 +203,31 @@ SELECT CATEGORIE,
 FROM REF_ARTICLES_MARCHE
 GROUP BY CATEGORIE
 ORDER BY CATEGORIE;
+
+-- ================================================================
+-- TABLE HISTORIQUE DES PRÉDICTIONS
+-- ================================================================
+CREATE TABLE HISTORIQUE_PREDICTIONS (
+    id_prediction    NUMBER PRIMARY KEY,
+    date_prediction  DATE DEFAULT SYSDATE,
+    categorie        VARCHAR2(100),
+    type_article     VARCHAR2(100),
+    couleur          VARCHAR2(50),
+    cout_fabrication NUMBER(10,2),
+    prix_predit      NUMBER(10,2),
+    marge_estimee    NUMBER(10,2),
+    segment          VARCHAR2(50),
+    niveau_confiance VARCHAR2(20)
+);
+
+CREATE SEQUENCE seq_predictions START WITH 1 INCREMENT BY 1;
+
+CREATE OR REPLACE TRIGGER trg_predictions_id
+BEFORE INSERT ON HISTORIQUE_PREDICTIONS
+FOR EACH ROW
+BEGIN
+    IF :NEW.ID_PREDICTION IS NULL THEN
+        SELECT seq_predictions.NEXTVAL INTO :NEW.ID_PREDICTION FROM DUAL;
+    END IF;
+END;
+/

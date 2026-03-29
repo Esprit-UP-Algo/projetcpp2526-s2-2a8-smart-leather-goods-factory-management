@@ -10,6 +10,8 @@ static QSqlQuery makeQuery() {
 // Constructeur par défaut
 Article::Article()
     : idArticle(0)
+    , couleurR(141), couleurG(110), couleurB(99)
+    , largeur(1.0), hauteur(1.0), profondeur(1.0)
     , prixUnitaire(0.0)
     , coutFabrication(0.0)
     , statut("disponible")
@@ -19,10 +21,13 @@ Article::Article()
 
 // Constructeur avec paramètres
 Article::Article(int id, const QString &ref, const QString &n, const QString &cat,
-                 const QString &t, const QString &c, const QString &dim,
+                 const QString &t, const QString &m3d,
+                 int r, int g, int b, double larg, double haut, double prof,
                  double prix, double cout, const QString &s, const QDate &date)
-    : idArticle(id), reference(ref), nom(n), categorie(cat), type(t),
-      couleur(c), dimensions(dim), prixUnitaire(prix), coutFabrication(cout),
+    : idArticle(id), reference(ref), nom(n), categorie(cat), type(t), modele3d(m3d),
+      couleurR(r), couleurG(g), couleurB(b),
+      largeur(larg), hauteur(haut), profondeur(prof),
+      prixUnitaire(prix), coutFabrication(cout),
       statut(s), dateCreation(date)
 {
 }
@@ -74,17 +79,25 @@ bool Article::ajouter()
     }
 
     QSqlQuery query = makeQuery();
-    query.prepare("INSERT INTO ARTICLES (ID_ARTICLE, REFERENCE, NOM, CATEGORIE, TYPE, COULEUR, "
-                  "DIMENSION, PRIX_UNITAIRE, COUT_FABRICATION, STATUT, DATE_CREATION) "
-                  "VALUES (:id, :ref, :nom, :cat, :type, :couleur, :dim, :prix, :cout, :statut, "
-                  "TO_DATE(:date, 'YYYY-MM-DD'))");
+    query.prepare("INSERT INTO ARTICLES (ID_ARTICLE, REFERENCE, NOM, CATEGORIE, TYPE, "
+                  "MODELE_3D, COULEUR_R, COULEUR_G, COULEUR_B, "
+                  "LARGEUR, HAUTEUR, PROFONDEUR, "
+                  "PRIX_UNITAIRE, COUT_FABRICATION, STATUT, DATE_CREATION) "
+                  "VALUES (:id, :ref, :nom, :cat, :type, "
+                  ":modele, :cr, :cg, :cb, :larg, :haut, :prof, "
+                  ":prix, :cout, :statut, TO_DATE(:date, 'YYYY-MM-DD'))");
     query.bindValue(":id",     idArticle);
     query.bindValue(":ref",    reference);
     query.bindValue(":nom",    nom);
     query.bindValue(":cat",    categorie);
     query.bindValue(":type",   type);
-    query.bindValue(":couleur",couleur);
-    query.bindValue(":dim",    dimensions);
+    query.bindValue(":modele", modele3d);
+    query.bindValue(":cr",     couleurR);
+    query.bindValue(":cg",     couleurG);
+    query.bindValue(":cb",     couleurB);
+    query.bindValue(":larg",   largeur);
+    query.bindValue(":haut",   hauteur);
+    query.bindValue(":prof",   profondeur);
     query.bindValue(":prix",   prixUnitaire);
     query.bindValue(":cout",   coutFabrication);
     query.bindValue(":statut", statut);
@@ -108,15 +121,22 @@ bool Article::modifier()
 
     QSqlQuery query = makeQuery();
     query.prepare("UPDATE ARTICLES SET REFERENCE=:ref, NOM=:nom, CATEGORIE=:cat, "
-                  "TYPE=:type, COULEUR=:couleur, DIMENSION=:dim, "
+                  "TYPE=:type, MODELE_3D=:modele, "
+                  "COULEUR_R=:cr, COULEUR_G=:cg, COULEUR_B=:cb, "
+                  "LARGEUR=:larg, HAUTEUR=:haut, PROFONDEUR=:prof, "
                   "PRIX_UNITAIRE=:prix, COUT_FABRICATION=:cout, STATUT=:statut "
                   "WHERE ID_ARTICLE=:id");
     query.bindValue(":ref",    reference);
     query.bindValue(":nom",    nom);
     query.bindValue(":cat",    categorie);
     query.bindValue(":type",   type);
-    query.bindValue(":couleur",couleur);
-    query.bindValue(":dim",    dimensions);
+    query.bindValue(":modele", modele3d);
+    query.bindValue(":cr",     couleurR);
+    query.bindValue(":cg",     couleurG);
+    query.bindValue(":cb",     couleurB);
+    query.bindValue(":larg",   largeur);
+    query.bindValue(":haut",   hauteur);
+    query.bindValue(":prof",   profondeur);
     query.bindValue(":prix",   prixUnitaire);
     query.bindValue(":cout",   coutFabrication);
     query.bindValue(":statut", statut);
@@ -146,18 +166,25 @@ static Article fromQuery(QSqlQuery &q) {
     a.setNom(q.value(2).toString());
     a.setCategorie(q.value(3).toString());
     a.setType(q.value(4).toString());
-    a.setCouleur(q.value(5).toString());
-    a.setDimensions(q.value(6).toString());
-    a.setPrixUnitaire(q.value(7).toDouble());
-    a.setCoutFabrication(q.value(8).toDouble());
-    a.setStatut(q.value(9).toString());
-    a.setDateCreation(q.value(10).toDate());
+    a.setModele3D(q.value(5).toString());
+    a.setCouleurR(q.value(6).toInt());
+    a.setCouleurG(q.value(7).toInt());
+    a.setCouleurB(q.value(8).toInt());
+    a.setLargeur(q.value(9).toDouble());
+    a.setHauteur(q.value(10).toDouble());
+    a.setProfondeur(q.value(11).toDouble());
+    a.setPrixUnitaire(q.value(12).toDouble());
+    a.setCoutFabrication(q.value(13).toDouble());
+    a.setStatut(q.value(14).toString());
+    a.setDateCreation(q.value(15).toDate());
     return a;
 }
 
 static const QString SELECT_COLS =
-    "SELECT ID_ARTICLE, REFERENCE, NOM, CATEGORIE, TYPE, COULEUR, "
-    "DIMENSION, PRIX_UNITAIRE, COUT_FABRICATION, STATUT, DATE_CREATION FROM ARTICLES ";
+    "SELECT ID_ARTICLE, REFERENCE, NOM, CATEGORIE, TYPE, "
+    "MODELE_3D, COULEUR_R, COULEUR_G, COULEUR_B, "
+    "LARGEUR, HAUTEUR, PROFONDEUR, "
+    "PRIX_UNITAIRE, COUT_FABRICATION, STATUT, DATE_CREATION FROM ARTICLES ";
 
 // AFFICHER tous
 QList<Article> Article::afficher()
@@ -407,4 +434,73 @@ Article::PredictionResult Article::predirePrixAvance(
         res.recommandation = "🚨 ATTENTION - coût trop élevé par rapport au marché";
 
     return res;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SAUVEGARDER UNE PRÉDICTION DANS L'HISTORIQUE
+// ═══════════════════════════════════════════════════════════════
+bool Article::sauvegarderPrediction(const PredictionResult &res, const QString &categorie,
+                                     const QString &type, const QString &couleur, double cout)
+{
+    QSqlQuery q = makeQuery();
+    q.prepare("INSERT INTO HISTORIQUE_PREDICTIONS "
+              "(CATEGORIE, TYPE_ARTICLE, COULEUR, COUT_FABRICATION, "
+              "PRIX_PREDIT, MARGE_ESTIMEE, SEGMENT, NIVEAU_CONFIANCE) "
+              "VALUES (:cat, :type, :col, :cout, :prix, :marge, :seg, :conf)");
+    q.bindValue(":cat",  categorie);
+    q.bindValue(":type", type);
+    q.bindValue(":col",  couleur);
+    q.bindValue(":cout", cout);
+    q.bindValue(":prix", res.prixPredit);
+    q.bindValue(":marge",res.margeEstimee);
+    QString seg = res.margeEstimee>=150?"LUXE":res.margeEstimee>=80?"PREMIUM":
+                  res.margeEstimee>=40?"STANDARD":"ENTRÉE DE GAMME";
+    q.bindValue(":seg",  seg);
+    q.bindValue(":conf", res.niveauConfiance);
+    if (!q.exec()) { qDebug() << "❌ Erreur sauvegarde prédiction:" << q.lastError().text(); return false; }
+    qDebug() << "✅ Prédiction sauvegardée";
+    return true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OPTIMISATION DU COÛT : coût max pour atteindre une marge cible
+// Résout : prixPredit(cout) = cout * (1 + margeObjectif/100)
+// Par dichotomie sur l'intervalle [1, 500]
+// ═══════════════════════════════════════════════════════════════
+double Article::optimiserCout(const QString &categorie, const QString &type,
+                               const QString &couleur, double margeObjectif)
+{
+    double lo = 1.0, hi = 500.0;
+    for (int i = 0; i < 50; ++i) {  // 50 itérations = précision < 0.001 DT
+        double mid = (lo + hi) / 2.0;
+        auto res = predirePrixAvance(categorie, type, couleur, mid);
+        double margeObtenue = res.margeEstimee;
+        if (margeObtenue > margeObjectif) lo = mid;
+        else hi = mid;
+    }
+    return (lo + hi) / 2.0;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MATRICE DE DÉCISION : ratio moyen prix/coût par catégorie × couleur
+// ═══════════════════════════════════════════════════════════════
+QMap<QString, QMap<QString,double>> Article::matriceDecision()
+{
+    QMap<QString, QMap<QString,double>> matrice;
+    QSqlQuery q = makeQuery();
+    q.prepare("SELECT CATEGORIE, COULEUR, "
+              "AVG(PRIX_UNITAIRE / NULLIF(COUT_FABRICATION,0)) AS RATIO "
+              "FROM REF_ARTICLES_MARCHE "
+              "WHERE COUT_FABRICATION > 0 "
+              "GROUP BY CATEGORIE, COULEUR "
+              "ORDER BY CATEGORIE, COULEUR");
+    if (q.exec()) {
+        while (q.next()) {
+            QString cat = q.value(0).toString();
+            QString col = q.value(1).toString();
+            double ratio = q.value(2).toDouble();
+            matrice[cat][col] = ratio;
+        }
+    }
+    return matrice;
 }

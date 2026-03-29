@@ -13,7 +13,8 @@ public:
     // Constructeurs
     Article();
     Article(int id, const QString &ref, const QString &nom, const QString &cat,
-            const QString &type, const QString &couleur, const QString &dim,
+            const QString &type, const QString &modele3d,
+            int r, int g, int b, double larg, double haut, double prof,
             double prix, double cout, const QString &statut, const QDate &date);
     
     // Getters
@@ -22,8 +23,13 @@ public:
     QString getNom() const { return nom; }
     QString getCategorie() const { return categorie; }
     QString getType() const { return type; }
-    QString getCouleur() const { return couleur; }
-    QString getDimensions() const { return dimensions; }
+    QString getModele3D() const { return modele3d; }
+    int getCouleurR() const { return couleurR; }
+    int getCouleurG() const { return couleurG; }
+    int getCouleurB() const { return couleurB; }
+    double getLargeur() const { return largeur; }
+    double getHauteur() const { return hauteur; }
+    double getProfondeur() const { return profondeur; }
     double getPrixUnitaire() const { return prixUnitaire; }
     double getCoutFabrication() const { return coutFabrication; }
     QString getStatut() const { return statut; }
@@ -35,12 +41,21 @@ public:
     void setNom(const QString &n) { nom = n; }
     void setCategorie(const QString &cat) { categorie = cat; }
     void setType(const QString &t) { type = t; }
-    void setCouleur(const QString &c) { couleur = c; }
-    void setDimensions(const QString &dim) { dimensions = dim; }
+    void setModele3D(const QString &m) { modele3d = m; }
+    void setCouleurR(int r) { couleurR = r; }
+    void setCouleurG(int g) { couleurG = g; }
+    void setCouleurB(int b) { couleurB = b; }
+    void setLargeur(double l) { largeur = l; }
+    void setHauteur(double h) { hauteur = h; }
+    void setProfondeur(double p) { profondeur = p; }
     void setPrixUnitaire(double prix) { prixUnitaire = prix; }
     void setCoutFabrication(double cout) { coutFabrication = cout; }
     void setStatut(const QString &s) { statut = s; }
     void setDateCreation(const QDate &date) { dateCreation = date; }
+    
+    // Helpers couleur/dimensions
+    QString getCouleur() const { return QString("rgb(%1,%2,%3)").arg(couleurR).arg(couleurG).arg(couleurB); }
+    QString getDimensions() const { return QString("%1x%2x%3").arg(largeur).arg(hauteur).arg(profondeur); }
     
     // Méthodes CRUD (Modèle) - Requêtes préparées
     bool ajouter();
@@ -79,6 +94,11 @@ public:
     };
     static PredictionResult predirePrixAvance(const QString &categorie, const QString &type,
                                                const QString &couleur, double coutFabrication);
+    static bool sauvegarderPrediction(const PredictionResult &res, const QString &categorie,
+                                       const QString &type, const QString &couleur, double cout);
+    static double optimiserCout(const QString &categorie, const QString &type,
+                                 const QString &couleur, double margeObjectif);
+    static QMap<QString, QMap<QString,double>> matriceDecision();
 
 private:
     int idArticle;
@@ -86,8 +106,9 @@ private:
     QString nom;
     QString categorie;
     QString type;
-    QString couleur;
-    QString dimensions;
+    QString modele3d;
+    int couleurR, couleurG, couleurB;
+    double largeur, hauteur, profondeur;
     double prixUnitaire;
     double coutFabrication;
     QString statut;

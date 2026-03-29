@@ -276,7 +276,7 @@ QPushButton#btnAddMatiere:pressed, QPushButton#btnEditMatiere:pressed, QPushButt
 }
 
 /* Primary Action Buttons - Suppliers Module */
-QPushButton#btnAddFournisseur, QPushButton#btnEditFournisseur, QPushButton#btnDeleteFournisseur, QPushButton#btnExportFournisseur, QPushButton#btnStatsFournisseur, QPushButton#btnTriFournisseur, QPushButton#btnSmsFournisseur {
+QPushButton#btnAddFournisseur, QPushButton#btnEditFournisseur, QPushButton#btnDeleteFournisseur, QPushButton#btnExportFournisseur, QPushButton#btnStatsFournisseur, QPushButton#btnTriFournisseur, QPushButton#btnSmsFournisseur, QPushButton#btnQrFournisseur {
     background-color: #8D6E63;
     color: white;
     border: none;
@@ -288,12 +288,12 @@ QPushButton#btnAddFournisseur, QPushButton#btnEditFournisseur, QPushButton#btnDe
     text-align: center;
 }
 
-QPushButton#btnAddFournisseur:hover, QPushButton#btnEditFournisseur:hover, QPushButton#btnDeleteFournisseur:hover, QPushButton#btnExportFournisseur:hover, QPushButton#btnStatsFournisseur:hover, QPushButton#btnTriFournisseur:hover, QPushButton#btnSmsFournisseur:hover {
+QPushButton#btnAddFournisseur:hover, QPushButton#btnEditFournisseur:hover, QPushButton#btnDeleteFournisseur:hover, QPushButton#btnExportFournisseur:hover, QPushButton#btnStatsFournisseur:hover, QPushButton#btnTriFournisseur:hover, QPushButton#btnSmsFournisseur:hover, QPushButton#btnQrFournisseur:hover {
     background-color: #A0826D;
     border: none;
 }
 
-QPushButton#btnAddFournisseur:pressed, QPushButton#btnEditFournisseur:pressed, QPushButton#btnDeleteFournisseur:pressed, QPushButton#btnExportFournisseur:pressed, QPushButton#btnStatsFournisseur:pressed, QPushButton#btnTriFournisseur:pressed, QPushButton#btnSmsFournisseur:pressed {
+QPushButton#btnAddFournisseur:pressed, QPushButton#btnEditFournisseur:pressed, QPushButton#btnDeleteFournisseur:pressed, QPushButton#btnExportFournisseur:pressed, QPushButton#btnStatsFournisseur:pressed, QPushButton#btnTriFournisseur:pressed, QPushButton#btnSmsFournisseur:pressed, QPushButton#btnQrFournisseur:pressed {
     background-color: #6E473B;
     border: none;
     padding: 11px 20px 9px 20px;
@@ -324,7 +324,7 @@ QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:presse
 }
 
 /* Primary Action Buttons - Articles Module */
-QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArticle, QPushButton#btnViewArticle, QPushButton#btnExportPdfArticle, QPushButton#btnAnalyseRentabilite, QPushButton#btnAideDecision, QPushButton#btnStatistiquesArticle, QPushButton#btnTriArticle {
+QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArticle, QPushButton#btnViewArticle, QPushButton#btnView3DArticle, QPushButton#btnExportPdfArticle, QPushButton#btnAnalyseRentabilite, QPushButton#btnAideDecision, QPushButton#btnStatistiquesArticle, QPushButton#btnTriArticle {
     background-color: #8D6E63;
     color: white;
     border: none;
@@ -336,12 +336,12 @@ QPushButton#btnAddArticle, QPushButton#btnEditArticle, QPushButton#btnDeleteArti
     text-align: center;
 }
 
-QPushButton#btnAddArticle:hover, QPushButton#btnEditArticle:hover, QPushButton#btnDeleteArticle:hover, QPushButton#btnViewArticle:hover, QPushButton#btnExportPdfArticle:hover, QPushButton#btnAnalyseRentabilite:hover, QPushButton#btnAideDecision:hover, QPushButton#btnStatistiquesArticle:hover, QPushButton#btnTriArticle:hover {
+QPushButton#btnAddArticle:hover, QPushButton#btnEditArticle:hover, QPushButton#btnDeleteArticle:hover, QPushButton#btnViewArticle:hover, QPushButton#btnView3DArticle:hover, QPushButton#btnExportPdfArticle:hover, QPushButton#btnAnalyseRentabilite:hover, QPushButton#btnAideDecision:hover, QPushButton#btnStatistiquesArticle:hover, QPushButton#btnTriArticle:hover {
     background-color: #A0826D;
     border: none;
 }
 
-QPushButton#btnAddArticle:pressed, QPushButton#btnEditArticle:pressed, QPushButton#btnDeleteArticle:pressed, QPushButton#btnViewArticle:pressed, QPushButton#btnExportPdfArticle:pressed, QPushButton#btnAnalyseRentabilite:pressed, QPushButton#btnAideDecision:pressed, QPushButton#btnStatistiquesArticle:pressed, QPushButton#btnTriArticle:pressed {
+QPushButton#btnAddArticle:pressed, QPushButton#btnEditArticle:pressed, QPushButton#btnDeleteArticle:pressed, QPushButton#btnViewArticle:pressed, QPushButton#btnView3DArticle:pressed, QPushButton#btnExportPdfArticle:pressed, QPushButton#btnAnalyseRentabilite:pressed, QPushButton#btnAideDecision:pressed, QPushButton#btnStatistiquesArticle:pressed, QPushButton#btnTriArticle:pressed {
     background-color: #6E473B;
     border: none;
     padding: 11px 20px 9px 20px;
@@ -2139,6 +2139,19 @@ QPushButton:hover {
                    </property>
                   </widget>
                  </item>
+                 <item>
+                  <widget class="QPushButton" name="btnQrFournisseur">
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>32</height>
+                    </size>
+                   </property>
+                   <property name="text">
+                    <string>⬛ Scan QR</string>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
                </widget>
               </item>
@@ -2815,18 +2828,18 @@ QPushButton:hover {
                 <property name="minimumSize">
                  <size>
                   <width>0</width>
-                  <height>42</height>
+                  <height>80</height>
                  </size>
                 </property>
                 <property name="maximumSize">
                  <size>
                   <width>16777215</width>
-                  <height>42</height>
+                  <height>90</height>
                  </size>
                 </property>
-                <layout class="QHBoxLayout" name="horizontalLayout_articles">
+                <layout class="QVBoxLayout" name="verticalLayout_articlesToolbar">
                  <property name="spacing">
-                  <number>10</number>
+                  <number>4</number>
                  </property>
                  <property name="leftMargin">
                   <number>0</number>
@@ -2841,147 +2854,120 @@ QPushButton:hover {
                   <number>0</number>
                  </property>
                  <item>
-                  <widget class="QLineEdit" name="searchBoxArticle">
-                   <property name="minimumSize">
-                    <size>
-                     <width>300</width>
-                     <height>0</height>
-                    </size>
+                  <layout class="QHBoxLayout" name="articlesRow1">
+                   <property name="spacing">
+                    <number>6</number>
                    </property>
-                   <property name="placeholderText">
-                    <string>⌕ Rechercher par référence, nom, catégorie...</string>
-                   </property>
-                  </widget>
+                   <item>
+                    <widget class="QLineEdit" name="searchBoxArticle">
+                     <property name="minimumSize">
+                      <size>
+                       <width>150</width>
+                       <height>0</height>
+                      </size>
+                     </property>
+                     <property name="maximumSize">
+                      <size>
+                       <width>250</width>
+                       <height>16777215</height>
+                      </size>
+                     </property>
+                     <property name="placeholderText">
+                      <string>⌕ Rechercher...</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="btnAddArticle">
+                     <property name="text">
+                      <string>+ Ajouter</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="btnEditArticle">
+                     <property name="text">
+                      <string>~ Modifier</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="btnDeleteArticle">
+                     <property name="text">
+                      <string>✗ Supprimer</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="btnViewArticle">
+                     <property name="text">
+                      <string>◎ Consulter</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="btnView3DArticle">
+                     <property name="text">
+                      <string>🎮 Vue 3D</string>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
                  </item>
                  <item>
-                  <spacer name="horizontalSpacer_articles">
-                   <property name="orientation">
-                    <enum>Qt::Orientation::Horizontal</enum>
+                  <layout class="QHBoxLayout" name="articlesRow2">
+                   <property name="spacing">
+                    <number>6</number>
                    </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnAddArticle">
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>+ Ajouter</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnEditArticle">
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>~ Modifier</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnDeleteArticle">
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>✗ Supprimer</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnViewArticle">
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>◎ Consulter</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnExportPdfArticle">
-                   <property name="minimumSize">
-                    <size>
-                     <width>120</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>▤ Catalogue</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnTriArticle">
-                   <property name="minimumSize">
-                    <size>
-                     <width>85</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>⇅ Trier</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnAnalyseRentabilite">
-                   <property name="minimumSize">
-                    <size>
-                     <width>160</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>⊕ Analyse Rentabilité</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnAideDecision">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>∆ Aide Décision</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnStatistiquesArticle">
-                   <property name="minimumSize">
-                    <size>
-                     <width>140</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>📊 Statistiques</string>
-                   </property>
-                  </widget>
+                   <item>
+                    <widget class="QPushButton" name="btnTriArticle">
+                     <property name="text">
+                      <string>⇅ Trier</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="btnExportPdfArticle">
+                     <property name="text">
+                      <string>▤ Catalogue PDF</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="btnStatistiquesArticle">
+                     <property name="text">
+                      <string>📊 Statistiques</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="btnAnalyseRentabilite">
+                     <property name="text">
+                      <string>⊕ Analyse Rentabilité</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPushButton" name="btnAideDecision">
+                     <property name="text">
+                      <string>∆ Aide Décision IA</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <spacer name="spacerArticlesRow2">
+                     <property name="orientation">
+                      <enum>Qt::Orientation::Horizontal</enum>
+                     </property>
+                     <property name="sizeHint" stdset="0">
+                      <size>
+                       <width>40</width>
+                       <height>20</height>
+                      </size>
+                     </property>
+                    </spacer>
+                   </item>
+                  </layout>
                  </item>
                 </layout>
                </widget>
