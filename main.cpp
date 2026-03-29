@@ -17,7 +17,9 @@ int main(int argc, char *argv[])
     if (!QFile::exists(envPath))
         envPath = QCoreApplication::applicationDirPath() + "/../../.env";
     if (!QFile::exists(envPath))
-        envPath = QCoreApplication::applicationDirPath() + "/../../../integration_fournisseur2/.env";
+        envPath = QCoreApplication::applicationDirPath() + "/../../../.env";
+    if (!QFile::exists(envPath))
+        envPath = QCoreApplication::applicationDirPath() + "/../../../../.env";
     if (!QFile::exists(envPath))
         envPath = ".env";
     qDebug() << "Loading .env from:" << envPath << "exists:" << QFile::exists(envPath);

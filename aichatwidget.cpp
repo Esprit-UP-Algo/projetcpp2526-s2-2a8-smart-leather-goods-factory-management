@@ -4,16 +4,24 @@
 #include <QUrl>
 #include <QScrollBar>
 
-// ─────────────────────────────────────────────────────────────────────────────
 AIChatWidget::AIChatWidget(QWidget *parent)
     : QWidget(parent), m_visible(false)
 {
-    // Initialiser le gestionnaire réseau et connecter le signal de réponse
     m_network = new QNetworkAccessManager(this);
     connect(m_network, &QNetworkAccessManager::finished, this, &AIChatWidget::onReplyFinished);
 
+    m_voiceTimer = new QTimer(this);
+    m_voiceTimer->setInterval(200); // poll toutes les 200ms
+    connect(m_voiceTimer, &QTimer::timeout, this, &AIChatWidget::checkVoiceResult);
+
     setupUI();
-    hide(); // Le panneau est masqué par défaut, toggleChat() l'affiche
+    initSAPI();
+    hide();
+}
+
+AIChatWidget::~AIChatWidget()
+{
+    stopSAPI();
 }
 
 // ── Construction de l'interface ───────────────────────────────────────────────
@@ -81,11 +89,25 @@ void AIChatWidget::setupUI()
         "QPushButton { background: #89b4fa; color: #1e1e2e; border-radius: 8px; "
         "border: none; font-size: 16px; font-weight: bold; }"
         "QPushButton:hover { background: #74c7ec; }"
-        "QPushButton:disabled { background: #45475a; }" // Grisé pendant l'attente
+        "QPushButton:disabled { background: #45475a; }"
     );
     connect(m_sendBtn, &QPushButton::clicked, this, &AIChatWidget::sendMessage);
 
+    // Bouton micro
+    m_voiceBtn = new QPushButton("🎤");
+    m_voiceBtn->setFixedSize(38, 38);
+    m_voiceBtn->setToolTip("Parler à l'assistant");
+    m_voiceBtn->setStyleSheet(
+        "QPushButton { background: #a6e3a1; color: #1e1e2e; border-radius: 8px; "
+        "border: none; font-size: 16px; }"
+        "QPushButton:hover { background: #94e2d5; }"
+        "QPushButton:checked { background: #f38ba8; }"
+    );
+    m_voiceBtn->setCheckable(true);
+    connect(m_voiceBtn, &QPushButton::clicked, this, &AIChatWidget::toggleVoice);
+
     inputRow->addWidget(m_inputField);
+    inputRow->addWidget(m_voiceBtn);
     inputRow->addWidget(m_sendBtn);
     layout->addLayout(inputRow);
 
@@ -228,4 +250,83 @@ void AIChatWidget::onReplyFinished(QNetworkReply *reply)
     }
 
     reply->deleteLater(); // Libérer la mémoire de la réponse
+}
+
+// ── Initialisation SAPI ───────────────────────────────────────────────────────
+void AIChatWidget::initSAPI()
+{
+    // Vérifier que PowerShell est disponible (requis pour la reconnaissance vocale)
+    QProcess test;
+    test.start("powershell", {"-Command", "echo ok"});
+    test.waitForFinished(2000);
+    if (test.exitCode() != 0) {
+        m_voiceBtn->setEnabled(false);
+        m_voiceBtn->setToolTip("PowerShell non disponible");
+    }
+}
+
+void AIChatWidget::stopSAPI()
+{
+    m_voiceTimer->stop();
+    if (m_voiceProcess) {
+        m_voiceProcess->kill();
+        m_voiceProcess->waitForFinished(1000);
+        delete m_voiceProcess;
+        m_voiceProcess = nullptr;
+    }
+}
+
+// ── Bascule écoute vocale ─────────────────────────────────────────────────────
+void AIChatWidget::toggleVoice()
+{
+    if (!m_listening) {
+        // Démarrer l'écoute via PowerShell + System.Speech
+        m_listening = true;
+        m_voiceBtn->setChecked(true);
+        m_statusLabel->setText("🎤 Écoute en cours...");
+
+        // Script PowerShell inline : écoute 6 secondes et retourne le texte reconnu
+        QString script =
+            "Add-Type -AssemblyName System.Speech;"
+            "$r = New-Object System.Speech.Recognition.SpeechRecognitionEngine;"
+            "$r.SetInputToDefaultAudioDevice();"
+            "$g = New-Object System.Speech.Recognition.DictationGrammar;"
+            "$r.LoadGrammar($g);"
+            "$res = $r.Recognize([TimeSpan]::FromSeconds(6));"
+            "if ($res) { Write-Output $res.Text } else { Write-Output '' }";
+
+        m_voiceProcess = new QProcess(this);
+        connect(m_voiceProcess, QOverload<int,QProcess::ExitStatus>::of(&QProcess::finished),
+                this, &AIChatWidget::checkVoiceResult);
+        m_voiceProcess->start("powershell", {"-NoProfile", "-Command", script});
+
+    } else {
+        // Annuler l'écoute
+        stopSAPI();
+        m_listening = false;
+        m_voiceBtn->setChecked(false);
+        m_statusLabel->setText("");
+    }
+}
+
+// ── Récupération du résultat vocal ───────────────────────────────────────────
+void AIChatWidget::checkVoiceResult()
+{
+    m_listening = false;
+    m_voiceBtn->setChecked(false);
+    m_statusLabel->setText("");
+
+    if (!m_voiceProcess) return;
+
+    QString recognized = QString::fromUtf8(m_voiceProcess->readAllStandardOutput()).trimmed();
+    m_voiceProcess->deleteLater();
+    m_voiceProcess = nullptr;
+
+    if (!recognized.isEmpty()) {
+        m_inputField->setText(recognized);
+        sendMessage();
+    } else {
+        m_statusLabel->setText("⚠ Rien compris, réessayez.");
+        QTimer::singleShot(2000, this, [this]{ m_statusLabel->setText(""); });
+    }
 }
