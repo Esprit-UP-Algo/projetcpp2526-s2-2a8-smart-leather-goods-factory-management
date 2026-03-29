@@ -916,7 +916,7 @@ void MainWindow::on_btntrie_clicked()
     menu->exec(ui->btntrie->mapToGlobal(QPoint(0, ui->btntrie->height())));
 }
 //-------------------------------------------------------------------------------------------------
-//btn stat
+//btn statclient
 //-------------------------------------------------------------------------------------------------
 
 
@@ -925,52 +925,138 @@ void MainWindow::on_btnStatsByRegion_clicked()
     Client c;
     QMap<QString, int> stats = c.statistiquesParVille();
 
-    // ===== PIE CHART =====
-    QPieSeries *series = new QPieSeries();
+    if(stats.isEmpty())
+        return;
+
+    // ===== PREP DATA =====
+    QList<QPair<QString,int>> list;
+    int total = 0;
 
     for(auto it = stats.begin(); it != stats.end(); ++it)
     {
-        QPieSlice *slice = series->append(it.key(), it.value());
-
-        // 🎨 nice color palette (not random trash)
-        slice->setBrush(QColor::fromHsv(QRandomGenerator::global()->bounded(360), 180, 230));
-
-        // ✨ hover effect
-        QObject::connect(slice, &QPieSlice::hovered, [=](bool state){
-            slice->setExploded(state);
-            slice->setLabelVisible(state);
-        });
-
-        // 📊 label with percentage
-        slice->setLabel(QString("%1 (%2%)")
-            .arg(it.key())
-            .arg(slice->percentage() * 100, 0, 'f', 1));
+        list.append(qMakePair(it.key(), it.value()));
+        total += it.value();
     }
 
-    series->setLabelsVisible(true);
-    series->setLabelsPosition(QPieSlice::LabelOutside);
+    std::sort(list.begin(), list.end(), [](auto a, auto b){
+        return a.second > b.second;
+    });
 
-    // ===== CHART =====
-    QChart *chart = new QChart();
-    chart->addSeries(series);
-    chart->setTitle("Clients par ville");
-    chart->setTitleFont(QFont("Arial", 14, QFont::Bold));
+    // ===== PIE =====
+    QPieSeries *pieSeries = new QPieSeries();
 
-    // ✨ animation (MAIN FEATURE)
-    chart->setAnimationOptions(QChart::AllAnimations);
+    int limit = 5, others = 0;
 
-    // 🎨 theme
-    chart->setTheme(QChart::ChartThemeLight);
-    chart->legend()->setAlignment(Qt::AlignRight);
+    for(int i = 0; i < list.size(); i++)
+    {
+        if(i < limit)
+            pieSeries->append(list[i].first, list[i].second);
+        else
+            others += list[i].second;
+    }
 
-    // ===== VIEW =====
-    QChartView *chartView = new QChartView(chart);
-    chartView->setRenderHint(QPainter::Antialiasing);
+    if(others > 0)
+        pieSeries->append("Others", others);
 
-    chartView->resize(700, 450);
-    chartView->show();
+    QList<QColor> colors = {
+        QColor("#4CAF50"), QColor("#2196F3"), QColor("#FF9800"),
+        QColor("#E91E63"), QColor("#9C27B0"), QColor("#009688")
+    };
+
+    int i = 0;
+    for(QPieSlice *slice : pieSeries->slices())
+    {
+        slice->setBrush(colors[i % colors.size()]);
+        i++;
+    }
+
+    for(QPieSlice *slice : pieSeries->slices())
+    {
+        slice->setLabel(QString("%1 (%2%)")
+            .arg(slice->label())
+            .arg(slice->percentage()*100, 0, 'f', 1));
+    }
+
+    pieSeries->setLabelsVisible(true);
+    pieSeries->setLabelsPosition(QPieSlice::LabelOutside);
+
+    // ===== PIE CHART =====
+    QChart *pieChart = new QChart();
+    pieChart->addSeries(pieSeries);
+
+    // 🔥 restore nice title style
+    pieChart->setTitle(QString("Clients par ville (Total: %1)").arg(total));
+    pieChart->setTitleFont(QFont("Arial", 14, QFont::Bold));
+
+    pieChart->setAnimationOptions(QChart::AllAnimations);
+    pieChart->legend()->setAlignment(Qt::AlignRight);
+
+    QChartView *pieView = new QChartView(pieChart);
+    pieView->setRenderHint(QPainter::Antialiasing);
+
+    // ===== BAR (STICKS) =====
+    QBarSeries *barSeries = new QBarSeries();
+    QBarSet *set = new QBarSet("Clients");
+
+    *set << 0; // initial empty
+    barSeries->append(set);
+
+    QChart *barChart = new QChart();
+    barChart->addSeries(barSeries);
+    barChart->setTitle("Détails de la région");
+    barChart->setTitleFont(QFont("Arial", 13, QFont::Bold));
+
+    barChart->createDefaultAxes();
+    barChart->axes(Qt::Vertical).first()->setLabelsColor(Qt::black);
+    barChart->axes(Qt::Horizontal).first()->setLabelsColor(Qt::black);
+
+    QChartView *barView = new QChartView(barChart);
+    barView->setMinimumWidth(300);
+    barView->setRenderHint(QPainter::Antialiasing);
+
+    // ===== HOVER INTERACTION =====
+    for(QPieSlice *slice : pieSeries->slices())
+    {
+        QObject::connect(slice, &QPieSlice::hovered, [=](bool state){
+            slice->setExploded(state);
+
+            if(state)
+            {
+                int value = slice->value();
+
+                // Clear old data
+                set->remove(0, set->count());
+                *set << value;
+
+                // Update X label (no recreation spam)
+                QStringList categories;
+                categories << slice->label();
+
+                QBarCategoryAxis *axisX = qobject_cast<QBarCategoryAxis*>(barChart->axes(Qt::Horizontal).first());
+                axisX->clear();
+                axisX->append(categories);
+
+                // ✅ FIX Y AXIS RANGE
+                QValueAxis *axisY = qobject_cast<QValueAxis*>(barChart->axes(Qt::Vertical).first());
+                axisY->setRange(0, value + 1);
+
+                // ✅ SHOW VALUE ON TOP OF BAR
+                set->setLabel(QString::number(value));
+            }
+        });
+    }
+
+    // ===== MAIN WINDOW =====
+    QWidget *window = new QWidget;
+    QHBoxLayout *layout = new QHBoxLayout(window);
+
+    layout->addWidget(pieView, 3);
+    layout->addWidget(barView, 2);
+
+    window->setWindowTitle("Statistiques des clients");
+    window->resize(1000, 500);
+    window->show();
 }
-
 
 void MainWindow::on_btnFidelityClassification_clicked() {}
 void MainWindow::on_btnAIAgent_clicked() {}

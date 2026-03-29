@@ -1,4 +1,5 @@
 #include "clientmanagerdialog.h"
+#include "qsqlquery.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -223,34 +224,6 @@ void ClientManagerDialog::setClientData(const QString &nom, const QString &preno
 // getClient — construit et retourne le Client depuis le form
 // ============================================================
 
-Client ClientManagerDialog::getClient() const
-{
-    Client c;
-
-    // En mode Edit, on restaure l'id pour que modifier() cible le bon enregistrement
-    if (mode == EditMode && editingId > 0)
-        c.setId_client(editingId);
-
-    if (nomEdit)     c.setNom(nomEdit->text().trimmed());
-    if (prenomEdit)  c.setPrenom(prenomEdit->text().trimmed());
-    if (sexeCombo)   c.setSexe(sexeCombo->currentText());
-    if (cinEdit)     c.setCin(cinEdit->text().trimmed());
-    if (paysEdit)    c.setPays(paysEdit->text().trimmed());
-    if (villeEdit)   c.setVille(villeEdit->text().trimmed());
-    if (adresseEdit) c.setAdresse(adresseEdit->text().trimmed());
-    if (emailEdit)   c.setEmail(emailEdit->text().trimmed());
-
-    // ← correction : setDate_inscription (pas setDateInscritption)
-    if (dateInscrit)
-        c.setDate_inscription(dateInscrit->date().toString("yyyy-MM-dd"));
-
-    return c;
-}
-
-// ============================================================
-// onAccepted — validation avant de fermer
-// ============================================================
-
 void ClientManagerDialog::onAccepted()
 {
     if (mode == AddMode || mode == EditMode)
@@ -266,7 +239,7 @@ void ClientManagerDialog::onAccepted()
 
 
         // =========================
-        //  Champs obligatoires (TOUS sauf id_employe)
+        // Champs obligatoires
         // =========================
         if (nom.isEmpty() || prenom.isEmpty() || sexe.isEmpty() ||
             cin.isEmpty() || pays.isEmpty() || ville.isEmpty() ||
@@ -278,13 +251,44 @@ void ClientManagerDialog::onAccepted()
         }
 
         // =========================
-        // 🆔 CIN → chiffres seulement
+        // CIN → chiffres seulement
         // =========================
         QRegularExpression cinRegex("^\\d+$");
         if (!cinRegex.match(cin).hasMatch())
         {
             QMessageBox::warning(this, "Erreur",
                                  "Le CIN doit contenir uniquement des chiffres.");
+            return;
+        }
+
+        if (cin.length() < 6)
+        {
+            QMessageBox::warning(this, "Erreur",
+                                 "Le CIN est trop court.");
+            return;
+        }
+
+        // =========================
+        // 🔍 CIN déjà utilisé
+        // =========================
+        QSqlQuery query;
+        query.prepare("SELECT COUNT(*) FROM CLIENTS WHERE CIN = :cin");
+        query.bindValue(":cin", cin);
+
+        if (!query.exec())
+        {
+            QMessageBox::critical(this, "Erreur",
+                                  "Erreur lors de la vérification du CIN.");
+            return;
+        }
+
+        query.next();
+        int count = query.value(0).toInt();
+
+        if (count > 0)
+        {
+            QMessageBox::warning(this, "Erreur",
+                                 "Ce CIN existe déjà.");
             return;
         }
 
@@ -299,7 +303,7 @@ void ClientManagerDialog::onAccepted()
         }
 
         // =========================
-        // 🔤 Nom / prénom / ville / pays (basique)
+        // 🔤 Nom / prénom / ville / pays
         // =========================
         QRegularExpression textRegex("^[a-zA-Z\\s-]+$");
 
