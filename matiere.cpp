@@ -172,22 +172,27 @@ QSqlQueryModel* Matiere::rechercher(const QString &terme)
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     
-    QString queryStr = QString(
+    QSqlQuery query(Connection::instance()->getDatabase());
+    query.prepare(
         "SELECT ID_MATIERE, NOM, REFERENCE, TYPE_MATIERE, QUANTITE_ACTUELLE, "
         "SEUIL, DATE_EXPIRATION, PHOTO_URL FROM MATIERES_PREMIERES "
-        "WHERE UPPER(NOM) LIKE UPPER('%%1%') "
-        "OR UPPER(REFERENCE) LIKE UPPER('%%1%') "
-        "OR UPPER(TYPE_MATIERE) LIKE UPPER('%%1%') "
+        "WHERE UPPER(NOM) LIKE UPPER(:terme) "
+        "OR UPPER(REFERENCE) LIKE UPPER(:terme) "
+        "OR UPPER(TYPE_MATIERE) LIKE UPPER(:terme) "
         "ORDER BY NOM"
-    ).arg(terme);
+    );
     
-    model->setQuery(queryStr, Connection::instance()->getDatabase());
+    // Protection SQL injection avec bindValue
+    QString searchTerm = "%" + terme + "%";
+    query.bindValue(":terme", searchTerm);
     
-    if (model->lastError().isValid()) {
-        qDebug() << "❌ Erreur recherche matières:" << model->lastError().text();
+    if (!query.exec()) {
+        qDebug() << "❌ Erreur recherche matières:" << query.lastError().text();
         delete model;
         return nullptr;
     }
+    
+    model->setQuery(query);
     
     model->setHeaderData(0, Qt::Horizontal, "ID");
     model->setHeaderData(1, Qt::Horizontal, "Nom");
@@ -205,10 +210,14 @@ QSqlQueryModel* Matiere::trierPar(const QString &colonne)
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     
+    // Whitelist validation pour éviter SQL injection
+    QStringList colonnesValides = {"NOM", "REFERENCE", "TYPE_MATIERE", "QUANTITE_ACTUELLE", "SEUIL", "DATE_EXPIRATION"};
+    QString colonneSecurisee = colonnesValides.contains(colonne.toUpper()) ? colonne : "NOM";
+    
     QString queryStr = QString(
         "SELECT ID_MATIERE, NOM, REFERENCE, TYPE_MATIERE, QUANTITE_ACTUELLE, "
         "SEUIL, DATE_EXPIRATION, PHOTO_URL FROM MATIERES_PREMIERES ORDER BY %1"
-    ).arg(colonne);
+    ).arg(colonneSecurisee);
     
     model->setQuery(queryStr, Connection::instance()->getDatabase());
     

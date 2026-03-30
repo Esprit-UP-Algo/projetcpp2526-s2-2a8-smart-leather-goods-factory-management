@@ -104,8 +104,6 @@ private slots:
     void onAddMatiere();
     void onEditMatiere();
     void onDeleteMatiere();
-    void onSaveMatiere();
-    void onCancelForm();
     void onSuggestionCommande();
     void onOptimisationFIFO();
     void onRechercheTriMatiere();
@@ -113,17 +111,6 @@ private slots:
     void onTriMatiere();
     void onDetectionDefauts();
     void onGestionFournisseurs();
-    void onGenerateSuggestion();
-    void onCloseSuggestion();
-    void onAnalyzeFIFO();
-    void onCloseOptimisation();
-    void onAppliquerRecherche();
-    void onResetRecherche();
-    void onCloseRecherche();
-    void onAddFournisseur();
-    void onEditFournisseur();
-    void onDeleteFournisseur();
-    void onCloseFournisseurs();
     void onExportMatiere();
 
     // Voice
@@ -192,19 +179,6 @@ private:
     int m_sortIndex = 0;
     // Raw materials
     void setupMatiereTable();
-    void setupSuggestionTable();
-    void setupHistoriqueTable();
-    void showForm(bool editMode = false);
-    void hideForm();
-    void clearForm();
-    void hideAllPanels();
-    void addMatiereToTable(const QString&, const QString&, const QString&,
-                           const QString&, const QString&, const QString&);
-    void loadFournisseurs();
-    void saveFournisseurs();
-    void updateFournisseursList();
-    void updateHistoriqueTable();
-    void updateConsommationChart();
     int calculateDaysToExpiration(const QString &dateStr);
     QString getStockLevel(int current, int threshold);
     int calculateSuggestedQuantity(const QString &matiere);
