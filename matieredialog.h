@@ -42,6 +42,12 @@ public:
     }
     void setQuantite(const QString &q)  { if (txtQuantite) txtQuantite->setText(q); }
     void setSeuil(const QString &s)     { if (txtSeuil) txtSeuil->setText(s); }
+    void setDateExpiration(const QString &d) { 
+        if (dateExpiration) {
+            QDate date = QDate::fromString(d, "yyyy-MM-dd");
+            if (date.isValid()) dateExpiration->setDate(date);
+        }
+    }
 
 private slots:
     void onSaveClicked();

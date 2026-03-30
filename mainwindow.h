@@ -104,13 +104,10 @@ private slots:
     void onAddMatiere();
     void onEditMatiere();
     void onDeleteMatiere();
-    void onSuggestionCommande();
-    void onOptimisationFIFO();
     void onRechercheTriMatiere();
     void onStatistiquesMatiere();
     void onTriMatiere();
     void onDetectionDefauts();
-    void onGestionFournisseurs();
     void onExportMatiere();
 
     // Voice
@@ -179,9 +176,6 @@ private:
     int m_sortIndex = 0;
     // Raw materials
     void setupMatiereTable();
-    int calculateDaysToExpiration(const QString &dateStr);
-    QString getStockLevel(int current, int threshold);
-    int calculateSuggestedQuantity(const QString &matiere);
     void updateMatiereStatistics();
     
     // Détection de défauts
