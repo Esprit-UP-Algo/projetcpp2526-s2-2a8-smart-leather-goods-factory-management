@@ -2598,31 +2598,6 @@ void MainWindow::on_btnAddFournisseur_clicked()
     FournisseurDialog dlg(this, FournisseurDialog::AddMode);
     if (dlg.exec() == QDialog::Accepted) {
         FournisseurData f;
-        
-        // Vérifier si on est en mode BD ou mode statique
-        QSqlQueryModel* testModel = f.afficher();
-        
-        if (!testModel || testModel->rowCount() == 0) {
-            // Mode statique - ajouter directement dans la table
-            qDebug() << "⚠️ Mode statique - ajout dans le tableau uniquement";
-            int row = ui->fournisseurTable->rowCount();
-            ui->fournisseurTable->insertRow(row);
-            ui->fournisseurTable->setItem(row, 0, new QTableWidgetItem(QString::number(row + 100)));
-            ui->fournisseurTable->setItem(row, 1, new QTableWidgetItem(dlg.getNomEntreprise()));
-            ui->fournisseurTable->setItem(row, 2, new QTableWidgetItem(dlg.getEmail()));
-            ui->fournisseurTable->setItem(row, 3, new QTableWidgetItem(dlg.getTelephone()));
-            ui->fournisseurTable->setItem(row, 4, new QTableWidgetItem(dlg.getMatriculeFiscal()));
-            ui->fournisseurTable->setItem(row, 5, new QTableWidgetItem(dlg.getTypeProduit()));
-            ui->fournisseurTable->setItem(row, 6, new QTableWidgetItem(dlg.getConditionPaiement()));
-            ui->fournisseurTable->setItem(row, 7, new QTableWidgetItem(dlg.getStatut()));
-            QMessageBox::information(this, "Succès", "Fournisseur ajouté");
-            if (testModel) delete testModel;
-            return;
-        }
-        
-        delete testModel;
-        
-        // Mode BD
         f.setNomEntreprise(dlg.getNomEntreprise());
         f.setEmail(dlg.getEmail());
         f.setTelephone(dlg.getTelephone());
@@ -2630,12 +2605,12 @@ void MainWindow::on_btnAddFournisseur_clicked()
         f.setTypeProduit(dlg.getTypeProduit());
         f.setConditionPaiement(dlg.getConditionPaiement());
         f.setStatut(dlg.getStatut());
-        
+
         if (f.ajouter()) {
             refreshFournisseurTable();
             QMessageBox::information(this, "Succès", "Fournisseur ajouté avec succès !");
         } else {
-            QMessageBox::critical(this, "Erreur", 
+            QMessageBox::critical(this, "Erreur",
                 "Impossible d'ajouter le fournisseur.\n"
                 "Vérifiez que la table FOURNISSEURS existe dans la base de données.");
         }
@@ -2661,28 +2636,6 @@ void MainWindow::on_btnEditFournisseur_clicked()
     
     if (dlg.exec() == QDialog::Accepted) {
         FournisseurData f;
-        
-        // Vérifier si on est en mode BD ou mode statique
-        QSqlQueryModel* testModel = f.afficher();
-        
-        if (!testModel || testModel->rowCount() == 0) {
-            // Mode statique - modifier directement dans la table
-            qDebug() << "⚠️ Mode statique - modification dans le tableau uniquement";
-            ui->fournisseurTable->item(row, 1)->setText(dlg.getNomEntreprise());
-            ui->fournisseurTable->item(row, 2)->setText(dlg.getEmail());
-            ui->fournisseurTable->item(row, 3)->setText(dlg.getTelephone());
-            ui->fournisseurTable->item(row, 4)->setText(dlg.getMatriculeFiscal());
-            ui->fournisseurTable->item(row, 5)->setText(dlg.getTypeProduit());
-            ui->fournisseurTable->item(row, 6)->setText(dlg.getConditionPaiement());
-            ui->fournisseurTable->item(row, 7)->setText(dlg.getStatut());
-            QMessageBox::information(this, "Succès", "Fournisseur modifié");
-            if (testModel) delete testModel;
-            return;
-        }
-        
-        delete testModel;
-        
-        // Mode BD
         f.setId(id);
         f.setNomEntreprise(dlg.getNomEntreprise());
         f.setEmail(dlg.getEmail());
@@ -2691,12 +2644,12 @@ void MainWindow::on_btnEditFournisseur_clicked()
         f.setTypeProduit(dlg.getTypeProduit());
         f.setConditionPaiement(dlg.getConditionPaiement());
         f.setStatut(dlg.getStatut());
-        
+
         if (f.modifier()) {
             refreshFournisseurTable();
             QMessageBox::information(this, "Succès", "Fournisseur modifié avec succès !");
         } else {
-            QMessageBox::critical(this, "Erreur", 
+            QMessageBox::critical(this, "Erreur",
                 "Impossible de modifier le fournisseur.\n"
                 "Vérifiez que la table FOURNISSEURS existe dans la base de données.");
         }
@@ -2721,27 +2674,12 @@ void MainWindow::on_btnDeleteFournisseur_clicked()
     dlg.setFournisseurData(id, nomEntreprise, email, telephone, typeProduit, conditionPaiement, matriculeFiscal, statut);
     
     if (dlg.exec() == QDialog::Accepted) {
-        // Vérifier si on est en mode BD ou mode statique
         FournisseurData f;
-        QSqlQueryModel* testModel = f.afficher();
-        
-        if (!testModel || testModel->rowCount() == 0) {
-            // Mode statique - supprimer directement de la table
-            qDebug() << "⚠️ Mode statique - suppression de la ligne du tableau";
-            ui->fournisseurTable->removeRow(row);
-            QMessageBox::information(this, "Succès", "Fournisseur supprimé (mode statique)");
-            if (testModel) delete testModel;
-            return;
-        }
-        
-        delete testModel;
-        
-        // Mode BD - utiliser la méthode supprimer
         if (f.supprimer(id)) {
             refreshFournisseurTable();
             QMessageBox::information(this, "Succès", "Fournisseur supprimé avec succès !");
         } else {
-            QMessageBox::critical(this, "Erreur", 
+            QMessageBox::critical(this, "Erreur",
                 QString("Impossible de supprimer le fournisseur.\n"
                        "ID: %1\n"
                        "Vérifiez que la table FOURNISSEURS existe dans la base de données.").arg(id));

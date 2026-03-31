@@ -6,10 +6,6 @@
 #include <QDebug>
 #include <QVariant>
 
-// ═══════════════════════════════════════════════════════════════════════════
-// IMPLÉMENTATION : Production (Classe Métier Pure)
-// ═══════════════════════════════════════════════════════════════════════════
-
 Production::Production()
     : id_commande(0)
     , montant(0.0)
@@ -36,15 +32,11 @@ Production::Production(int id, const QString &ref, const QString &t,
 {
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// MÉTHODES MÉTIER : Validation et Logique
-// ═══════════════════════════════════════════════════════════════════════════
 
 // ── Validation : retourne true si tous les champs obligatoires sont corrects ──
 bool Production::estValide() const
 {
     return !reference.isEmpty()
-        && (type == "cmd" || type == "vente")
         && date_creation.isValid()
         && date_livraison_prevue.isValid()
         && date_livraison_prevue >= date_creation
@@ -63,9 +55,6 @@ QStringList Production::obtenirProblemes() const
     
     if (reference.isEmpty())
         problemes << "La référence est obligatoire";
-    
-    if (type != "cmd" && type != "vente")
-        problemes << "Le type doit être 'cmd' ou 'vente'";
     
     if (!date_creation.isValid())
         problemes << "La date de création est invalide";
@@ -111,13 +100,11 @@ int Production::joursAvantLivraison() const
     return QDate::currentDate().daysTo(date_livraison_prevue);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// IMPLÉMENTATION: ProductionCommande
-// ═══════════════════════════════════════════════════════════════════════════
+// ═══notif════════════════════════════════════════════════════════════════════════
 
 ProductionCommande::ProductionCommande()
     : idCommande(0), quantite(0), montant(0.0)
-    , ordrePassage(0), avancement(0), retard(false)
+    , avancement(0), retard(false)
     , alerteRetard(Aucune)
 {}
 
@@ -170,12 +157,7 @@ QString ProductionCommande::getAlerteRetardColor() const
     }
 }
 
-bool ProductionCommande::validerPlanification() const
-{
-    if (dateDebutPrevue.isValid() && dateFinPrevue.isValid() && dateDebutPrevue > dateFinPrevue)
-        return false;
-    return ordrePassage > 0;
-}
+
 
 bool ProductionCommande::validerSuivi() const
 {
@@ -205,7 +187,7 @@ QString ProductionCommande::genererMessageNotification() const
 
 
 // ═══════════════════════════════════════════════════════════════════════════
-// IMPLÉMENTATION : ProductionDAO
+// IMPLÉMENTATION : ProductionDataAccessObject
 // ═══════════════════════════════════════════════════════════════════════════
 
 
@@ -248,10 +230,10 @@ bool ProductionDAO::ajouter(const Production &production)
 
 bool ProductionDAO::modifier(const Production &production)
 {
-    QSqlDatabase db = Connection::instance()->getDatabase();
-    if (!db.isOpen()) { qDebug() << "❌ Base de données non connectée!"; return false; }
+    QSqlDatabase db = Connection::instance()->getDatabase(); // récupère la BDD
+    if (!db.isOpen()) { qDebug() << "❌ Base de données non connectée!"; return false; }  // vérifie qu'elle est ouverte
 
-    QSqlQuery query(db);
+    QSqlQuery query(db);     // crée le message
     query.prepare("UPDATE COMMANDES SET "
                   "REFERENCE=:reference, PRODUIT=:produit, DATE_CREATION=:dateCreation, "
                   "DATE_LIVRAISON=:dateLivraison, STATUT=:statut, PRIORITE=:priorite, "

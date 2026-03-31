@@ -26,25 +26,38 @@ FournisseurData::FournisseurData(const QString &id, const QString &nomEntreprise
 bool FournisseurData::ajouter()
 {
     QSqlQuery query(Connection::instance()->getDatabase());
-    query.prepare("INSERT INTO FOURNISSEURS (NOM_ENTREPRISE, EMAIL, TELEPHONE, "
+
+    // Récupérer le prochain ID via séquence ou MAX+1
+    QSqlQuery seqQ(Connection::instance()->getDatabase());
+    int newId = 1;
+    if (seqQ.exec("SELECT SEQ_FOURNISSEURS.NEXTVAL FROM DUAL") && seqQ.next()) {
+        newId = seqQ.value(0).toInt();
+    } else {
+        QSqlQuery maxQ(Connection::instance()->getDatabase());
+        if (maxQ.exec("SELECT NVL(MAX(ID_FOURNISSEUR),0)+1 FROM FOURNISSEURS") && maxQ.next())
+            newId = maxQ.value(0).toInt();
+    }
+
+    query.prepare("INSERT INTO FOURNISSEURS (ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, "
                   "MATRICULE_FISCAL, TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT) "
-                  "VALUES (:nomEntreprise, :email, :telephone, :matriculeFiscal, "
+                  "VALUES (:id, :nomEntreprise, :email, :telephone, :matriculeFiscal, "
                   ":typeProduit, :conditionPaiement, :statut)");
 
-    query.bindValue(":nomEntreprise", nomEntreprise);
-    query.bindValue(":email", email);
-    query.bindValue(":telephone", telephone);
-    query.bindValue(":matriculeFiscal", matriculeFiscal);
-    query.bindValue(":typeProduit", typeProduit);
-    query.bindValue(":conditionPaiement", conditionPaiement);
-    query.bindValue(":statut", statut);
+    query.bindValue(":id",                 newId);
+    query.bindValue(":nomEntreprise",      nomEntreprise);
+    query.bindValue(":email",              email);
+    query.bindValue(":telephone",          telephone);
+    query.bindValue(":matriculeFiscal",    matriculeFiscal);
+    query.bindValue(":typeProduit",        typeProduit);
+    query.bindValue(":conditionPaiement",  conditionPaiement);
+    query.bindValue(":statut",             statut);
 
     if (!query.exec()) {
         qDebug() << "❌ Erreur ajout fournisseur:" << query.lastError().text();
         return false;
     }
 
-    qDebug() << "✅ Fournisseur ajouté avec succès";
+    qDebug() << "✅ Fournisseur ajouté avec succès, ID:" << newId;
     return true;
 }
 

@@ -72,6 +72,8 @@ CREATE TABLE Articles (
         REFERENCES Commandes(id_commande)
 );
 
+CREATE SEQUENCE seq_articles START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE;
+
 /* =========================
    4. FOURNISSEURS
 ========================= */

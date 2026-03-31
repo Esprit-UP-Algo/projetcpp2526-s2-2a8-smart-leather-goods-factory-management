@@ -69,9 +69,9 @@ bool Matiere::ajouter()
     qDebug() << "✅ ID final sélectionné:" << newId;
     
     query.prepare("INSERT INTO MATIERES_PREMIERES (ID_MATIERE, NOM, TYPE_MATIERE, "
-                  "QUANTITE_ACTUELLE, SEUIL, DATE_EXPIRATION, REFERENCE, PHOTO_URL, ID_FOURNISSEUR) "
+                  "QUANTITE_ACTUELLE, SEUIL, DATE_EXPIRATION, REFERENCE, ID_FOURNISSEUR) "
                   "VALUES (:id, :nom, :type, :quantite, :seuil, "
-                  ":dateExpiration, :reference, :photoUrl, :idFournisseur)");
+                  ":dateExpiration, :reference, :idFournisseur)");
     
     query.bindValue(":id", newId);
     query.bindValue(":nom", nom);
@@ -80,7 +80,6 @@ bool Matiere::ajouter()
     query.bindValue(":seuil", seuil);
     query.bindValue(":dateExpiration", dateExpiration);
     query.bindValue(":reference", reference);
-    query.bindValue(":photoUrl", photoUrl);
     query.bindValue(":idFournisseur", idFournisseur);
     
     qDebug() << "🔍 DEBUG - Valeurs avant INSERT:";
