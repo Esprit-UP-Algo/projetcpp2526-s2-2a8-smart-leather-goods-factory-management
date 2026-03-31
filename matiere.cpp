@@ -1,5 +1,7 @@
 #include "matiere.h"
 #include "connection.h"
+#include <QSqlQuery>
+#include <QSqlQueryModel>
 #include <QSqlError>
 #include <QDebug>
 

@@ -36,6 +36,8 @@
 #include "articleviewer3d.h"
 #include "aichatwidget.h"
 #include "notificationwidget.h"
+#include "matieredetection.h"
+#include "voicematieres.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -48,6 +50,16 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
+    
+    // Méthodes publiques pour les classes extraites
+    void setupMatiereTable();
+    void updateMatiereStatistics();
+    void onDeleteMatiere();
+    void onRechercheTriMatiere();
+    void onStatistiquesMatiere();
+    void onExportMatiere();
+    void onDetectionDefauts();
+    void onTriMatiere();
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
@@ -106,16 +118,6 @@ private slots:
     // Raw materials
     void onAddMatiere();
     void onEditMatiere();
-    void onDeleteMatiere();
-    void onRechercheTriMatiere();
-    void onStatistiquesMatiere();
-    void onTriMatiere();
-    void onDetectionDefauts();
-    void onExportMatiere();
-
-    // Voice
-    void onVoiceCommand();
-    void processVoiceCommand(const QString &cmd);
 
     // Suppliers
     void on_btnAddFournisseur_clicked();
@@ -155,6 +157,10 @@ private:
     QString apiUrl;
     QLabel *detectionResultLabel;
     QProgressBar *detectionProgress;
+    
+    // Classes extraites pour matières premières
+    MatiereDetection *matiereDetection;
+    VoiceMatieres *voiceMatieres;
 
     // Voice recognition
     bool voiceListening;
@@ -178,16 +184,7 @@ private:
     void refreshClientTable();
     void afficherClients();
     int m_sortIndex = 0;
-    // Raw materials
-    void setupMatiereTable();
-    void updateMatiereStatistics();
     
-    // Détection de défauts
-    void startDetectionAnalysis(const QString &imagePath);
-    void detectDefectsInImage(const QString &imagePath);
-    void showDetectionResults(const QJsonObject &results);
-    QString translateDefectClass(const QString &englishName);
-
     // Suppliers
     void setupFournisseurTable();
     void refreshFournisseurTable();

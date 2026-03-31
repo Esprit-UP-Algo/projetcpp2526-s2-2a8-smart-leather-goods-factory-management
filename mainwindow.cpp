@@ -147,6 +147,10 @@ MainWindow::MainWindow(QWidget *parent)
     detectionResultLabel = nullptr;
     detectionProgress = nullptr;
     
+    // Initialiser les classes extraites pour matières premières
+    matiereDetection = new MatiereDetection(this, ui->matiereTable, networkManager, apiUrl);
+    voiceMatieres = new VoiceMatieres(this, ui->matiereTable);
+    
     // ══════════════════════════════════════════════════════════════════════
     // ANCIEN CODE (API Locale) - Désactivé car on utilise maintenant l'API Cloud
     // ══════════════════════════════════════════════════════════════════════
@@ -227,7 +231,7 @@ MainWindow::MainWindow(QWidget *parent)
     spGrammar     = nullptr;
     CoInitialize(nullptr);
 #endif
-    connect(ui->btnVoice, &QPushButton::clicked, this, &MainWindow::onVoiceCommand);
+    connect(ui->btnVoice, &QPushButton::clicked, [this]() { voiceMatieres->openVoiceDialog(); });
     connect(ui->btnExportMatiere,&QPushButton::clicked, this, &MainWindow::onExportMatiere);
 
     // ── Client extra buttons ────────────────────────────────────────────────
@@ -1601,33 +1605,78 @@ void MainWindow::onTriMatiere()
                                           "Choisissez le critère de tri:", 
                                           options, 0, false, &ok);
     
-    if (ok && !choice.isEmpty()) {
-        int column = -1;
-        Qt::SortOrder order = Qt::AscendingOrder;
-        
-        if (choice.contains("Module")) {
-            column = 0;
-            order = choice.contains("Z-A") ? Qt::DescendingOrder : Qt::AscendingOrder;
-        } else if (choice.contains("Type")) {
-            column = 2;
-            order = choice.contains("Z-A") ? Qt::DescendingOrder : Qt::AscendingOrder;
-        } else if (choice.contains("Quantité")) {
-            column = 3;
-            order = choice.contains("Décroissant") ? Qt::DescendingOrder : Qt::AscendingOrder;
-        } else if (choice.contains("Seuil")) {
-            column = 4;
-            order = choice.contains("Décroissant") ? Qt::DescendingOrder : Qt::AscendingOrder;
-        } else if (choice.contains("Date")) {
-            column = 5;
-            order = choice.contains("lointaine") ? Qt::DescendingOrder : Qt::AscendingOrder;
+    if (!ok || choice.isEmpty()) return;
+    
+    // Structure pour stocker ligne complète avec données UserRole
+    struct RowData {
+        QStringList texts;
+        QVariant photoUrl;
+        int originalId;
+    };
+    
+    // Collecter toutes les données
+    QList<RowData> rows;
+    for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
+        RowData row;
+        for (int c = 0; c < ui->matiereTable->columnCount(); ++c) {
+            row.texts << (ui->matiereTable->item(r, c) ? ui->matiereTable->item(r, c)->text() : "");
         }
-        
-        if (column >= 0) {
-            ui->matiereTable->sortItems(column, order);
-            QMessageBox::information(this, "Tri effectué", 
-                                   QString("Les matières ont été triées par: %1").arg(choice));
+        row.photoUrl = ui->matiereTable->item(r, 0) ? ui->matiereTable->item(r, 0)->data(Qt::UserRole + 1) : QVariant();
+        row.originalId = ui->matiereTable->item(r, 0) ? ui->matiereTable->item(r, 0)->data(Qt::UserRole).toInt() : 0;
+        rows.append(row);
+    }
+    
+    // Trier selon le critère
+    if (choice.contains("Module")) {
+        bool desc = choice.contains("Z-A");
+        std::sort(rows.begin(), rows.end(), [desc](const RowData &a, const RowData &b) {
+            return desc ? a.texts[0] > b.texts[0] : a.texts[0] < b.texts[0];
+        });
+    } else if (choice.contains("Type")) {
+        bool desc = choice.contains("Z-A");
+        std::sort(rows.begin(), rows.end(), [desc](const RowData &a, const RowData &b) {
+            return desc ? a.texts[2] > b.texts[2] : a.texts[2] < b.texts[2];
+        });
+    } else if (choice.contains("Quantité")) {
+        bool desc = choice.contains("Décroissant");
+        std::sort(rows.begin(), rows.end(), [desc](const RowData &a, const RowData &b) {
+            double qtyA = QString(a.texts[3]).remove(" m²").toDouble();
+            double qtyB = QString(b.texts[3]).remove(" m²").toDouble();
+            return desc ? qtyA > qtyB : qtyA < qtyB;
+        });
+    } else if (choice.contains("Seuil")) {
+        bool desc = choice.contains("Décroissant");
+        std::sort(rows.begin(), rows.end(), [desc](const RowData &a, const RowData &b) {
+            double seuilA = a.texts[4].toDouble();
+            double seuilB = b.texts[4].toDouble();
+            return desc ? seuilA > seuilB : seuilA < seuilB;
+        });
+    } else if (choice.contains("Date")) {
+        bool desc = choice.contains("lointaine");
+        std::sort(rows.begin(), rows.end(), [desc](const RowData &a, const RowData &b) {
+            QDate dateA = QDate::fromString(a.texts[5], "yyyy-MM-dd");
+            QDate dateB = QDate::fromString(b.texts[5], "yyyy-MM-dd");
+            if (!dateA.isValid()) return !desc;
+            if (!dateB.isValid()) return desc;
+            return desc ? dateA > dateB : dateA < dateB;
+        });
+    }
+    
+    // Réappliquer les données triées avec UserRole
+    for (int r = 0; r < rows.size(); ++r) {
+        for (int c = 0; c < rows[r].texts.size(); ++c) {
+            if (ui->matiereTable->item(r, c)) {
+                ui->matiereTable->item(r, c)->setText(rows[r].texts[c]);
+                if (c == 0) {
+                    ui->matiereTable->item(r, c)->setData(Qt::UserRole, rows[r].originalId);
+                    ui->matiereTable->item(r, c)->setData(Qt::UserRole + 1, rows[r].photoUrl);
+                }
+            }
         }
     }
+    
+    QMessageBox::information(this, "Tri effectué", 
+                           QString("Les matières ont été triées par: %1").arg(choice));
 }
 
 void MainWindow::onRechercheTriMatiere()
@@ -1772,631 +1821,7 @@ void MainWindow::onRechercheTriMatiere()
 
 void MainWindow::onDetectionDefauts()
 {
-    // Créer une boîte de dialogue améliorée pour la détection
-    QDialog *detectionDialog = new QDialog(this);
-    detectionDialog->setWindowTitle("Détection de Défauts - Cuir");
-    detectionDialog->setFixedSize(650, 550);
-    detectionDialog->setStyleSheet(
-        "QDialog { background: #FAF5F0; }"
-        "QLabel { color: #291C0E; }"
-        "QPushButton { border-radius: 8px; padding: 10px 20px; font-weight: bold; }"
-        "QComboBox { background: white; border: 2px solid #BCAAA4; border-radius: 6px; padding: 8px; }"
-        "QGroupBox { font-weight: bold; border: 2px solid #BCAAA4; border-radius: 8px; margin-top: 10px; padding-top: 15px; }"
-        "QGroupBox::title { subcontrol-origin: margin; left: 15px; padding: 0 5px; }"
-    );
-    
-    QVBoxLayout *mainLayout = new QVBoxLayout(detectionDialog);
-    mainLayout->setSpacing(15);
-    mainLayout->setContentsMargins(25, 25, 25, 25);
-    
-    // Titre
-    QLabel *titleLabel = new QLabel("🔬 Analyse de Qualité du Cuir", detectionDialog);
-    titleLabel->setAlignment(Qt::AlignCenter);
-    titleLabel->setStyleSheet("font-size: 20px; font-weight: bold; color: #8D6E63; margin-bottom: 10px;");
-    mainLayout->addWidget(titleLabel);
-    
-    // Description
-    QLabel *descLabel = new QLabel("Sélectionnez une image de matière première pour détecter les défauts potentiels.", detectionDialog);
-    descLabel->setAlignment(Qt::AlignCenter);
-    descLabel->setWordWrap(true);
-    descLabel->setStyleSheet("color: #5D4037; font-size: 12px; margin-bottom: 15px;");
-    mainLayout->addWidget(descLabel);
-    
-    // Zone de prévisualisation de l'image
-    QLabel *previewLabel = new QLabel(detectionDialog);
-    previewLabel->setFixedSize(200, 200);
-    previewLabel->setAlignment(Qt::AlignCenter);
-    previewLabel->setStyleSheet(
-        "background: #E8E0D8; border: 3px dashed #BCAAA4; border-radius: 12px;"
-    );
-    previewLabel->setText("📷\nAucune image\nsélectionnée");
-    
-    QHBoxLayout *previewLayout = new QHBoxLayout();
-    previewLayout->addStretch();
-    previewLayout->addWidget(previewLabel);
-    previewLayout->addStretch();
-    mainLayout->addLayout(previewLayout);
-    
-    // Variable pour stocker le chemin de l'image
-    QString *selectedImagePath = new QString();
-    
-    // GroupBox: Sélection depuis le tableau
-    QGroupBox *tableGroup = new QGroupBox("📋 Sélectionner depuis le tableau des matières", detectionDialog);
-    QVBoxLayout *tableLayout = new QVBoxLayout(tableGroup);
-    
-    QComboBox *matiereCombo = new QComboBox(detectionDialog);
-    matiereCombo->addItem("-- Choisir une matière première --", "");
-    
-    // Remplir le combo avec les matières ayant une photo
-    for (int row = 0; row < ui->matiereTable->rowCount(); ++row) {
-        QString photoPath = ui->matiereTable->item(row, 0)->data(Qt::UserRole + 1).toString();
-        if (!photoPath.isEmpty() && QFile::exists(photoPath)) {
-            QString matiereName = ui->matiereTable->item(row, 0)->text();
-            QString matiereRef = ui->matiereTable->item(row, 1)->text();
-            matiereCombo->addItem(QString("📦 %1 (%2)").arg(matiereName, matiereRef), photoPath);
-        }
-    }
-    
-    if (matiereCombo->count() == 1) {
-        matiereCombo->setItemText(0, "-- Aucune matière avec photo disponible --");
-        matiereCombo->setEnabled(false);
-    }
-    
-    tableLayout->addWidget(matiereCombo);
-    mainLayout->addWidget(tableGroup);
-    
-    // GroupBox: Sélection depuis fichier
-    QGroupBox *fileGroup = new QGroupBox("📁 Ou importer depuis un fichier", detectionDialog);
-    QHBoxLayout *fileLayout = new QHBoxLayout(fileGroup);
-    
-    QPushButton *browseBtn = new QPushButton("🖼️ Parcourir...", detectionDialog);
-    browseBtn->setStyleSheet(
-        "QPushButton { background: #6D4C41; color: white; }"
-        "QPushButton:hover { background: #8D6E63; }"
-    );
-    fileLayout->addWidget(browseBtn);
-    
-    QLabel *filePathLabel = new QLabel("Aucun fichier sélectionné", detectionDialog);
-    filePathLabel->setStyleSheet("color: #757575; font-style: italic;");
-    fileLayout->addWidget(filePathLabel, 1);
-    mainLayout->addWidget(fileGroup);
-    
-    // Boutons d'action
-    QHBoxLayout *buttonLayout = new QHBoxLayout();
-    buttonLayout->addStretch();
-    
-    QPushButton *analyzeBtn = new QPushButton("🔍 Analyser", detectionDialog);
-    analyzeBtn->setStyleSheet(
-        "QPushButton { background: #4CAF50; color: white; font-size: 14px; padding: 12px 30px; }"
-        "QPushButton:hover { background: #66BB6A; }"
-        "QPushButton:disabled { background: #BDBDBD; }"
-    );
-    analyzeBtn->setEnabled(false);
-    
-    QPushButton *cancelBtn = new QPushButton("Annuler", detectionDialog);
-    cancelBtn->setStyleSheet(
-        "QPushButton { background: #BCAAA4; color: white; }"
-        "QPushButton:hover { background: #A1887F; }"
-    );
-    
-    buttonLayout->addWidget(analyzeBtn);
-    buttonLayout->addWidget(cancelBtn);
-    buttonLayout->addStretch();
-    mainLayout->addLayout(buttonLayout);
-    
-    // Connexions
-    auto updatePreview = [previewLabel, analyzeBtn, selectedImagePath](const QString &path) {
-        *selectedImagePath = path;
-        if (!path.isEmpty() && QFile::exists(path)) {
-            QPixmap pixmap(path);
-            previewLabel->setPixmap(pixmap.scaled(190, 190, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-            analyzeBtn->setEnabled(true);
-        } else {
-            previewLabel->setText("📷\nAucune image\nsélectionnée");
-            analyzeBtn->setEnabled(false);
-        }
-    };
-    
-    connect(matiereCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), 
-            [matiereCombo, filePathLabel, updatePreview](int index) {
-        QString path = matiereCombo->itemData(index).toString();
-        if (!path.isEmpty()) {
-            filePathLabel->setText("Image du tableau");
-            updatePreview(path);
-        }
-    });
-    
-    connect(browseBtn, &QPushButton::clicked, [detectionDialog, filePathLabel, matiereCombo, updatePreview]() {
-        QString imagePath = QFileDialog::getOpenFileName(
-            detectionDialog,
-            "Sélectionner une image de cuir",
-            "",
-            "Images (*.png *.jpg *.jpeg *.bmp *.tiff)"
-        );
-        if (!imagePath.isEmpty()) {
-            QFileInfo fi(imagePath);
-            filePathLabel->setText(fi.fileName());
-            matiereCombo->setCurrentIndex(0);
-            updatePreview(imagePath);
-        }
-    });
-    
-    connect(cancelBtn, &QPushButton::clicked, detectionDialog, &QDialog::reject);
-    
-    connect(analyzeBtn, &QPushButton::clicked, [this, detectionDialog, selectedImagePath]() {
-        if (selectedImagePath->isEmpty()) {
-            QMessageBox::warning(detectionDialog, "Attention", "Veuillez sélectionner une image.");
-            return;
-        }
-        detectionDialog->accept();
-        startDetectionAnalysis(*selectedImagePath);
-    });
-    
-    detectionDialog->exec();
-    delete selectedImagePath;
-    detectionDialog->deleteLater();
-}
-
-void MainWindow::startDetectionAnalysis(const QString &imagePath)
-{
-    // Créer une boîte de dialogue de connexion
-    QDialog *waitDialog = new QDialog(this);
-    waitDialog->setWindowTitle("Connexion au serveur");
-    waitDialog->setModal(true);
-    waitDialog->setFixedSize(400, 180);
-    waitDialog->setStyleSheet("QDialog { background: #FAF5F0; }");
-    
-    QVBoxLayout *waitLayout = new QVBoxLayout(waitDialog);
-    waitLayout->setSpacing(15);
-    waitLayout->setContentsMargins(25, 25, 25, 25);
-    
-    QLabel *iconLabel = new QLabel("🔄", waitDialog);
-    iconLabel->setAlignment(Qt::AlignCenter);
-    iconLabel->setStyleSheet("font-size: 40px;");
-    waitLayout->addWidget(iconLabel);
-    
-    QLabel *waitLabel = new QLabel("Connexion au serveur de détection...", waitDialog);
-    waitLabel->setAlignment(Qt::AlignCenter);
-    waitLabel->setStyleSheet("font-size: 14px; color: #5D4037;");
-    waitLayout->addWidget(waitLabel);
-    
-    QProgressBar *waitProgress = new QProgressBar(waitDialog);
-    waitProgress->setRange(0, 0);
-    waitProgress->setStyleSheet(
-        "QProgressBar { border: 2px solid #BCAAA4; border-radius: 5px; background: white; }"
-        "QProgressBar::chunk { background: #8D6E63; }"
-    );
-    waitLayout->addWidget(waitProgress);
-    
-    QPushButton *cancelBtn = new QPushButton("Annuler", waitDialog);
-    cancelBtn->setStyleSheet(
-        "QPushButton { background: #BCAAA4; color: white; border-radius: 6px; padding: 8px 20px; }"
-        "QPushButton:hover { background: #A1887F; }"
-    );
-    waitLayout->addWidget(cancelBtn, 0, Qt::AlignCenter);
-    
-    // Timer pour les tentatives de connexion
-    QTimer *retryTimer = new QTimer(waitDialog);
-    int *attempt = new int(0);
-    int maxRetries = 10;  // 10 secondes d'attente
-    
-    connect(cancelBtn, &QPushButton::clicked, [waitDialog, retryTimer]() {
-        retryTimer->stop();
-        waitDialog->close();
-        waitDialog->deleteLater();
-    });
-    
-    connect(retryTimer, &QTimer::timeout, [this, imagePath, waitDialog, waitLabel, retryTimer, attempt, maxRetries]() {
-        QNetworkRequest healthRequest(QUrl(apiUrl + "/health"));
-        healthRequest.setTransferTimeout(2000);
-        QNetworkReply *healthReply = networkManager->get(healthRequest);
-        
-        connect(healthReply, &QNetworkReply::finished, [this, imagePath, healthReply, waitDialog, waitLabel, retryTimer, attempt, maxRetries]() {
-            healthReply->deleteLater();
-            
-            if (healthReply->error() == QNetworkReply::NoError) {
-                retryTimer->stop();
-                waitDialog->close();
-                waitDialog->deleteLater();
-                delete attempt;
-                detectDefectsInImage(imagePath);
-                return;
-            }
-            
-            (*attempt)++;
-            waitLabel->setText(QString("Attente du serveur... (%1/%2)").arg(*attempt).arg(maxRetries));
-            
-            if (*attempt >= maxRetries) {
-                retryTimer->stop();
-                delete attempt;
-                
-                // Fermer le dialog d'attente silencieusement (pas de message d'erreur)
-                waitDialog->close();
-                QTimer::singleShot(100, [waitDialog]() {
-                    waitDialog->deleteLater();
-                });
-            }
-        });
-    });
-    
-    waitDialog->show();
-    retryTimer->start(1000);
-}
-
-void MainWindow::detectDefectsInImage(const QString &imagePath)
-{
-    // Créer une boîte de dialogue de progression
-    QDialog *progressDialog = new QDialog(this);
-    progressDialog->setWindowTitle("Détection en cours");
-    progressDialog->setModal(true);
-    progressDialog->setFixedSize(400, 150);
-    
-    QVBoxLayout *layout = new QVBoxLayout(progressDialog);
-    
-    QLabel *statusLabel = new QLabel("Analyse de l'image en cours...", progressDialog);
-    statusLabel->setAlignment(Qt::AlignCenter);
-    layout->addWidget(statusLabel);
-    
-    QProgressBar *progressBar = new QProgressBar(progressDialog);
-    progressBar->setRange(0, 0); // Mode indéterminé
-    layout->addWidget(progressBar);
-    
-    progressDialog->show();
-    
-    // Lire et encoder l'image en base64
-    QFile imageFile(imagePath);
-    if (!imageFile.open(QIODevice::ReadOnly)) {
-        progressDialog->close();
-        progressDialog->deleteLater();
-        QMessageBox::critical(this, "Erreur", "Impossible de lire l'image");
-        return;
-    }
-    
-    QByteArray imageData = imageFile.readAll();
-    imageFile.close();
-    
-    // Vérifier que l'image n'est pas trop grande (max 10MB)
-    if (imageData.size() > 10 * 1024 * 1024) {
-        progressDialog->close();
-        progressDialog->deleteLater();
-        QMessageBox::warning(this, "Attention", 
-            "L'image est trop volumineuse (> 10MB).\n"
-            "Veuillez utiliser une image plus petite.");
-        return;
-    }
-    
-    QString base64Image = imageData.toBase64();
-    
-    // Préparer la requête JSON
-    QJsonObject requestData;
-    requestData["image"] = "data:image/jpeg;base64," + base64Image;
-    
-    QJsonDocument doc(requestData);
-    QByteArray jsonData = doc.toJson();
-    
-    // Envoyer la requête à l'API
-    QNetworkRequest request(QUrl(apiUrl + "/predict"));
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setTransferTimeout(60000);  // Timeout de 60 secondes pour l'analyse
-    
-    QNetworkReply *reply = networkManager->post(request, jsonData);
-    
-    // Utiliser QPointer pour éviter les dangling pointers
-    QPointer<QDialog> dialogPtr(progressDialog);
-    
-    connect(reply, &QNetworkReply::finished, this, [this, reply, dialogPtr]() {
-        // Vérifier que le dialog existe encore
-        if (dialogPtr) {
-            dialogPtr->close();
-            dialogPtr->deleteLater();
-        }
-        
-        if (reply->error() != QNetworkReply::NoError) {
-            QString errorDetails = QString("Code: %1\nMessage: %2\nURL: %3")
-                .arg(reply->error())
-                .arg(reply->errorString())
-                .arg(reply->url().toString());
-            
-            // Lire la réponse même en cas d'erreur pour voir le message du serveur
-            QByteArray responseData = reply->readAll();
-            if (!responseData.isEmpty()) {
-                errorDetails += QString("\n\nRéponse du serveur:\n%1")
-                    .arg(QString::fromUtf8(responseData));
-            }
-            
-            QMessageBox::critical(this, "Erreur de détection", errorDetails);
-            reply->deleteLater();
-            return;
-        }
-        
-        // Traiter la réponse
-        QByteArray responseData = reply->readAll();
-        
-        // Vérifier que la réponse n'est pas vide
-        if (responseData.isEmpty()) {
-            QMessageBox::critical(this, "Erreur", "Réponse vide du serveur");
-            reply->deleteLater();
-            return;
-        }
-        
-        // Parser le JSON
-        QJsonParseError parseError;
-        QJsonDocument responseDoc = QJsonDocument::fromJson(responseData, &parseError);
-        
-        if (parseError.error != QJsonParseError::NoError) {
-            QMessageBox::critical(this, "Erreur JSON", 
-                QString("Erreur de parsing JSON:\n%1\n\nRéponse brute:\n%2")
-                    .arg(parseError.errorString())
-                    .arg(QString::fromUtf8(responseData)));
-            reply->deleteLater();
-            return;
-        }
-        
-        QJsonObject response = responseDoc.object();
-        
-        // Vérifier le champ "success"
-        if (!response.contains("success")) {
-            QMessageBox::critical(this, "Erreur", 
-                "La réponse ne contient pas le champ 'success'");
-            reply->deleteLater();
-            return;
-        }
-        
-        if (response["success"].toBool()) {
-            showDetectionResults(response);
-        } else {
-            QString errorMsg = response["error"].toString();
-            if (errorMsg.isEmpty()) {
-                errorMsg = "Erreur inconnue";
-            }
-            QMessageBox::critical(this, "Erreur", 
-                "Échec de la détection:\n" + errorMsg);
-        }
-        
-        reply->deleteLater();
-    });
-}
-
-QString MainWindow::translateDefectClass(const QString &englishName)
-{
-    // Traduction des classes de défauts en français
-    static QMap<QString, QString> translations = {
-        {"Folding marks", "Marques de pliage"},
-        {"Grain off", "Grain détaché"},
-        {"Growth marks", "Marques de croissance"},
-        {"loose grains", "Grains lâches"},
-        {"non defective", "Non défectueux"},
-        {"pinhole", "Trou d'épingle"}
-    };
-    
-    return translations.value(englishName, englishName);
-}
-
-void MainWindow::showDetectionResults(const QJsonObject &results)
-{
-    // Vérifier que les champs nécessaires existent
-    if (!results.contains("prediction") || !results.contains("all_predictions")) {
-        QMessageBox::critical(this, "Erreur", 
-            "Format de réponse invalide: champs manquants");
-        return;
-    }
-    
-    QJsonObject prediction = results["prediction"].toObject();
-    
-    if (!prediction.contains("class_name") || !prediction.contains("confidence_percent")) {
-        QMessageBox::critical(this, "Erreur", 
-            "Format de prédiction invalide");
-        return;
-    }
-    
-    QString className = prediction["class_name"].toString();
-    QString classNameFr = translateDefectClass(className);
-    double confidence = prediction["confidence_percent"].toDouble();
-    
-    // Déterminer le style selon le résultat
-    bool isDefective = (className.toLower() != "non defective");
-    QString statusIcon, statusText, gradientStart, gradientEnd, accentColor;
-    
-    if (!isDefective) {
-        statusIcon = "✓";
-        statusText = "QUALITÉ VALIDÉE";
-        gradientStart = "#43A047";
-        gradientEnd = "#66BB6A";
-        accentColor = "#2E7D32";
-    } else if (confidence > 70) {
-        statusIcon = "✗";
-        statusText = "DÉFAUT DÉTECTÉ";
-        gradientStart = "#E53935";
-        gradientEnd = "#EF5350";
-        accentColor = "#C62828";
-    } else {
-        statusIcon = "!";
-        statusText = "À VÉRIFIER";
-        gradientStart = "#FB8C00";
-        gradientEnd = "#FFA726";
-        accentColor = "#EF6C00";
-    }
-    
-    // Créer le dialogue principal
-    QDialog *resultDialog = new QDialog(this);
-    resultDialog->setWindowTitle("Résultats de Détection");
-    resultDialog->setModal(true);
-    resultDialog->setFixedSize(520, 580);
-    resultDialog->setStyleSheet(
-        "QDialog { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FAFAFA, stop:1 #F0EBE6); }"
-    );
-    
-    QVBoxLayout *mainLayout = new QVBoxLayout(resultDialog);
-    mainLayout->setSpacing(0);
-    mainLayout->setContentsMargins(0, 0, 0, 0);
-    
-    // === HEADER avec gradient ===
-    QFrame *headerFrame = new QFrame(resultDialog);
-    headerFrame->setFixedHeight(180);
-    headerFrame->setStyleSheet(QString(
-        "QFrame { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 %1, stop:1 %2); "
-        "border-top-left-radius: 0px; border-top-right-radius: 0px; }"
-    ).arg(gradientStart, gradientEnd));
-    
-    QVBoxLayout *headerLayout = new QVBoxLayout(headerFrame);
-    headerLayout->setAlignment(Qt::AlignCenter);
-    headerLayout->setSpacing(8);
-    
-    // Icône circulaire
-    QLabel *iconCircle = new QLabel(statusIcon, headerFrame);
-    iconCircle->setFixedSize(70, 70);
-    iconCircle->setAlignment(Qt::AlignCenter);
-    iconCircle->setStyleSheet(
-        "QLabel { background: rgba(255,255,255,0.25); color: white; font-size: 36px; "
-        "font-weight: bold; border-radius: 35px; }"
-    );
-    headerLayout->addWidget(iconCircle, 0, Qt::AlignCenter);
-    
-    // Texte de statut
-    QLabel *statusLabel = new QLabel(statusText, headerFrame);
-    statusLabel->setAlignment(Qt::AlignCenter);
-    statusLabel->setStyleSheet(
-        "QLabel { color: white; font-size: 20px; font-weight: bold; letter-spacing: 2px; }"
-    );
-    headerLayout->addWidget(statusLabel);
-    
-    // Nom du défaut
-    QLabel *defectLabel = new QLabel(classNameFr, headerFrame);
-    defectLabel->setAlignment(Qt::AlignCenter);
-    defectLabel->setStyleSheet(
-        "QLabel { color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 500; }"
-    );
-    headerLayout->addWidget(defectLabel);
-    
-    mainLayout->addWidget(headerFrame);
-    
-    // === CONTENU ===
-    QWidget *contentWidget = new QWidget(resultDialog);
-    QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
-    contentLayout->setSpacing(20);
-    contentLayout->setContentsMargins(25, 25, 25, 20);
-    
-    // Carte de confiance
-    QFrame *confidenceCard = new QFrame(contentWidget);
-    confidenceCard->setStyleSheet(
-        "QFrame { background: white; border-radius: 12px; }"
-    );
-    QHBoxLayout *confLayout = new QHBoxLayout(confidenceCard);
-    confLayout->setContentsMargins(20, 15, 20, 15);
-    
-    QLabel *confTitle = new QLabel("Niveau de Confiance", confidenceCard);
-    confTitle->setStyleSheet("QLabel { color: #5D4037; font-size: 13px; font-weight: 600; }");
-    confLayout->addWidget(confTitle);
-    
-    confLayout->addStretch();
-    
-    QLabel *confValue = new QLabel(QString("%1%").arg(confidence, 0, 'f', 1), confidenceCard);
-    confValue->setStyleSheet(QString(
-        "QLabel { color: %1; font-size: 24px; font-weight: bold; }"
-    ).arg(accentColor));
-    confLayout->addWidget(confValue);
-    
-    contentLayout->addWidget(confidenceCard);
-    
-    // Section Analyse Détaillée
-    QLabel *detailsTitle = new QLabel("Analyse Complète", contentWidget);
-    detailsTitle->setStyleSheet(
-        "QLabel { color: #5D4037; font-size: 14px; font-weight: bold; margin-top: 5px; }"
-    );
-    contentLayout->addWidget(detailsTitle);
-    
-    // Carte des détails
-    QFrame *detailsCard = new QFrame(contentWidget);
-    detailsCard->setStyleSheet(
-        "QFrame { background: white; border-radius: 12px; }"
-    );
-    QVBoxLayout *detailsLayout = new QVBoxLayout(detailsCard);
-    detailsLayout->setSpacing(12);
-    detailsLayout->setContentsMargins(18, 18, 18, 18);
-    
-    QJsonArray allPredictions = results["all_predictions"].toArray();
-    
-    for (int i = 0; i < allPredictions.size(); ++i) {
-        QJsonObject predObj = allPredictions[i].toObject();
-        QString name = predObj["class_name"].toString();
-        QString nameFr = translateDefectClass(name);
-        double conf = predObj["confidence_percent"].toDouble();
-        
-        QWidget *rowWidget = new QWidget(detailsCard);
-        QHBoxLayout *rowLayout = new QHBoxLayout(rowWidget);
-        rowLayout->setContentsMargins(0, 0, 0, 0);
-        rowLayout->setSpacing(12);
-        
-        // Indicateur coloré
-        QLabel *dot = new QLabel(rowWidget);
-        dot->setFixedSize(8, 8);
-        QString dotColor = (name.toLower() == "non defective") ? "#4CAF50" : 
-                          (conf > 50) ? "#F44336" : "#BDBDBD";
-        dot->setStyleSheet(QString(
-            "QLabel { background: %1; border-radius: 4px; }"
-        ).arg(dotColor));
-        rowLayout->addWidget(dot);
-        
-        // Nom
-        QLabel *nameLabel = new QLabel(nameFr, rowWidget);
-        nameLabel->setStyleSheet("QLabel { color: #424242; font-size: 12px; }");
-        nameLabel->setMinimumWidth(140);
-        rowLayout->addWidget(nameLabel);
-        
-        // Barre de progression stylée
-        QFrame *barBg = new QFrame(rowWidget);
-        barBg->setFixedHeight(8);
-        barBg->setStyleSheet("QFrame { background: #EEEEEE; border-radius: 4px; }");
-        
-        QFrame *barFill = new QFrame(barBg);
-        int fillWidth = static_cast<int>(conf * 1.2); // Max 120px
-        barFill->setFixedSize(fillWidth, 8);
-        barFill->move(0, 0);
-        QString fillColor = (name.toLower() == "non defective") ? "#4CAF50" : "#8D6E63";
-        barFill->setStyleSheet(QString(
-            "QFrame { background: %1; border-radius: 4px; }"
-        ).arg(fillColor));
-        
-        rowLayout->addWidget(barBg, 1);
-        
-        // Pourcentage
-        QLabel *percLabel = new QLabel(QString("%1%").arg(conf, 0, 'f', 1), rowWidget);
-        percLabel->setFixedWidth(50);
-        percLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        QString percColor = (conf > 50) ? "#424242" : "#9E9E9E";
-        percLabel->setStyleSheet(QString(
-            "QLabel { color: %1; font-size: 12px; font-weight: 600; }"
-        ).arg(percColor));
-        rowLayout->addWidget(percLabel);
-        
-        detailsLayout->addWidget(rowWidget);
-    }
-    
-    contentLayout->addWidget(detailsCard);
-    contentLayout->addStretch();
-    
-    // Bouton Fermer
-    QPushButton *closeBtn = new QPushButton("Fermer", contentWidget);
-    closeBtn->setFixedSize(160, 44);
-    closeBtn->setCursor(Qt::PointingHandCursor);
-    closeBtn->setStyleSheet(QString(
-        "QPushButton { background: %1; color: white; border: none; border-radius: 22px; "
-        "font-size: 14px; font-weight: bold; }"
-        "QPushButton:hover { background: %2; }"
-        "QPushButton:pressed { background: %1; }"
-    ).arg(gradientStart, gradientEnd));
-    connect(closeBtn, &QPushButton::clicked, resultDialog, &QDialog::accept);
-    
-    QHBoxLayout *btnLayout = new QHBoxLayout();
-    btnLayout->addStretch();
-    btnLayout->addWidget(closeBtn);
-    btnLayout->addStretch();
-    contentLayout->addLayout(btnLayout);
-    
-    mainLayout->addWidget(contentWidget);
-    
-    resultDialog->exec();
-    resultDialog->deleteLater();
+    matiereDetection->startDetection();
 }
 
 void MainWindow::updateMatiereStatistics()
@@ -5398,78 +4823,6 @@ void MainWindow::stopSAPI()
 
 #endif
 
-void MainWindow::onVoiceCommand()
-{
-    // Dialog avec champ texte pour saisie vocale via Win+H
-    QDialog dlg(this);
-    dlg.setWindowTitle("Commande Vocale");
-    dlg.setMinimumWidth(420);
-    dlg.setStyleSheet(
-        "QDialog { background-color: #FAF5F0; }"
-        "QLabel { color: #291C0E; font-size: 13px; }"
-        "QLineEdit { background: white; border: 2px solid #8D6E63; border-radius: 8px; "
-        "padding: 10px; font-size: 14px; color: #291C0E; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; "
-        "border-radius: 6px; padding: 8px 20px; font-size: 12px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #A0826D; }");
-
-    QVBoxLayout lay(&dlg);
-    lay.setSpacing(12);
-    lay.setContentsMargins(20, 20, 20, 20);
-    auto *info = new QLabel("🎤 Appuyez sur  Win + H  puis dites votre commande :", &dlg);
-    info->setWordWrap(true);
-    auto *hint = new QLabel(
-        "<small style='color:#8D6E63;'>"
-        "Commandes : <b>ajouter</b> · <b>modifier</b> · <b>supprimer</b> · "
-        "<b>statistiques</b> · <b>exporter</b> · <b>détection</b> · "
-        "<b>trier</b> · <b>rechercher [mot]</b>"
-        "</small>", &dlg);
-    hint->setWordWrap(true);
-    hint->setTextFormat(Qt::RichText);
-    auto *input = new QLineEdit(&dlg);
-    input->setPlaceholderText("La commande apparaîtra ici...");
-    QHBoxLayout btnLay;
-    auto *btnOk     = new QPushButton("✔ Exécuter", &dlg);
-    auto *btnCancel = new QPushButton("Annuler",    &dlg);
-    btnCancel->setStyleSheet(
-        "QPushButton { background-color: #E7DDD1; color: #291C0E; border: 1px solid #BCAAA4; "
-        "border-radius: 6px; padding: 8px 20px; }"
-        "QPushButton:hover { background-color: #F0E6DA; }");
-    btnLay.addStretch();
-    btnLay.addWidget(btnOk);
-    btnLay.addWidget(btnCancel);
-    lay.addWidget(info);
-    lay.addWidget(hint);
-    lay.addWidget(input);
-    lay.addLayout(&btnLay);
-    connect(btnOk,     &QPushButton::clicked, &dlg, &QDialog::accept);
-    connect(btnCancel, &QPushButton::clicked, &dlg, &QDialog::reject);
-    connect(input, &QLineEdit::returnPressed, &dlg, &QDialog::accept);
-    // Focus sur le champ et déclencher Win+H automatiquement
-    input->setFocus();
-    QTimer::singleShot(300, [&]() {
-#ifdef Q_OS_WIN
-        // Simuler Win+H pour ouvrir la saisie vocale Windows sur le champ
-        INPUT inputs[4] = {};
-        inputs[0].type = INPUT_KEYBOARD;
-        inputs[0].ki.wVk = VK_LWIN;
-        inputs[1].type = INPUT_KEYBOARD;
-        inputs[1].ki.wVk = 'H';
-        inputs[2].type = INPUT_KEYBOARD;
-        inputs[2].ki.wVk = 'H';
-        inputs[2].ki.dwFlags = KEYEVENTF_KEYUP;
-        inputs[3].type = INPUT_KEYBOARD;
-        inputs[3].ki.wVk = VK_LWIN;
-        inputs[3].ki.dwFlags = KEYEVENTF_KEYUP;
-        SendInput(4, inputs, sizeof(INPUT));
-#endif
-    });
-    if (dlg.exec() == QDialog::Accepted) {
-        QString cmd = input->text().trimmed().toLower();
-        if (!cmd.isEmpty())
-            processVoiceCommand(cmd);
-    }
-}
 //send email
 void MainWindow::onSendEmailButtonClicked()
 {
@@ -5496,216 +4849,4 @@ void MainWindow::onSendEmailButtonClicked()
     else
         QMessageBox::critical(this, "Erreur",
                               "❌ Échec de l'envoi pour la commande ID = " + QString::number(id_commande));
-}
-void MainWindow::processVoiceCommand(const QString &rawCmd)
-{
-    // Normaliser : minuscules, supprimer ponctuation finale
-    QString cmd = rawCmd.toLower().trimmed();
-    cmd.remove(QRegularExpression("[.!?,;]$"));
-    QString feedback = "🎤 \"" + cmd + "\"";
-    //Ajouter
-    if (cmd.contains("ajouter") || cmd.contains("ajoutez") || cmd.contains("ajoute") ||
-        cmd.contains("ajout")   || cmd.contains("créer")   || cmd.contains("créez")  ||
-        cmd.contains("creer")   || cmd.contains("cree")    || cmd.contains("créé")   ||
-        cmd.contains("nouvelle") || cmd.contains("nouveau") || cmd.contains("insérer") ||
-        cmd.contains("inserer") || cmd.contains("add")) {
-        // Extraire quantité : "quantité 2.9" / "quantite 5"
-        QRegularExpression reQty("(quantit[eé]|quantite)\\s+(\\d+[.,]?\\d*)");
-        auto mQty = reQty.match(cmd);
-        QString qty = mQty.hasMatch() ? mQty.captured(2).replace(",", ".") : "";
-
-        // Extraire nom : "nom aaa" / "nommée cuir" / "appelée cuir"
-        QRegularExpression reNom("(nom|nomm[eé]e?|appel[eé]e?)\\s+(\\w+)");
-        auto mNom = reNom.match(cmd);
-        QString nom = mNom.hasMatch() ? mNom.captured(2) : "";
-        // Extraire référence : "référence dd" / "ref dd"
-        QRegularExpression reRef("(r[eé]f[eé]rence|ref|r[eé]f)\\s+(\\w+)");
-        auto mRef = reRef.match(cmd);
-        QString ref = mRef.hasMatch() ? mRef.captured(2) : "";
-        // Extraire type : "type cuir" / "de type peau"
-        QRegularExpression reType("(type|de type)\\s+(\\w+(?:\\s+\\w+)?)");
-        auto mType = reType.match(cmd);
-        QString type = mType.hasMatch() ? mType.captured(2) : "";
-        // Extraire seuil : "seuil 100"
-        QRegularExpression reSeuil("(seuil)\\s+(\\d+)");
-        auto mSeuil = reSeuil.match(cmd);
-        QString seuil = mSeuil.hasMatch() ? mSeuil.captured(2) : "";
-        MatiereDialog dlg(this, MatiereDialog::AddMode);
-        if (!nom.isEmpty() || !qty.isEmpty() || !ref.isEmpty() || !seuil.isEmpty())
-            dlg.setMatiereData(nom, ref, type, qty, seuil, "");
-        if (dlg.exec() == QDialog::Accepted) {
-            Matiere m;
-            m.setNom(dlg.getModule());
-            m.setReference(dlg.getReference());
-            m.setType(dlg.getType());
-            m.setQuantite(dlg.getQuantite().toDouble());
-            m.setSeuil(dlg.getSeuil().toInt());
-            m.setDateExpiration(QDate::fromString(dlg.getDateExpiration(), "yyyy-MM-dd"));
-            m.setPhotoUrl(dlg.getPhotoUrl());
-            if (m.ajouter()) { setupMatiereTable(); updateMatiereStatistics(); }
-        }
-    //Modifier
-    } else if (cmd.contains("modifier") || cmd.contains("modifiez") || cmd.contains("modifie") ||
-               cmd.contains("changer")  || cmd.contains("changez")  || cmd.contains("éditer") ||
-               cmd.contains("mettre à jour") || cmd.contains("première matière")) {
-        // Extraire nom pour sélectionner la ligne
-        QRegularExpression reNomCible("(mati[eè]re|matiere)\\s+(\\w+)");
-        auto mNomCible = reNomCible.match(cmd);
-        if (mNomCible.hasMatch()) {
-            QString nomCible = mNomCible.captured(2);
-            for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
-                if (cellText(ui->matiereTable, r, 0).toLower().contains(nomCible)) {
-                    ui->matiereTable->selectRow(r);
-                    break;
-                }
-            }
-        }
-        int row = ui->matiereTable->currentRow();
-        if (row < 0) {
-            QMessageBox::warning(this, "Modifier", "Veuillez sélectionner une matière à modifier.");
-            return;
-        }
-        // Extraire les modifications demandées
-        QRegularExpression reQty("(quantit[eé]|quantite)\\s+([àa]\\s+|pour\\s+)?(\\d+[.,]?\\d*)");
-        auto mQty = reQty.match(cmd);
-        QString qty = mQty.hasMatch() ? mQty.captured(3).replace(",", ".") : "";
-        QRegularExpression reSeuil("(seuil)\\s+([àa]\\s+|pour\\s+)?(\\d+)");
-        auto mSeuil = reSeuil.match(cmd);
-        QString seuil = mSeuil.hasMatch() ? mSeuil.captured(3) : "";
-        QRegularExpression reType("(type)\\s+([àa]\\s+|pour\\s+)?(\\w+(?:\\s+\\w+)?)");
-        auto mType = reType.match(cmd);
-        QString type = mType.hasMatch() ? mType.captured(3) : "";
-        QRegularExpression reRef("(r[eé]f[eé]rence|ref)\\s+([àa]\\s+|pour\\s+)?(\\w+)");
-        auto mRef = reRef.match(cmd);
-        QString ref = mRef.hasMatch() ? mRef.captured(3) : "";
-        QRegularExpression reNom("(nom|module)\\s+([àa]\\s+|pour\\s+)?(\\w+(?:\\s+\\w+)?)");
-        auto mNom = reNom.match(cmd);
-        QString nom = mNom.hasMatch() ? mNom.captured(3) : "";
-        QRegularExpression reDate("(date|expiration)\\s+([àa]\\s+|pour\\s+)?(\\d{4})[\\s\\-\\.](\\d{2})[\\s\\-\\.](\\d{2})");
-        auto mDate = reDate.match(cmd);
-        QString dateStr = mDate.hasMatch() ? mDate.captured(3) + "-" + mDate.captured(4) + "-" + mDate.captured(5) : "";
-        MatiereDialog dlg(this, MatiereDialog::EditMode);
-        dlg.setMatiereData(
-            cellText(ui->matiereTable, row, 0),
-            cellText(ui->matiereTable, row, 1),
-            cellText(ui->matiereTable, row, 2),
-            cellText(ui->matiereTable, row, 3).remove(" m²"),
-            cellText(ui->matiereTable, row, 4),
-            cellText(ui->matiereTable, row, 5),
-            ""
-        );
-        // Appliquer les modifications vocales
-        if (!qty.isEmpty())   dlg.setQuantite(qty);
-        if (!seuil.isEmpty()) dlg.setSeuil(seuil);
-        if (!type.isEmpty())  dlg.setTypeMatiere(type);
-        if (!ref.isEmpty())   dlg.setReference(ref);
-        if (!nom.isEmpty())   dlg.setModule(nom);
-        if (!dateStr.isEmpty()) dlg.setDateExpiration(dateStr);
-        if (dlg.exec() == QDialog::Accepted) {
-            Matiere m;
-            m.setId(cellText(ui->matiereTable, row, 0).toInt());
-            m.setNom(dlg.getModule());
-            m.setReference(dlg.getReference());
-            m.setType(dlg.getType());
-            m.setQuantite(dlg.getQuantite().toDouble());
-            m.setSeuil(dlg.getSeuil().toInt());
-            m.setDateExpiration(QDate::fromString(dlg.getDateExpiration(), "yyyy-MM-dd"));
-            m.setPhotoUrl(dlg.getPhotoUrl());
-            if (m.modifier()) { setupMatiereTable(); updateMatiereStatistics(); }
-        }
-    //Supprimer
-    } else if (cmd.contains("supprimer") || cmd.contains("supprimez") || cmd.contains("supprime") ||
-               cmd.contains("effacer")   || cmd.contains("effacez")   || cmd.contains("enlever") ||
-               cmd.contains("retirer")   || cmd.contains("enlève")) {
-        QRegularExpression reNom("(mati[eè]re|matiere)\\s+(\\w+)");
-        auto mNom = reNom.match(cmd);
-        if (mNom.hasMatch()) {
-            QString nomCible = mNom.captured(2);
-            for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
-                if (cellText(ui->matiereTable, r, 0).toLower().contains(nomCible)) {
-                    ui->matiereTable->selectRow(r);
-                    break;
-                }
-            }
-        }
-        onDeleteMatiere();
-    //Rechercher
-    } else if (cmd.contains("rechercher") || cmd.contains("recherche") ||
-               cmd.contains("chercher")   || cmd.contains("trouver")   ||
-               cmd.contains("filtrer")    || cmd.contains("afficher")) {
-        // Extraire le terme : "rechercher cuir" / "chercher stock critique"
-        QString term = cmd;
-        for (const QString &kw : QStringList{"rechercher", "recherche", "chercher", "trouver",
-                                   "filtrer", "afficher", "la matière", "matière", "les matières"})
-            term.remove(kw);
-        term = term.trimmed();
-        // Détection de filtres spéciaux
-        if (term.contains("critique") || term.contains("stock critique")) {
-            // Filtrer stock critique
-            for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
-                int qty = cellText(ui->matiereTable, r, 3).remove(" m²").toInt();
-                int seuil = cellText(ui->matiereTable, r, 4).toInt();
-                ui->matiereTable->setRowHidden(r, qty >= seuil);
-            }
-            QMainWindow::statusBar()->showMessage("🔍 Affichage : stock critique", 3000);
-        } else if (term.contains("expiré") || term.contains("expire") || term.contains("périmé")) {
-            // Filtrer matières expirées
-            for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
-                QString dateStr = cellText(ui->matiereTable, r, 5);
-                QDate expDate = QDate::fromString(dateStr, "yyyy-MM-dd");
-                int daysLeft = QDate::currentDate().daysTo(expDate);
-                ui->matiereTable->setRowHidden(r, daysLeft >= 0);
-            }
-            QMainWindow::statusBar()->showMessage("🔍 Affichage : matières expirées", 3000);
-        } else if (!term.isEmpty()) {
-            // Recherche textuelle simple
-            QString lower = term.toLower();
-            for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
-                bool match = false;
-                for (int c = 0; c < 3; ++c) { // Nom, Ref, Type
-                    if (cellText(ui->matiereTable, r, c).toLower().contains(lower)) {
-                        match = true;
-                        break;
-                    }
-                }
-                ui->matiereTable->setRowHidden(r, !match);
-            }
-            QMainWindow::statusBar()->showMessage("🔍 Recherche : " + term, 3000);
-        } else {
-            // Ouvrir le dialog de recherche avancée
-            onRechercheTriMatiere();
-        }
-    //Statistiques
-    } else if (cmd.contains("statistique") || cmd.contains("stats") ||
-               cmd.contains("statistiques")) {
-        onStatistiquesMatiere();
-    //Exporter
-    } else if (cmd.contains("export") || cmd.contains("exporter") ||
-               cmd.contains("exportez") || cmd.contains("pdf") ||
-               cmd.contains("rapport")) {
-        onExportMatiere();
-    //Détection
-    } else if (cmd.contains("détection") || cmd.contains("detection") ||
-               cmd.contains("détecter")  || cmd.contains("analyser") ||
-               cmd.contains("défaut")    || cmd.contains("defaut")) {
-        onDetectionDefauts();
-    //Trier
-    } else if (cmd.contains("trier") || cmd.contains("trier") || cmd.contains("tri") ||
-               cmd.contains("trie")  || cmd.contains("classer") || cmd.contains("ordonner")) {
-        onTriMatiere();
-    } else {
-        QMessageBox::information(this, "Vocal",
-            "Commande non reconnue : \"" + cmd + "\"\n\n"
-            "Exemples :\n"
-            "• \"ajouter matière\"\n"
-            "• \"modifier la matière dd\"\n"
-            "• \"supprimer la matière cuir\"\n"
-            "• \"rechercher peau de veau\"\n"
-            "• \"statistiques\"\n"
-            "• \"exporter\"\n"
-            "• \"détection\"\n"
-            "• \"trier\"");
-        return;
-    }
-    QMainWindow::statusBar()->showMessage(feedback, 3000);
 }

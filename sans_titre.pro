@@ -24,6 +24,8 @@ SOURCES += \
     clientmanagerdialog.cpp \
     matiere.cpp \
     matieredialog.cpp \
+    matieredetection.cpp \
+    voicematieres.cpp \
     fournisseur.cpp \
     fournisseurdialog.cpp \
     smsfournisseurdialog.cpp \
@@ -49,6 +51,8 @@ HEADERS += \
     clientmanagerdialog.h \
     matiere.h \
     matieredialog.h \
+    matieredetection.h \
+    voicematieres.h \
     fournisseur.h \
     fournisseurdialog.h \
     smsfournisseurdialog.h \
