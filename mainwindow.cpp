@@ -2737,8 +2737,21 @@ void MainWindow::onModifierProduction()
     }
     
     QComboBox typeC(&d);
-    typeC.addItems({"Sac à Main Cuir", "Portefeuille", "Ceinture", "Sacoche", "Porte-documents", "Sac à Dos"});
-    typeC.setCurrentText(cellText(ui->productionTable, row, 3));
+    {
+        QSqlQuery qa(Connection::instance()->getDatabase());
+        if (qa.exec("SELECT NOM FROM ARTICLES ORDER BY NOM")) {
+            while (qa.next())
+                typeC.addItem(qa.value(0).toString(), qa.value(0).toString());
+        }
+        if (typeC.count() == 0)
+            typeC.addItems({"Sac à Main Cuir","Portefeuille","Ceinture","Sacoche","Porte-documents","Sac à Dos"});
+    }
+    // Pré-sélectionner le produit actuel
+    for (int i = 0; i < typeC.count(); ++i) {
+        if (typeC.itemData(i).toString() == cellText(ui->productionTable, row, 3)) {
+            typeC.setCurrentIndex(i); break;
+        }
+    }
     
     QString montantStr = cellText(ui->productionTable, row, 4);
     montantStr.remove(" DT").remove(",").replace(" ", "");
@@ -2748,6 +2761,11 @@ void MainWindow::onModifierProduction()
     montantE.setSuffix(" DT");
     montantE.setSingleStep(1.0);
     montantE.setValue(montantStr.toDouble());
+    montantE.setStyleSheet(
+        "QDoubleSpinBox { background:white; border:2px solid #BCAAA4; border-radius:6px; "
+        "padding:8px; font-size:12px; color:#291C0E; }"
+        "QDoubleSpinBox:focus { border-color:#8D6E63; }"
+        "QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width:18px; }");
 
     QDateEdit dcE(QDate::fromString(cellText(ui->productionTable, row, 5), "dd/MM/yyyy"), &d);
     dcE.setCalendarPopup(true);
@@ -2819,8 +2837,8 @@ void MainWindow::onModifierProduction()
         prod.setIdCommande(cellText(ui->productionTable, row, 0).toInt());
         prod.setReference(refE.text());
         prod.setIdEmploye(employeC.currentData().toInt());
-        prod.setType(typeC.currentText());
-        prod.setServiceVente(typeC.currentText());
+        prod.setType(typeC.currentData().toString());
+        prod.setServiceVente(typeC.currentData().toString());
         prod.setMontant(montantE.value());
         prod.setDateCreation(dcE.date());
         prod.setDateLivraisonPrevue(dlE.date());
@@ -2903,183 +2921,267 @@ void MainWindow::onFactureProduction()
     int row = ui->productionTable->currentRow();
     if (row < 0) { QMessageBox::warning(this,"","Sélectionnez une commande."); return; }
 
-    // ── Données de la ligne sélectionnée ────────────────────────────────────
-    QString id      = cellText(ui->productionTable, row, 0);
-    QString ref     = cellText(ui->productionTable, row, 1);
-    QString employe = cellText(ui->productionTable, row, 2);
-    QString type    = cellText(ui->productionTable, row, 3);
+    QString id         = cellText(ui->productionTable, row, 0);
+    QString ref        = cellText(ui->productionTable, row, 1);
+    QString employe    = cellText(ui->productionTable, row, 2);
+    QString type       = cellText(ui->productionTable, row, 3);
     QString montantRaw = cellText(ui->productionTable, row, 4);
-    QString dc      = cellText(ui->productionTable, row, 5);
-    QString dl      = cellText(ui->productionTable, row, 6);
-    QString statut  = cellText(ui->productionTable, row, 7);
-    QString priorite= cellText(ui->productionTable, row, 8);
+    QString dc         = cellText(ui->productionTable, row, 5);
+    QString dl         = cellText(ui->productionTable, row, 6);
+    QString statut     = cellText(ui->productionTable, row, 7);
+    QString priorite   = cellText(ui->productionTable, row, 8);
 
-    double ht  = QString(montantRaw).remove(" DT").remove(",").replace(" ","").toDouble();
-    double tva = ht * 0.19;
-    double ttc = ht + tva;
+    double ht     = QString(montantRaw).remove(" DT").remove(",").replace(" ","").toDouble();
+    double tva    = ht * 0.19;
+    double remise = ht * 0.05;
+    double ttc    = ht + tva - remise;
 
-
-
-    // ── Couleur statut ───────────────────────────────────────────────────────
-    auto statutColor = [](const QString &s) -> QString {
-        if (s == "Terminé")      return "#27AE60";
-        if (s == "En Production") return "#F39C12";
-        if (s == "Planifié")     return "#3498DB";
-        return "#95A5A6";
-    };
-    auto prioriteColor = [](const QString &p) -> QString {
-        if (p == "Urgente") return "#E74C3C";
-        if (p == "Haute")   return "#F39C12";
-        if (p == "Normale") return "#3498DB";
-        return "#95A5A6";
-    };
-
-    // ── HTML ─────────────────────────────────────────────────────────────────
-    QString html = QString(R"(
-<html><head><style>
-  body { font-family: Arial, sans-serif; color: #291C0E; margin: 0; padding: 30px; background: #FAFAFA; }
-  .page { background: white; padding: 40px; border-radius: 8px; max-width: 750px; margin: auto; }
-  h1 { font-size: 36px; color: #8D6E63; text-align: center; letter-spacing: 4px; margin: 0 0 4px 0; }
-  .subtitle { text-align: center; color: #A0826D; font-size: 13px; margin-bottom: 20px; }
-  hr { border: none; border-top: 2px solid #E0D0C0; margin: 18px 0; }
-  .hr-light { border: none; border-top: 1px solid #F0E6DA; margin: 10px 0; }
-  .info-grid { display: table; width: 100%%; }
-  .info-col  { display: table-cell; width: 50%%; vertical-align: top; }
-  .label { font-size: 10px; color: #A0826D; text-transform: uppercase; letter-spacing: 1px; }
-  .value { font-size: 13px; font-weight: bold; color: #291C0E; margin-bottom: 10px; }
-  table.items { width: 100%%; border-collapse: collapse; margin: 12px 0; }
-  table.items th { background: #8D6E63; color: white; padding: 10px 12px; font-size: 12px; text-align: left; }
-  table.items td { padding: 10px 12px; font-size: 12px; border-bottom: 1px solid #F0E6DA; }
-  table.items tr:nth-child(even) td { background: #FFF8F0; }
-  .totals { float: right; width: 280px; margin-top: 10px; }
-  .totals table { width: 100%%; border-collapse: collapse; }
-  .totals td { padding: 7px 12px; font-size: 13px; }
-  .totals .ttc { background: #8D6E63; color: white; font-weight: bold; font-size: 15px; border-radius: 4px; }
-  .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; color: white; font-size: 11px; font-weight: bold; }
-  .footer { text-align: center; color: #A0826D; font-size: 11px; margin-top: 30px; }
-  .section-title { font-size: 11px; color: #A0826D; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; margin-bottom: 8px; }
-  .clearfix::after { content: ''; display: table; clear: both; }
-</style></head><body><div class='page'>
-
-  <!-- EN-TÊTE -->
-  <h1>FACTURE</h1>
-  <div class='subtitle'>CUIREA Management &mdash; Usine de Cuir</div>
-  <hr/>
-
-  <!-- INFOS PRINCIPALES -->
-  <div class='info-grid'>
-    <div class='info-col'>
-      <div class='label'>N° Facture</div><div class='value'>#%1</div>
-      <div class='label'>Référence</div><div class='value'>%2</div>
-      <div class='label'>Type</div><div class='value'>%3</div>
-    </div>
-    <div class='info-col' style='text-align:right;'>
-      <div class='label'>Date de création</div><div class='value'>%4</div>
-      <div class='label'>Date de livraison prévue</div><div class='value'>%5</div>
-    </div>
-  </div>
-  <hr/>
-
-  <!-- PARTIES -->
-  <div class='info-grid'>
-    <div class='info-col'>
-      <div class='section-title'>Émetteur</div>
-      <div class='value'>CUIREA Management</div>
-      <div style='font-size:12px;color:#666;'>Usine de Cuir &mdash; Tunisie</div>
-    </div>
-    <div class='info-col'>
-      <div class='section-title'>Responsable</div>
-      <div class='value'>%6</div>
-    </div>
-  </div>
-  <hr/>
-
-  <!-- TABLEAU DÉTAIL -->
-  <div class='section-title'>Détail de la commande</div>
-  <table class='items'>
-    <tr><th>Désignation</th><th>Qté</th><th>Prix Unitaire HT</th><th>Total HT</th></tr>
-    <tr>
-      <td>%3 &mdash; Réf. %2</td>
-      <td>1</td>
-      <td>%7 DT</td>
-      <td>%7 DT</td>
-    </tr>
-  </table>
-
-  <!-- TOTAUX -->
-  <div class='clearfix'>
-    <div class='totals'>
-      <table>
-        <tr><td>Montant HT</td><td style='text-align:right;'><b>%7 DT</b></td></tr>
-        <tr><td>TVA (19%%)</td><td style='text-align:right;'>%8 DT</td></tr>
-        <tr class='ttc'><td><b>Total TTC</b></td><td style='text-align:right;'><b>%9 DT</b></td></tr>
-      </table>
-    </div>
-  </div>
-  <br style='clear:both;'/>
-  <hr/>
-
-  <!-- SUIVI -->
-  <div class='section-title'>Suivi &amp; État</div>
-  <div class='info-grid'>
-    <div class='info-col'>
-      <div class='label'>Statut</div>
-      <div style='margin-bottom:10px;'>
-        <span class='badge' style='background:%10;'>%11</span>
-      </div>
-      <div class='label'>Priorité</div>
-      <div><span class='badge' style='background:%12;'>%13</span></div>
-    </div>
-    <div class='info-col'>
-      <div class='label'>État de paiement</div>
-      <div><span class='badge' style='background:#E74C3C;'>Non payée</span></div>
-    </div>
-  </div>
-  <hr/>
-
-  <!-- PIED DE PAGE -->
-  <div class='footer'>
-    <b>Merci pour votre confiance !</b><br/>
-    Conditions de paiement : 30 jours &mdash; Tout retard entraîne des pénalités de 1,5%% par mois.<br/>
-    CUIREA Management &mdash; contact@cuirea.tn &mdash; +216 XX XXX XXX
-  </div>
-
-</div></body></html>
-    )")
-    .arg(id, ref, type, dc, dl, employe)
-    .arg(QString::number(ht,'f',2), QString::number(tva,'f',2), QString::number(ttc,'f',2))
-    .arg(statutColor(statut), statut, prioriteColor(priorite), priorite);
+    // Mail client depuis BD
+    QString mailClient;
+    {
+        QSqlQuery q(Connection::instance()->getDatabase());
+        q.prepare("SELECT MAIL_CLIENT FROM COMMANDES WHERE ID_COMMANDE = :id");
+        q.bindValue(":id", id.toInt());
+        if (q.exec() && q.next()) mailClient = q.value(0).toString();
+    }
 
     // ── Dialogue ─────────────────────────────────────────────────────────────
     QDialog dlg(this);
     dlg.setWindowTitle("Facture — " + ref);
-    dlg.setMinimumSize(800, 700);
-    dlg.setStyleSheet("QDialog{background:#FAF5F0;}");
+    dlg.setMinimumSize(780, 700);
+    dlg.setStyleSheet("QDialog { background: #F4F4F8; }");
 
-    QVBoxLayout lay(&dlg);
-    lay.setContentsMargins(16, 16, 16, 16);
-    lay.setSpacing(10);
+    QVBoxLayout *root = new QVBoxLayout(&dlg);
+    root->setContentsMargins(20, 20, 20, 16);
+    root->setSpacing(12);
 
-    auto *view = new QTextEdit(&dlg);
-    view->setReadOnly(true);
-    view->setHtml(html);
-    view->setStyleSheet("QTextEdit{background:white;border:1px solid #BCAAA4;border-radius:6px;}");
-    lay.addWidget(view);
+    QScrollArea *scroll = new QScrollArea(&dlg);
+    scroll->setWidgetResizable(true);
+    scroll->setStyleSheet("QScrollArea { border:none; background:#F4F4F8; }");
 
-    QHBoxLayout btns;
-    QPushButton pdf("⬇ Exporter PDF", &dlg), close("Fermer", &dlg);
-    pdf.setStyleSheet("QPushButton{background:#8D6E63;color:white;border:none;border-radius:6px;"
-                      "padding:8px 20px;font-weight:bold;}"
-                      "QPushButton:hover{background:#A0826D;}");
-    close.setStyleSheet("QPushButton{background:#95877C;color:white;border:none;border-radius:6px;"
-                        "padding:8px 20px;}"
-                        "QPushButton:hover{background:#7D6B61;}");
-    btns.addStretch();
-    btns.addWidget(&pdf);
-    btns.addWidget(&close);
-    lay.addLayout(&btns);
+    QWidget *page = new QWidget();
+    page->setStyleSheet("background:white; border-radius:10px;");
+    QVBoxLayout *lay = new QVBoxLayout(page);
+    lay->setContentsMargins(36, 32, 36, 32);
+    lay->setSpacing(20);
 
-    connect(&pdf, &QPushButton::clicked, [&] {
+    // ── EN-TÊTE ──────────────────────────────────────────────────────────────
+    QHBoxLayout *hdr = new QHBoxLayout();
+
+    QVBoxLayout *logoCol = new QVBoxLayout();
+    QLabel *logoLbl = new QLabel("CUIREA");
+    logoLbl->setStyleSheet("font-size:30px; font-weight:bold; color:#5A4FCF; letter-spacing:3px;");
+    QLabel *subLbl = new QLabel("Smart Leather Goods Factory");
+    subLbl->setStyleSheet("font-size:11px; color:#888;");
+    logoCol->addWidget(logoLbl); logoCol->addWidget(subLbl); logoCol->addStretch();
+    hdr->addLayout(logoCol);
+    hdr->addStretch();
+
+    QVBoxLayout *titleCol = new QVBoxLayout();
+    titleCol->setAlignment(Qt::AlignRight);
+    QLabel *facLbl = new QLabel("FACTURE");
+    facLbl->setStyleSheet("font-size:34px; font-weight:bold; color:#5A4FCF; letter-spacing:4px;");
+    facLbl->setAlignment(Qt::AlignRight);
+    QLabel *numLbl = new QLabel("N° " + ref);
+    numLbl->setStyleSheet("font-size:13px; color:#555;"); numLbl->setAlignment(Qt::AlignRight);
+    QLabel *dateLbl = new QLabel("Date : " + QDate::currentDate().toString("dd MMMM yyyy"));
+    dateLbl->setStyleSheet("font-size:12px; color:#888;"); dateLbl->setAlignment(Qt::AlignRight);
+    titleCol->addWidget(facLbl); titleCol->addWidget(numLbl); titleCol->addWidget(dateLbl);
+    hdr->addLayout(titleCol);
+    lay->addLayout(hdr);
+
+    // Séparateur
+    auto makeSep = [&]() {
+        QFrame *s = new QFrame(); s->setFrameShape(QFrame::HLine);
+        s->setStyleSheet("color:#E0E0E0;"); return s;
+    };
+    lay->addWidget(makeSep());
+
+    // ── INFOS ENTREPRISE / CLIENT ─────────────────────────────────────────────
+    auto makeInfoBox = [](const QString &title, const QStringList &lines) {
+        QWidget *box = new QWidget();
+        box->setStyleSheet("background:#F8F7FF; border-radius:8px;");
+        QVBoxLayout *bl = new QVBoxLayout(box);
+        bl->setContentsMargins(14,12,14,12); bl->setSpacing(4);
+        QLabel *t = new QLabel(title);
+        t->setStyleSheet("font-size:10px; font-weight:bold; color:#5A4FCF; text-transform:uppercase; letter-spacing:1px;");
+        bl->addWidget(t);
+        QFrame *sep = new QFrame(); sep->setFrameShape(QFrame::HLine);
+        sep->setStyleSheet("color:#D0CCFF;"); bl->addWidget(sep);
+        for (const QString &line : lines) {
+            QLabel *l = new QLabel(line); l->setStyleSheet("font-size:12px; color:#333;");
+            l->setWordWrap(true); bl->addWidget(l);
+        }
+        return box;
+    };
+
+    QHBoxLayout *infoRow = new QHBoxLayout();
+    infoRow->addWidget(makeInfoBox("Émetteur", {
+        "<b>CUIREA Management</b>", "Zone Industrielle, Tunis, Tunisie",
+        "Tél : +216 71 000 000", "contact@cuirea.tn"
+    }));
+    infoRow->addSpacing(20);
+    infoRow->addWidget(makeInfoBox("Facturé à", {
+        mailClient.isEmpty() ? "Client interne" : mailClient,
+        "Livraison prévue : " + dl
+    }));
+    lay->addLayout(infoRow);
+
+    // ── TABLEAU ARTICLES ──────────────────────────────────────────────────────
+    QLabel *tblTitle = new QLabel("Détail de la commande");
+    tblTitle->setStyleSheet("font-size:11px; font-weight:bold; color:#5A4FCF; text-transform:uppercase; letter-spacing:1px;");
+    lay->addWidget(tblTitle);
+
+    QTableWidget *table = new QTableWidget(1, 4, page);
+    table->setHorizontalHeaderLabels({"Description", "Prix Unitaire", "Quantité", "Total"});
+    table->horizontalHeader()->setStyleSheet(
+        "QHeaderView::section { background:#5A4FCF; color:white; font-weight:bold; "
+        "font-size:12px; padding:10px; border:none; }");
+    table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(2, QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
+    table->verticalHeader()->setVisible(false);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setSelectionMode(QAbstractItemView::NoSelection);
+    table->setShowGrid(false);
+    table->setAlternatingRowColors(true);
+    table->setStyleSheet(
+        "QTableWidget { border:1px solid #E8E8F0; border-radius:6px; font-size:12px; }"
+        "QTableWidget::item { padding:10px 12px; color:#333; }"
+        "QTableWidget { alternate-background-color:#F8F7FF; }");
+    table->setItem(0,0, new QTableWidgetItem(type + " — Réf. " + ref));
+    table->setItem(0,1, new QTableWidgetItem(QString::number(ht,'f',2) + " DT"));
+    table->setItem(0,2, new QTableWidgetItem("1"));
+    table->setItem(0,3, new QTableWidgetItem(QString::number(ht,'f',2) + " DT"));
+    table->setFixedHeight(table->horizontalHeader()->height() + table->rowHeight(0) + 4);
+    lay->addWidget(table);
+
+    // ── TOTAUX ────────────────────────────────────────────────────────────────
+    QHBoxLayout *totRow = new QHBoxLayout();
+    totRow->addStretch();
+    QWidget *totBox = new QWidget();
+    totBox->setStyleSheet("background:#F8F7FF; border-radius:8px;");
+    totBox->setFixedWidth(300);
+    QVBoxLayout *totLay = new QVBoxLayout(totBox);
+    totLay->setContentsMargins(16,14,16,14); totLay->setSpacing(6);
+
+    auto addTotLine = [&](const QString &lbl, const QString &val) {
+        QHBoxLayout *r = new QHBoxLayout();
+        QLabel *l = new QLabel(lbl); QLabel *v = new QLabel(val);
+        l->setStyleSheet("font-size:12px; color:#555;");
+        v->setStyleSheet("font-size:12px; color:#555;");
+        v->setAlignment(Qt::AlignRight);
+        r->addWidget(l); r->addStretch(); r->addWidget(v);
+        totLay->addLayout(r);
+    };
+    addTotLine("Sous-total HT",  QString::number(ht,'f',2)     + " DT");
+    addTotLine("TVA (19%)",      QString::number(tva,'f',2)    + " DT");
+    addTotLine("Remise (5%)",   "-" + QString::number(remise,'f',2) + " DT");
+
+    QFrame *sepTot = new QFrame(); sepTot->setFrameShape(QFrame::HLine);
+    sepTot->setStyleSheet("color:#D0CCFF;"); totLay->addWidget(sepTot);
+
+    QWidget *ttcBox = new QWidget();
+    ttcBox->setStyleSheet("background:#5A4FCF; border-radius:6px;");
+    QHBoxLayout *ttcLay = new QHBoxLayout(ttcBox);
+    ttcLay->setContentsMargins(12,10,12,10);
+    QLabel *ttcL = new QLabel("Total TTC");
+    QLabel *ttcV = new QLabel(QString::number(ttc,'f',2) + " DT");
+    ttcL->setStyleSheet("color:white; font-weight:bold; font-size:14px;");
+    ttcV->setStyleSheet("color:white; font-weight:bold; font-size:14px;");
+    ttcV->setAlignment(Qt::AlignRight);
+    ttcLay->addWidget(ttcL); ttcLay->addStretch(); ttcLay->addWidget(ttcV);
+    totLay->addWidget(ttcBox);
+    totRow->addWidget(totBox);
+    lay->addLayout(totRow);
+
+    // ── NOTE ─────────────────────────────────────────────────────────────────
+    QWidget *noteBox = new QWidget();
+    noteBox->setStyleSheet("background:#FFFBF0; border-left:4px solid #F0C040; border-radius:4px;");
+    QVBoxLayout *noteLay = new QVBoxLayout(noteBox);
+    noteLay->setContentsMargins(14,10,14,10);
+    QLabel *noteT = new QLabel("Note");
+    noteT->setStyleSheet("font-weight:bold; font-size:11px; color:#B8860B;");
+    QLabel *noteV = new QLabel("Priorité : " + priorite + "  |  Statut : " + statut + "  |  Créée le : " + dc);
+    noteV->setStyleSheet("font-size:12px; color:#555;");
+    noteLay->addWidget(noteT); noteLay->addWidget(noteV);
+    lay->addWidget(noteBox);
+
+    // ── PIED DE PAGE ─────────────────────────────────────────────────────────
+    lay->addWidget(makeSep());
+    QHBoxLayout *footer = new QHBoxLayout();
+    auto makeFooterCol = [](const QString &title, const QStringList &lines) {
+        QVBoxLayout *col = new QVBoxLayout();
+        QLabel *t = new QLabel(title);
+        t->setStyleSheet("font-size:10px; font-weight:bold; color:#5A4FCF; text-transform:uppercase;");
+        col->addWidget(t);
+        for (const QString &l : lines) {
+            QLabel *lbl = new QLabel(l); lbl->setStyleSheet("font-size:11px; color:#777;");
+            col->addWidget(lbl);
+        }
+        return col;
+    };
+    footer->addLayout(makeFooterCol("Contact",    {"contact@cuirea.tn", "+216 71 000 000"}));
+    footer->addStretch();
+    footer->addLayout(makeFooterCol("Paiement",   {"Virement bancaire", "IBAN : TN59 XXXX XXXX"}));
+    footer->addStretch();
+    footer->addLayout(makeFooterCol("Conditions", {"Paiement sous 30 jours", "Pénalités : 1,5%/mois"}));
+    lay->addLayout(footer);
+
+    scroll->setWidget(page);
+    root->addWidget(scroll);
+
+    // ── BOUTONS ───────────────────────────────────────────────────────────────
+    QHBoxLayout *btns = new QHBoxLayout();
+    QPushButton *pdf   = new QPushButton("⬇  Exporter PDF", &dlg);
+    QPushButton *close = new QPushButton("✖  Fermer",       &dlg);
+    pdf->setStyleSheet(
+        "QPushButton{background:#5A4FCF;color:white;border:none;border-radius:6px;"
+        "padding:9px 22px;font-size:13px;font-weight:bold;}"
+        "QPushButton:hover{background:#4A3FBF;}");
+    close->setStyleSheet(
+        "QPushButton{background:#95877C;color:white;border:none;border-radius:6px;"
+        "padding:9px 22px;font-size:13px;}"
+        "QPushButton:hover{background:#7D6B61;}");
+    btns->addStretch(); btns->addWidget(pdf); btns->addWidget(close);
+    root->addLayout(btns);
+
+    // HTML pour export PDF
+    QString htmlPdf = QString(R"(
+<html><head><style>
+body{font-family:Arial;color:#291C0E;margin:0;padding:30px;}
+table{width:100%%;border-collapse:collapse;}
+th{background:#5A4FCF;color:white;padding:9px 12px;font-size:12px;text-align:left;}
+td{padding:9px 12px;font-size:12px;border-bottom:1px solid #F0F0F0;}
+.ttc{background:#5A4FCF;color:white;font-weight:bold;}
+.footer{color:#888;font-size:10px;text-align:center;margin-top:20px;}
+</style></head><body>
+<table><tr>
+<td><b style='font-size:22px;color:#5A4FCF;'>CUIREA</b><br/><small>Smart Leather Goods Factory</small></td>
+<td style='text-align:right;'><b style='font-size:22px;color:#5A4FCF;'>FACTURE</b><br/>N° %1 &mdash; %2</td>
+</tr></table><hr/>
+<table><tr>
+<td><b>CUIREA Management</b><br/>Zone Industrielle, Tunis<br/>contact@cuirea.tn</td>
+<td><b>Facturé à :</b><br/>%3</td>
+</tr></table><hr/>
+<table><tr><th>Description</th><th>Prix HT</th><th>Qté</th><th>Total</th></tr>
+<tr><td>%5 — Réf. %1</td><td>%6 DT</td><td>1</td><td>%6 DT</td></tr>
+</table><br/>
+<table style='width:280px;float:right;'>
+<tr><td>Sous-total HT</td><td style='text-align:right;'>%6 DT</td></tr>
+<tr><td>TVA (19%%)</td><td style='text-align:right;'>%7 DT</td></tr>
+<tr><td>Remise (5%%)</td><td style='text-align:right;'>-%8 DT</td></tr>
+<tr class='ttc'><td><b>Total TTC</b></td><td style='text-align:right;'><b>%9 DT</b></td></tr>
+</table>
+<div class='footer'>CUIREA &mdash; contact@cuirea.tn &mdash; Paiement 30 jours</div>
+</body></html>)")
+    .arg(ref, QDate::currentDate().toString("dd/MM/yyyy"),
+         employe, mailClient.isEmpty() ? "" : mailClient, type,
+         QString::number(ht,'f',2), QString::number(tva,'f',2),
+         QString::number(remise,'f',2), QString::number(ttc,'f',2));
+
+    connect(pdf, &QPushButton::clicked, [&] {
         QString fn = QFileDialog::getSaveFileName(&dlg, "Enregistrer",
             "Facture_" + ref + ".pdf", "PDF (*.pdf)");
         if (!fn.isEmpty()) {
@@ -3087,13 +3189,11 @@ void MainWindow::onFactureProduction()
             p.setOutputFormat(QPrinter::PdfFormat);
             p.setOutputFileName(fn);
             p.setPageSize(QPageSize::A4);
-            QTextDocument doc;
-            doc.setHtml(html);
-            doc.print(&p);
+            QTextDocument doc; doc.setHtml(htmlPdf); doc.print(&p);
             QMessageBox::information(&dlg, "Succès", "Facture exportée :\n" + fn);
         }
     });
-    connect(&close, &QPushButton::clicked, &dlg, &QDialog::accept);
+    connect(close, &QPushButton::clicked, &dlg, &QDialog::accept);
     dlg.exec();
 }
 

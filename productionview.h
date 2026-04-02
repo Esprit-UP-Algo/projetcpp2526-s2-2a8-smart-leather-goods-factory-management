@@ -95,6 +95,7 @@ private:
      */
     void loadEmployes();
     void loadClients();
+    void loadArticles();
 
     DialogMode   m_mode;
     QLabel      *lblTitle, *lblDeleteWarning;

@@ -44,6 +44,7 @@ ProductionDialog::ProductionDialog(QWidget *parent, DialogMode mode)
     setMinimumSize(620, 520);
     loadEmployes(); // Charge la liste des employés depuis la DB
     loadClients();  // Charge la liste des clients depuis la DB
+    loadArticles(); // Charge la liste des articles depuis la DB
 
     // En mode suppression, tous les champs sont en lecture seule
     bool readOnly = (mode == DeleteMode);
@@ -107,8 +108,7 @@ void ProductionDialog::setupUI()
 
     txtId        = new QLineEdit(this); txtId->setReadOnly(true);
     txtReference = new QLineEdit(this); txtReference->setPlaceholderText("Ex: PROD-2024-001");
-    cmbProduit   = new QComboBox(this);
-    cmbProduit->addItems({"Sac à Main Cuir","Portefeuille","Ceinture","Sacoche","Porte-documents","Sac à Dos"});
+    cmbProduit   = new QComboBox(this); // Rempli dynamiquement par loadArticles()
     spnPrix = new QDoubleSpinBox(this);
     spnPrix->setRange(0.01, 999999.99);
     spnPrix->setDecimals(2);
@@ -116,6 +116,11 @@ void ProductionDialog::setupUI()
     spnPrix->setSingleStep(1.0);
     spnPrix->setValue(1.0);
     spnPrix->setGroupSeparatorShown(false);
+    spnPrix->setStyleSheet(
+        "QDoubleSpinBox { background:white; border:2px solid #BCAAA4; border-radius:6px; "
+        "padding:8px; font-size:12px; color:#291C0E; }"
+        "QDoubleSpinBox:focus { border-color:#8D6E63; }"
+        "QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width:18px; }");
     cmbStatut    = new QComboBox(this);
     cmbStatut->addItems({"En Attente","Planifié","En Cours","En Production","Suspendu","Terminé","Annulé"});
     dateDebut    = new QDateEdit(this); dateDebut->setCalendarPopup(true);
@@ -174,7 +179,14 @@ void ProductionDialog::setProductionData(const QString &id, const QString &refer
 {
     txtId->setText(id); txtReference->setText(reference);
     spnPrix->setValue(quantite.toDouble());
-    auto setCombo = [](QComboBox *c, const QString &v){ int i=c->findText(v); if(i>=0) c->setCurrentIndex(i); };
+    auto setCombo = [](QComboBox *c, const QString &v){
+        // Chercher d'abord par userData, puis par texte
+        for (int i = 0; i < c->count(); ++i) {
+            if (c->itemData(i).toString() == v) { c->setCurrentIndex(i); return; }
+        }
+        int i = c->findText(v, Qt::MatchContains);
+        if (i >= 0) c->setCurrentIndex(i);
+    };
     setCombo(cmbProduit, produit); setCombo(cmbStatut, statut);
     setCombo(cmbResponsable, responsable); setCombo(cmbPriorite, priorite);
     dateDebut->setDate(QDate::fromString(dDebut,"dd/MM/yyyy"));
@@ -190,7 +202,7 @@ void ProductionDialog::setProductionData(const QString &id, const QString &refer
 
 QString ProductionDialog::getId()          const { return txtId->text(); }
 QString ProductionDialog::getReference()   const { return txtReference->text(); }
-QString ProductionDialog::getProduit()     const { return cmbProduit->currentText(); }
+QString ProductionDialog::getProduit()     const { return cmbProduit->currentData().toString(); }
 QString ProductionDialog::getQuantite()    const { return QString::number(spnPrix->value(), 'f', 2); }
 QString ProductionDialog::getStatut()      const { return cmbStatut->currentText(); }
 QString ProductionDialog::getDateDebut()   const { return dateDebut->date().toString("dd/MM/yyyy"); }
@@ -296,6 +308,23 @@ void ProductionDialog::loadClients()
             cmbClient->addItem(nomComplet + "  <" + email + ">", email);
         }
     }
+}
+
+void ProductionDialog::loadArticles()
+{
+    QSqlDatabase db = Connection::instance()->getDatabase();
+    if (!db.isOpen()) return;
+    QSqlQuery query(db);
+    query.prepare("SELECT NOM FROM ARTICLES ORDER BY NOM");
+    cmbProduit->clear();
+    if (query.exec()) {
+        while (query.next()) {
+            QString nom = query.value(0).toString();
+            cmbProduit->addItem(nom, nom);
+        }
+    }
+    if (cmbProduit->count() == 0)
+        cmbProduit->addItem("(Aucun article disponible)", "");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
