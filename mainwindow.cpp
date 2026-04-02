@@ -2742,24 +2742,29 @@ void MainWindow::onModifierProduction()
     
     QString montantStr = cellText(ui->productionTable, row, 4);
     montantStr.remove(" DT").remove(",").replace(" ", "");
-    QLineEdit montantE(montantStr, &d);
-    
+    QDoubleSpinBox montantE(&d);
+    montantE.setRange(0.01, 999999.99);
+    montantE.setDecimals(2);
+    montantE.setSuffix(" DT");
+    montantE.setSingleStep(1.0);
+    montantE.setValue(montantStr.toDouble());
+
     QDateEdit dcE(QDate::fromString(cellText(ui->productionTable, row, 5), "dd/MM/yyyy"), &d);
     dcE.setCalendarPopup(true);
     dcE.setDisplayFormat("dd/MM/yyyy");
-    
+
     QDateEdit dlE(QDate::fromString(cellText(ui->productionTable, row, 6), "dd/MM/yyyy"), &d);
     dlE.setCalendarPopup(true);
     dlE.setDisplayFormat("dd/MM/yyyy");
-    
+
     QComboBox statC(&d);
     statC.addItems({"En Attente", "Planifié", "En Cours", "En Production", "Suspendu", "Terminé", "Annulé"});
     statC.setCurrentText(cellText(ui->productionTable, row, 7));
-    
+
     QComboBox prioC(&d);
     prioC.addItems({"Basse", "Normale", "Urgente"});
     prioC.setCurrentText(cellText(ui->productionTable, row, 8));
-    
+
     form.addRow("Référence *:", &refE);
     form.addRow("Employé *:", &employeC);
     form.addRow("Produit:", &typeC);
@@ -2768,11 +2773,31 @@ void MainWindow::onModifierProduction()
     form.addRow("Date Livraison:", &dlE);
     form.addRow("Statut:", &statC);
     form.addRow("Priorité:", &prioC);
-    QLineEdit mailClientE("", &d);
-    mailClientE.setPlaceholderText("client@email.com");
-    form.addRow("Mail Client:", &mailClientE);
+
+    // ComboBox client chargé depuis la BD
+    QComboBox clientC(&d);
+    clientC.addItem("-- Aucun client --", "");
+    QString mailActuel = "";
+    {
+        QSqlQuery qc(Connection::instance()->getDatabase());
+        if (qc.exec("SELECT EMAIL, PRENOM || ' ' || NOM FROM CLIENTS WHERE EMAIL IS NOT NULL ORDER BY NOM, PRENOM")) {
+            while (qc.next()) {
+                QString email = qc.value(0).toString();
+                QString nom   = qc.value(1).toString();
+                clientC.addItem(nom + "  <" + email + ">", email);
+            }
+        }
+        QSqlQuery qm(Connection::instance()->getDatabase());
+        qm.prepare("SELECT MAIL_CLIENT FROM COMMANDES WHERE ID_COMMANDE = :id");
+        qm.bindValue(":id", cellText(ui->productionTable, row, 0).toInt());
+        if (qm.exec() && qm.next()) mailActuel = qm.value(0).toString();
+    }
+    for (int i = 0; i < clientC.count(); ++i) {
+        if (clientC.itemData(i).toString() == mailActuel) { clientC.setCurrentIndex(i); break; }
+    }
+    form.addRow("Client :", &clientC);
     lay.addLayout(&form);
-    
+
     QHBoxLayout btns;
     QPushButton ok("Enregistrer", &d), cancel("Annuler", &d);
     cancel.setStyleSheet("QPushButton{background:#95877C;}");
@@ -2780,38 +2805,28 @@ void MainWindow::onModifierProduction()
     btns.addWidget(&ok);
     btns.addWidget(&cancel);
     lay.addLayout(&btns);
-    
+
     connect(&ok, &QPushButton::clicked, &d, &QDialog::accept);
     connect(&cancel, &QPushButton::clicked, &d, &QDialog::reject);
-    
+
     if (d.exec() == QDialog::Accepted) {
-        if (refE.text().isEmpty() || employeC.currentIndex() < 0 || montantE.text().isEmpty()) {
+        if (refE.text().isEmpty() || employeC.currentIndex() < 0 || montantE.value() <= 0) {
             QMessageBox::warning(this, "Attention", "Champs obligatoires manquants.");
             return;
         }
 
-        // Validation mail client
-        QString mailVal = mailClientE.text().trimmed();
-        if (!mailVal.isEmpty()) {
-            QRegularExpression emailRx(R"(^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$)");
-            if (!emailRx.match(mailVal).hasMatch()) {
-                QMessageBox::warning(this, "Validation", "L'adresse email du client est invalide.");
-                return;
-            }
-        }
-        
         Production prod;
         prod.setIdCommande(cellText(ui->productionTable, row, 0).toInt());
         prod.setReference(refE.text());
-        prod.setIdEmploye(employeC.currentData().toInt());  // Utiliser l'ID de l'employé
-        prod.setType(typeC.currentText()); // Le nom du produit va dans PRODUIT
+        prod.setIdEmploye(employeC.currentData().toInt());
+        prod.setType(typeC.currentText());
         prod.setServiceVente(typeC.currentText());
-        prod.setMontant(montantE.text().toDouble());
+        prod.setMontant(montantE.value());
         prod.setDateCreation(dcE.date());
         prod.setDateLivraisonPrevue(dlE.date());
         prod.setStatut(statC.currentText());
         prod.setPriorite(prioC.currentText());
-        prod.setMailClient(mailClientE.text().trimmed());
+        prod.setMailClient(clientC.currentData().toString());
         
         ProductionDAO dao;
         if (dao.modifier(prod)) {

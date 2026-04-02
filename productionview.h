@@ -9,6 +9,7 @@
 #include <QPushButton>
 #include <QLabel>
 #include <QDateEdit>
+#include <QDoubleSpinBox>
 #include <QSortFilterProxyModel>
 #include <QAbstractTableModel>
 #include <QList>
@@ -53,7 +54,8 @@ public:
      */
     void setProductionData(const QString &id, const QString &reference, const QString &produit,
                            const QString &quantite, const QString &statut, const QString &dateDebut,
-                           const QString &dateFin, const QString &responsable, const QString &priorite);
+                           const QString &dateFin, const QString &responsable, const QString &priorite,
+                           const QString &mailClient = QString());
 
     // ── Getters des champs du formulaire ─────────────────────────────────────
     QString getId()          const;
@@ -92,11 +94,13 @@ private:
      * Essaie d'abord en minuscules puis en majuscules pour la compatibilité Oracle.
      */
     void loadEmployes();
+    void loadClients();
 
     DialogMode   m_mode;
     QLabel      *lblTitle, *lblDeleteWarning;
-    QLineEdit   *txtId, *txtReference, *txtQuantite, *txtMailClient;
-    QComboBox   *cmbProduit, *cmbStatut, *cmbResponsable, *cmbPriorite;
+    QLineEdit   *txtId, *txtReference;
+    QDoubleSpinBox *spnPrix;
+    QComboBox   *cmbProduit, *cmbStatut, *cmbResponsable, *cmbPriorite, *cmbClient;
     QDateEdit   *dateDebut, *dateFin;
     QPushButton *btnSave, *btnCancel, *btnDelete;
 

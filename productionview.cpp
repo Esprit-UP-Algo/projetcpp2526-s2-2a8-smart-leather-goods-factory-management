@@ -43,10 +43,11 @@ ProductionDialog::ProductionDialog(QWidget *parent, DialogMode mode)
     setupUI();
     setMinimumSize(620, 520);
     loadEmployes(); // Charge la liste des employés depuis la DB
+    loadClients();  // Charge la liste des clients depuis la DB
 
     // En mode suppression, tous les champs sont en lecture seule
     bool readOnly = (mode == DeleteMode);
-    for (auto *w : {(QWidget*)txtQuantite}) w->setEnabled(!readOnly);
+    spnPrix->setEnabled(!readOnly);
     for (auto *w : {cmbProduit, cmbStatut, cmbResponsable, cmbPriorite}) w->setEnabled(!readOnly);
     dateDebut->setEnabled(!readOnly);
     dateFin->setEnabled(!readOnly);
@@ -108,7 +109,13 @@ void ProductionDialog::setupUI()
     txtReference = new QLineEdit(this); txtReference->setPlaceholderText("Ex: PROD-2024-001");
     cmbProduit   = new QComboBox(this);
     cmbProduit->addItems({"Sac à Main Cuir","Portefeuille","Ceinture","Sacoche","Porte-documents","Sac à Dos"});
-    txtQuantite  = new QLineEdit(this); txtQuantite->setPlaceholderText("Ex: 1500.00");
+    spnPrix = new QDoubleSpinBox(this);
+    spnPrix->setRange(0.01, 999999.99);
+    spnPrix->setDecimals(2);
+    spnPrix->setSuffix(" DT");
+    spnPrix->setSingleStep(1.0);
+    spnPrix->setValue(1.0);
+    spnPrix->setGroupSeparatorShown(false);
     cmbStatut    = new QComboBox(this);
     cmbStatut->addItems({"En Attente","Planifié","En Cours","En Production","Suspendu","Terminé","Annulé"});
     dateDebut    = new QDateEdit(this); dateDebut->setCalendarPopup(true);
@@ -123,16 +130,16 @@ void ProductionDialog::setupUI()
     txtId->setVisible(false);
     addRow("Référence * :",      txtReference);
     addRow("Produit * :",        cmbProduit);
-    addRow("Prix * :",           txtQuantite);
+    addRow("Prix * :",           spnPrix);
     addRow("Statut :",           cmbStatut);
     addRow("Date Début * :",     dateDebut);
     addRow("Date Fin Prévue * :",dateFin);
     addRow("Employé * :",        cmbResponsable);
     addRow("Priorité :",         cmbPriorite);
 
-    txtMailClient = new QLineEdit(this);
-    txtMailClient->setPlaceholderText("client@email.com");
-    addRow("Mail Client :",      txtMailClient);
+    cmbClient = new QComboBox(this);
+    cmbClient->setPlaceholderText("-- Sélectionner un client --");
+    addRow("Client :",           cmbClient);
 
     lay->addLayout(form);
 
@@ -162,26 +169,35 @@ void ProductionDialog::setupUI()
 
 void ProductionDialog::setProductionData(const QString &id, const QString &reference, const QString &produit,
                                          const QString &quantite, const QString &statut, const QString &dDebut,
-                                         const QString &dFin, const QString &responsable, const QString &priorite)
+                                         const QString &dFin, const QString &responsable, const QString &priorite,
+                                         const QString &mailClient)
 {
-    txtId->setText(id); txtReference->setText(reference); txtQuantite->setText(quantite);
+    txtId->setText(id); txtReference->setText(reference);
+    spnPrix->setValue(quantite.toDouble());
     auto setCombo = [](QComboBox *c, const QString &v){ int i=c->findText(v); if(i>=0) c->setCurrentIndex(i); };
     setCombo(cmbProduit, produit); setCombo(cmbStatut, statut);
     setCombo(cmbResponsable, responsable); setCombo(cmbPriorite, priorite);
     dateDebut->setDate(QDate::fromString(dDebut,"dd/MM/yyyy"));
     dateFin->setDate(QDate::fromString(dFin,"dd/MM/yyyy"));
+    if (!mailClient.isEmpty()) {
+        for (int i = 0; i < cmbClient->count(); ++i) {
+            if (cmbClient->itemData(i).toString() == mailClient) {
+                cmbClient->setCurrentIndex(i); break;
+            }
+        }
+    }
 }
 
 QString ProductionDialog::getId()          const { return txtId->text(); }
 QString ProductionDialog::getReference()   const { return txtReference->text(); }
 QString ProductionDialog::getProduit()     const { return cmbProduit->currentText(); }
-QString ProductionDialog::getQuantite()    const { return txtQuantite->text(); }
+QString ProductionDialog::getQuantite()    const { return QString::number(spnPrix->value(), 'f', 2); }
 QString ProductionDialog::getStatut()      const { return cmbStatut->currentText(); }
 QString ProductionDialog::getDateDebut()   const { return dateDebut->date().toString("dd/MM/yyyy"); }
 QString ProductionDialog::getDateFin()     const { return dateFin->date().toString("dd/MM/yyyy"); }
 QString ProductionDialog::getResponsable() const { return cmbResponsable->currentText(); }
 QString ProductionDialog::getPriorite()    const { return cmbPriorite->currentText(); }
-QString ProductionDialog::getMailClient()  const { return txtMailClient ? txtMailClient->text().trimmed() : QString(); }
+QString ProductionDialog::getMailClient()  const { return cmbClient ? cmbClient->currentData().toString() : QString(); }
 
 int ProductionDialog::getEmployeId() const
 {
@@ -192,23 +208,21 @@ int ProductionDialog::getEmployeId() const
 
 void ProductionDialog::onSaveClicked()
 {
-    // Validation minimale avant d'accepter le dialogue
-    if (txtReference->text().isEmpty()) { QMessageBox::warning(this,"","La référence est obligatoire."); return; }
-    if (txtQuantite->text().isEmpty())  { QMessageBox::warning(this,"","Le prix est obligatoire."); return; }
-    bool ok; double prix = txtQuantite->text().toDouble(&ok);
-    if (!ok || prix <= 0) { QMessageBox::warning(this,"","Le prix doit être un nombre positif."); return; }
-    if (dateDebut->date() > dateFin->date()) { QMessageBox::warning(this,"","Date début > date fin."); return; }
+    auto setError  = [](QWidget *w){ w->setStyleSheet("border: 2px solid red; border-radius:6px;"); };
+    auto setNormal = [](QWidget *w){ w->setStyleSheet(""); };
+    bool valid = true;
 
-    // Validation mail client
-    QString mail = txtMailClient ? txtMailClient->text().trimmed() : "";
-    if (!mail.isEmpty()) {
-        QRegularExpression emailRegex(R"(^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$)");
-        if (!emailRegex.match(mail).hasMatch()) {
-            QMessageBox::warning(this, "Validation", "L'adresse email du client est invalide.");
-            return;
-        }
-    }
-    // Tout est valide → confirmer et fermer le dialogue
+    if (txtReference->text().trimmed().isEmpty()) { setError(txtReference); valid = false; }
+    else setNormal(txtReference);
+
+    if (spnPrix->value() <= 0) { spnPrix->setStyleSheet("border: 2px solid red; border-radius:6px;"); valid = false; }
+    else spnPrix->setStyleSheet("");
+
+    if (dateDebut->date() > dateFin->date()) { setError(dateDebut); setError(dateFin); valid = false; }
+    else { setNormal(dateDebut); setNormal(dateFin); }
+
+    if (!valid) return;
+
     QMessageBox::information(this,"Succès", m_mode==AddMode ? "Commande créée avec succès !" : "Commande mise à jour avec succès !");
     accept();
 }
@@ -263,6 +277,24 @@ void ProductionDialog::loadEmployes()
         // Aucun employé en base → ajouter un item factice pour éviter un index -1
         QMessageBox::warning(this, "Attention", "⚠ Aucun employé trouvé dans la base de données!");
         cmbResponsable->addItem("(Aucun employé disponible)", 0);
+    }
+}
+
+void ProductionDialog::loadClients()
+{
+    QSqlDatabase db = Connection::instance()->getDatabase();
+    if (!db.isOpen()) return;
+    QSqlQuery query(db);
+    query.prepare("SELECT EMAIL, PRENOM || ' ' || NOM FROM CLIENTS "
+                  "WHERE EMAIL IS NOT NULL ORDER BY NOM, PRENOM");
+    cmbClient->clear();
+    cmbClient->addItem("-- Aucun client --", "");
+    if (query.exec()) {
+        while (query.next()) {
+            QString email     = query.value(0).toString();
+            QString nomComplet = query.value(1).toString();
+            cmbClient->addItem(nomComplet + "  <" + email + ">", email);
+        }
     }
 }
 
