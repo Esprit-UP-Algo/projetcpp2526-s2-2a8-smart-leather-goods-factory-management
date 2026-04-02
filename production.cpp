@@ -302,15 +302,23 @@ QSqlQueryModel* ProductionDAO::rechercher(const QString &terme)
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     QSqlQuery query(Connection::instance()->getDatabase());
-    query.prepare("SELECT C.ID_COMMANDE, C.REFERENCE, (E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
-                  "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT "
-                  "FROM COMMANDES C LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
-                  "WHERE UPPER(C.REFERENCE) LIKE UPPER(:terme) OR UPPER(C.PRODUIT) LIKE UPPER(:terme) "
-                  "OR UPPER(C.STATUT) LIKE UPPER(:terme) OR UPPER(C.PRIORITE) LIKE UPPER(:terme) "
-                  "OR UPPER(E.NOM) LIKE UPPER(:terme) OR UPPER(E.PRENOM) LIKE UPPER(:terme) "
-                  "ORDER BY C.DATE_CREATION DESC");
-    query.bindValue(":terme", "%" + terme + "%");
-    if (!query.exec()) { qDebug() << "❌ Erreur recherche:" << query.lastError().text(); delete model; return nullptr; }
+    query.prepare(
+        "SELECT C.ID_COMMANDE, C.REFERENCE, (E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
+        "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT, C.MAIL_CLIENT "
+        "FROM COMMANDES C LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
+        "WHERE UPPER(C.REFERENCE)   LIKE UPPER(:t) "
+        "OR UPPER(C.PRODUIT)        LIKE UPPER(:t) "
+        "OR UPPER(C.STATUT)         LIKE UPPER(:t) "
+        "OR UPPER(C.PRIORITE)       LIKE UPPER(:t) "
+        "OR UPPER(C.MAIL_CLIENT)    LIKE UPPER(:t) "
+        "OR UPPER(E.NOM)            LIKE UPPER(:t) "
+        "OR UPPER(E.PRENOM)         LIKE UPPER(:t) "
+        "ORDER BY C.DATE_CREATION DESC");
+    query.bindValue(":t", "%" + terme + "%");
+    if (!query.exec()) {
+        qDebug() << "❌ Erreur recherche:" << query.lastError().text();
+        delete model; return nullptr;
+    }
     model->setQuery(std::move(query));
     configurerEntetes(model);
     return model;

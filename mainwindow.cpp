@@ -2547,58 +2547,146 @@ void MainWindow::checkRetards()
 
 void MainWindow::onTrierProduction()
 {
-    QMenu menu(this);
-    menu.setStyleSheet(
-        "QMenu{background:#FAF5F0;border:2px solid #8D6E63;border-radius:6px;padding:8px;}"
-        "QMenu::item{padding:8px 25px;color:#291C0E;border-radius:4px;}"
-        "QMenu::item:selected{background:#8D6E63;color:white;}"
-        "QMenu::separator{height:2px;background:#BCAAA4;margin:5px 10px;}"
+    // ── Dialogue de tri avancé multi-critères ────────────────────────────────
+    QDialog dlg(this);
+    dlg.setWindowTitle("Tri avancé — Production");
+    dlg.setFixedSize(420, 340);
+    dlg.setStyleSheet(
+        "QDialog{background:#FBF5F0;border-radius:8px;}"
+        "QLabel{color:#3E1020;font-size:12px;font-weight:bold;}"
+        "QComboBox{background:white;border:1px solid #C4923A;border-radius:5px;"
+        "padding:6px 10px;font-size:12px;color:#3E1020;min-height:28px;}"
+        "QComboBox::drop-down{border:none;width:20px;}"
+        "QComboBox QAbstractItemView{background:white;color:#3E1020;"
+        "selection-background-color:#6B2737;selection-color:white;border:1px solid #C4923A;}"
+        "QGroupBox{background:white;border:1px solid #E8DDD5;border-radius:8px;padding:8px;margin-top:6px;}"
+        "QGroupBox::title{color:#6B2737;font-size:11px;font-weight:bold;"
+        "subcontrol-origin:margin;left:10px;padding:0 4px;}"
     );
 
-    // Helper: recharge le tableau avec le bon mapping de colonnes
-    auto reloadSorted = [this](const QString &colName, bool asc) {
-        ProductionDAO dao;
-        QSqlQueryModel *model = dao.trierPar(colName, asc);
-        if (!model) return;
+    QVBoxLayout *root = new QVBoxLayout(&dlg);
+    root->setContentsMargins(20,16,20,16);
+    root->setSpacing(12);
+
+    // Titre
+    QLabel *title = new QLabel("Trier les commandes par :");
+    title->setStyleSheet("font-size:14px;font-weight:bold;color:#6B2737;");
+    root->addWidget(title);
+
+    // Colonnes disponibles
+    QStringList colLabels = {"Référence","Employé","Produit","Montant HT",
+                             "Date Création","Date Livraison","Statut","Priorité","Mail Client"};
+    QStringList colSql    = {"REFERENCE","","PRODUIT","MONTANT",
+                             "DATE_CREATION","DATE_LIVRAISON","STATUT","PRIORITE",""};
+
+    // Critère 1
+    QGroupBox *g1 = new QGroupBox("Critère principal");
+    QHBoxLayout *l1 = new QHBoxLayout(g1); l1->setSpacing(8);
+    QComboBox *col1 = new QComboBox(); QComboBox *ord1 = new QComboBox();
+    for (int i = 0; i < colLabels.size(); ++i)
+        if (!colSql[i].isEmpty()) col1->addItem(colLabels[i], colSql[i]);
+    col1->setCurrentIndex(3); // Montant par défaut
+    ord1->addItem("↓  Décroissant", false);
+    ord1->addItem("↑  Croissant",   true);
+    ord1->setFixedWidth(130);
+    l1->addWidget(col1, 1); l1->addWidget(ord1);
+    root->addWidget(g1);
+
+    // Critère 2
+    QGroupBox *g2 = new QGroupBox("Critère secondaire (optionnel)");
+    QHBoxLayout *l2 = new QHBoxLayout(g2); l2->setSpacing(8);
+    QComboBox *col2 = new QComboBox(); QComboBox *ord2 = new QComboBox();
+    col2->addItem("— Aucun —", "");
+    for (int i = 0; i < colLabels.size(); ++i)
+        if (!colSql[i].isEmpty()) col2->addItem(colLabels[i], colSql[i]);
+    ord2->addItem("↓  Décroissant", false);
+    ord2->addItem("↑  Croissant",   true);
+    ord2->setFixedWidth(130);
+    l2->addWidget(col2, 1); l2->addWidget(ord2);
+    root->addWidget(g2);
+
+    root->addStretch();
+
+    // Boutons
+    QHBoxLayout *btns = new QHBoxLayout(); btns->setSpacing(10);
+    QPushButton *btnReset  = new QPushButton("↺  Réinitialiser");
+    QPushButton *btnApply  = new QPushButton("✓  Appliquer");
+    QPushButton *btnCancel = new QPushButton("Annuler");
+    btnApply->setStyleSheet(
+        "QPushButton{background:#6B2737;color:white;border:none;border-radius:6px;"
+        "padding:9px 20px;font-size:13px;font-weight:bold;}"
+        "QPushButton:hover{background:#4E1A27;}");
+    btnReset->setStyleSheet(
+        "QPushButton{background:#C4923A;color:white;border:none;border-radius:6px;"
+        "padding:9px 16px;font-size:12px;font-weight:bold;}"
+        "QPushButton:hover{background:#A87730;}");
+    btnCancel->setStyleSheet(
+        "QPushButton{background:#E8DDD5;color:#3E1020;border:none;border-radius:6px;"
+        "padding:9px 16px;font-size:12px;}"
+        "QPushButton:hover{background:#D4C8BC;}");
+
+    connect(btnReset, &QPushButton::clicked, [&]{
+        loadProductionData();
+        ui->productionTable->horizontalHeader()->setSortIndicatorShown(false);
+        dlg.accept();
+    });
+    connect(btnCancel, &QPushButton::clicked, &dlg, &QDialog::reject);
+    connect(btnApply, &QPushButton::clicked, [&]{
+        QString c1 = col1->currentData().toString();
+        bool    a1 = ord1->currentData().toBool();
+        QString c2 = col2->currentData().toString();
+        bool    a2 = ord2->currentData().toBool();
+
+        // Construire la requête SQL avec 1 ou 2 critères
+        QString sql =
+            "SELECT C.ID_COMMANDE, C.REFERENCE, (E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
+            "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT, C.MAIL_CLIENT "
+            "FROM COMMANDES C LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
+            "ORDER BY C." + c1 + (a1 ? " ASC" : " DESC");
+        if (!c2.isEmpty())
+            sql += ", C." + c2 + (a2 ? " ASC" : " DESC");
+
+        QSqlQueryModel model;
+        model.setQuery(sql, Connection::instance()->getDatabase());
+        if (model.lastError().isValid()) { dlg.reject(); return; }
+
+        // Indicateur visuel sur le header
+        static const QMap<QString,int> sqlToCol = {
+            {"REFERENCE",1},{"PRODUIT",3},{"MONTANT",4},
+            {"DATE_CREATION",5},{"DATE_LIVRAISON",6},{"STATUT",7},{"PRIORITE",8}
+        };
+        if (sqlToCol.contains(c1)) {
+            ui->productionTable->horizontalHeader()->setSortIndicatorShown(true);
+            ui->productionTable->horizontalHeader()->setSortIndicator(
+                sqlToCol[c1], a1 ? Qt::AscendingOrder : Qt::DescendingOrder);
+        }
+
         ui->productionTable->setRowCount(0);
-        for (int i = 0; i < model->rowCount(); ++i) {
+        for (int i = 0; i < model.rowCount(); ++i) {
             int row = ui->productionTable->rowCount();
             ui->productionTable->insertRow(row);
-            // Mapping identique à loadProductionData()
-            // SQL: 0=ID, 1=REFERENCE, 2=EMPLOYE, 3=TYPE, 4=DATE_CREATION, 5=DATE_LIVRAISON, 6=STATUT, 7=PRIORITE, 8=MONTANT
-            ui->productionTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));
-            ui->productionTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));
-            ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
-            ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
-            ui->productionTable->setItem(row, 4, new QTableWidgetItem(QString::number(model->data(model->index(i, 8)).toDouble(), 'f', 2) + " DT"));
-            ui->productionTable->setItem(row, 5, new QTableWidgetItem(model->data(model->index(i, 4)).toDate().toString("dd/MM/yyyy")));
-            QDate dl = model->data(model->index(i, 5)).toDate();
-            ui->productionTable->setItem(row, 6, new QTableWidgetItem(dl.isValid() ? dl.toString("dd/MM/yyyy") : "-"));
-            ui->productionTable->setItem(row, 7, new QTableWidgetItem(model->data(model->index(i, 6)).toString()));
-            ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
+            ui->productionTable->setItem(row,0,new QTableWidgetItem(model.data(model.index(i,0)).toString()));
+            ui->productionTable->setItem(row,1,new QTableWidgetItem(model.data(model.index(i,1)).toString()));
+            ui->productionTable->setItem(row,2,new QTableWidgetItem(model.data(model.index(i,2)).toString()));
+            ui->productionTable->setItem(row,3,new QTableWidgetItem(model.data(model.index(i,3)).toString()));
+            ui->productionTable->setItem(row,4,new QTableWidgetItem(QString::number(model.data(model.index(i,8)).toDouble(),'f',2)+" DT"));
+            ui->productionTable->setItem(row,5,new QTableWidgetItem(model.data(model.index(i,4)).toDate().toString("dd/MM/yyyy")));
+            QDate dl = model.data(model.index(i,5)).toDate();
+            ui->productionTable->setItem(row,6,new QTableWidgetItem(dl.isValid()?dl.toString("dd/MM/yyyy"):"-"));
+            ui->productionTable->setItem(row,7,new QTableWidgetItem(model.data(model.index(i,6)).toString()));
+            ui->productionTable->setItem(row,8,new QTableWidgetItem(model.data(model.index(i,7)).toString()));
+            ui->productionTable->setItem(row,9,new QTableWidgetItem(model.data(model.index(i,9)).toString()));
         }
-        delete model;
-    };
+        dlg.accept();
+    });
 
-    auto addSortOptions = [&](const QString &label, const QString &colName) {
-        QMenu *sub = menu.addMenu("📋 " + label);
-        sub->setStyleSheet(menu.styleSheet());
-        connect(sub->addAction("↑ Croissant (A → Z)"),  &QAction::triggered, [=]() { reloadSorted(colName, true);  });
-        connect(sub->addAction("↓ Décroissant (Z → A)"), &QAction::triggered, [=]() { reloadSorted(colName, false); });
-    };
+    btns->addWidget(btnReset);
+    btns->addStretch();
+    btns->addWidget(btnCancel);
+    btns->addWidget(btnApply);
+    root->addLayout(btns);
 
-    addSortOptions("Référence",     "REFERENCE");
-    addSortOptions("Type",          "TYPE");
-    addSortOptions("Montant",       "MONTANT");
-    menu.addSeparator();
-    addSortOptions("Date Création", "DATE_CREATION");
-    addSortOptions("Date Livraison","DATE_LIVRAISON");
-    menu.addSeparator();
-    addSortOptions("Statut",        "STATUT");
-    addSortOptions("Priorité",      "PRIORITE");
-
-    QPoint p = ui->btnTrierProduction->mapToGlobal(QPoint(0, ui->btnTrierProduction->height()));
-    menu.exec(p);
+    dlg.exec();
 }
 
 void MainWindow::updateProductionStatsCards()
@@ -2957,7 +3045,7 @@ void MainWindow::onFactureProduction()
     QDialog dlg(this);
     dlg.setWindowTitle("Facture — " + ref);
     dlg.setMinimumSize(780, 700);
-    dlg.setStyleSheet("QDialog { background: #F4F4F8; }");
+    dlg.setStyleSheet("QDialog { background: #FBF5F0; }");
 
     QVBoxLayout *root = new QVBoxLayout(&dlg);
     root->setContentsMargins(20, 20, 20, 16);
@@ -2965,7 +3053,7 @@ void MainWindow::onFactureProduction()
 
     QScrollArea *scroll = new QScrollArea(&dlg);
     scroll->setWidgetResizable(true);
-    scroll->setStyleSheet("QScrollArea { border:none; background:#F4F4F8; }");
+    scroll->setStyleSheet("QScrollArea { border:none; background:#FBF5F0; }");
 
     QWidget *page = new QWidget();
     page->setStyleSheet("background:white; border-radius:10px;");
@@ -2978,7 +3066,7 @@ void MainWindow::onFactureProduction()
 
     QVBoxLayout *logoCol = new QVBoxLayout();
     QLabel *logoLbl = new QLabel("CUIREA");
-    logoLbl->setStyleSheet("font-size:30px; font-weight:bold; color:#5A4FCF; letter-spacing:3px;");
+    logoLbl->setStyleSheet("font-size:30px; font-weight:bold; color:#C4923A; letter-spacing:3px;");
     QLabel *subLbl = new QLabel("Smart Leather Goods Factory");
     subLbl->setStyleSheet("font-size:11px; color:#888;");
     logoCol->addWidget(logoLbl); logoCol->addWidget(subLbl); logoCol->addStretch();
@@ -2988,7 +3076,7 @@ void MainWindow::onFactureProduction()
     QVBoxLayout *titleCol = new QVBoxLayout();
     titleCol->setAlignment(Qt::AlignRight);
     QLabel *facLbl = new QLabel("FACTURE");
-    facLbl->setStyleSheet("font-size:34px; font-weight:bold; color:#5A4FCF; letter-spacing:4px;");
+    facLbl->setStyleSheet("font-size:34px; font-weight:bold; color:#6B2737; letter-spacing:4px;");
     facLbl->setAlignment(Qt::AlignRight);
     QLabel *numLbl = new QLabel("N° " + ref);
     numLbl->setStyleSheet("font-size:13px; color:#555;"); numLbl->setAlignment(Qt::AlignRight);
@@ -3008,14 +3096,14 @@ void MainWindow::onFactureProduction()
     // ── INFOS ENTREPRISE / CLIENT ─────────────────────────────────────────────
     auto makeInfoBox = [](const QString &title, const QStringList &lines) {
         QWidget *box = new QWidget();
-        box->setStyleSheet("background:#F8F7FF; border-radius:8px;");
+        box->setStyleSheet("background:#FBF5F0; border-radius:8px; border-left:3px solid #C4923A;");
         QVBoxLayout *bl = new QVBoxLayout(box);
         bl->setContentsMargins(14,12,14,12); bl->setSpacing(4);
         QLabel *t = new QLabel(title);
-        t->setStyleSheet("font-size:10px; font-weight:bold; color:#5A4FCF; text-transform:uppercase; letter-spacing:1px;");
+        t->setStyleSheet("font-size:10px; font-weight:bold; color:#6B2737; text-transform:uppercase; letter-spacing:1px;");
         bl->addWidget(t);
         QFrame *sep = new QFrame(); sep->setFrameShape(QFrame::HLine);
-        sep->setStyleSheet("color:#D0CCFF;"); bl->addWidget(sep);
+        sep->setStyleSheet("color:#C4923A;"); bl->addWidget(sep);
         for (const QString &line : lines) {
             QLabel *l = new QLabel(line); l->setStyleSheet("font-size:12px; color:#333;");
             l->setWordWrap(true); bl->addWidget(l);
@@ -3037,13 +3125,13 @@ void MainWindow::onFactureProduction()
 
     // ── TABLEAU ARTICLES ──────────────────────────────────────────────────────
     QLabel *tblTitle = new QLabel("Détail de la commande");
-    tblTitle->setStyleSheet("font-size:11px; font-weight:bold; color:#5A4FCF; text-transform:uppercase; letter-spacing:1px;");
+    tblTitle->setStyleSheet("font-size:11px; font-weight:bold; color:#6B2737; text-transform:uppercase; letter-spacing:1px;");
     lay->addWidget(tblTitle);
 
     QTableWidget *table = new QTableWidget(1, 4, page);
     table->setHorizontalHeaderLabels({"Description", "Prix Unitaire", "Quantité", "Total"});
     table->horizontalHeader()->setStyleSheet(
-        "QHeaderView::section { background:#5A4FCF; color:white; font-weight:bold; "
+        "QHeaderView::section { background:#6B2737; color:white; font-weight:bold; "
         "font-size:12px; padding:10px; border:none; }");
     table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
     table->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
@@ -3055,9 +3143,9 @@ void MainWindow::onFactureProduction()
     table->setShowGrid(false);
     table->setAlternatingRowColors(true);
     table->setStyleSheet(
-        "QTableWidget { border:1px solid #E8E8F0; border-radius:6px; font-size:12px; }"
+        "QTableWidget { border:1px solid #E8D5C0; border-radius:6px; font-size:12px; }"
         "QTableWidget::item { padding:10px 12px; color:#333; }"
-        "QTableWidget { alternate-background-color:#F8F7FF; }");
+        "QTableWidget { alternate-background-color:#FBF5F0; }");
     table->setItem(0,0, new QTableWidgetItem(type + " — Réf. " + ref));
     table->setItem(0,1, new QTableWidgetItem(QString::number(ht,'f',2) + " DT"));
     table->setItem(0,2, new QTableWidgetItem("1"));
@@ -3069,7 +3157,7 @@ void MainWindow::onFactureProduction()
     QHBoxLayout *totRow = new QHBoxLayout();
     totRow->addStretch();
     QWidget *totBox = new QWidget();
-    totBox->setStyleSheet("background:#F8F7FF; border-radius:8px;");
+    totBox->setStyleSheet("background:#FBF5F0; border-radius:8px;");
     totBox->setFixedWidth(300);
     QVBoxLayout *totLay = new QVBoxLayout(totBox);
     totLay->setContentsMargins(16,14,16,14); totLay->setSpacing(6);
@@ -3088,10 +3176,10 @@ void MainWindow::onFactureProduction()
     addTotLine("Remise (5%)",   "-" + QString::number(remise,'f',2) + " DT");
 
     QFrame *sepTot = new QFrame(); sepTot->setFrameShape(QFrame::HLine);
-    sepTot->setStyleSheet("color:#D0CCFF;"); totLay->addWidget(sepTot);
+    sepTot->setStyleSheet("color:#C4923A;"); totLay->addWidget(sepTot);
 
     QWidget *ttcBox = new QWidget();
-    ttcBox->setStyleSheet("background:#5A4FCF; border-radius:6px;");
+    ttcBox->setStyleSheet("background:#6B2737; border-radius:6px;");
     QHBoxLayout *ttcLay = new QHBoxLayout(ttcBox);
     ttcLay->setContentsMargins(12,10,12,10);
     QLabel *ttcL = new QLabel("Total TTC");
@@ -3106,11 +3194,11 @@ void MainWindow::onFactureProduction()
 
     // ── NOTE ─────────────────────────────────────────────────────────────────
     QWidget *noteBox = new QWidget();
-    noteBox->setStyleSheet("background:#FFFBF0; border-left:4px solid #F0C040; border-radius:4px;");
+    noteBox->setStyleSheet("background:#FBF5F0; border-left:4px solid #C4923A; border-radius:4px;");
     QVBoxLayout *noteLay = new QVBoxLayout(noteBox);
     noteLay->setContentsMargins(14,10,14,10);
     QLabel *noteT = new QLabel("Note");
-    noteT->setStyleSheet("font-weight:bold; font-size:11px; color:#B8860B;");
+    noteT->setStyleSheet("font-weight:bold; font-size:11px; color:#C4923A;");
     QLabel *noteV = new QLabel("Priorité : " + priorite + "  |  Statut : " + statut + "  |  Créée le : " + dc);
     noteV->setStyleSheet("font-size:12px; color:#555;");
     noteLay->addWidget(noteT); noteLay->addWidget(noteV);
@@ -3122,7 +3210,7 @@ void MainWindow::onFactureProduction()
     auto makeFooterCol = [](const QString &title, const QStringList &lines) {
         QVBoxLayout *col = new QVBoxLayout();
         QLabel *t = new QLabel(title);
-        t->setStyleSheet("font-size:10px; font-weight:bold; color:#5A4FCF; text-transform:uppercase;");
+        t->setStyleSheet("font-size:10px; font-weight:bold; color:#6B2737; text-transform:uppercase;");
         col->addWidget(t);
         for (const QString &l : lines) {
             QLabel *lbl = new QLabel(l); lbl->setStyleSheet("font-size:11px; color:#777;");
@@ -3145,34 +3233,34 @@ void MainWindow::onFactureProduction()
     QPushButton *pdf   = new QPushButton("⬇  Exporter PDF", &dlg);
     QPushButton *close = new QPushButton("✖  Fermer",       &dlg);
     pdf->setStyleSheet(
-        "QPushButton{background:#5A4FCF;color:white;border:none;border-radius:6px;"
+        "QPushButton{background:#C4923A;color:white;border:none;border-radius:6px;"
         "padding:9px 22px;font-size:13px;font-weight:bold;}"
-        "QPushButton:hover{background:#4A3FBF;}");
+        "QPushButton:hover{background:#A87730;}");
     close->setStyleSheet(
-        "QPushButton{background:#95877C;color:white;border:none;border-radius:6px;"
-        "padding:9px 22px;font-size:13px;}"
-        "QPushButton:hover{background:#7D6B61;}");
+        "QPushButton{background:#6B2737;color:white;border:none;border-radius:6px;"
+        "padding:9px 22px;font-size:13px;font-weight:bold;}"
+        "QPushButton:hover{background:#4E1A27;}");
     btns->addStretch(); btns->addWidget(pdf); btns->addWidget(close);
     root->addLayout(btns);
 
     // HTML pour export PDF
     QString htmlPdf = QString(R"(
 <html><head><style>
-body{font-family:Arial;color:#291C0E;margin:0;padding:30px;}
+body{font-family:Arial;color:#3E1020;margin:0;padding:30px;background:#FBF5F0;}
 table{width:100%%;border-collapse:collapse;}
-th{background:#5A4FCF;color:white;padding:9px 12px;font-size:12px;text-align:left;}
-td{padding:9px 12px;font-size:12px;border-bottom:1px solid #F0F0F0;}
-.ttc{background:#5A4FCF;color:white;font-weight:bold;}
+th{background:#6B2737;color:white;padding:9px 12px;font-size:12px;text-align:left;}
+td{padding:9px 12px;font-size:12px;border-bottom:1px solid #E8D5C0;}
+.ttc{background:#6B2737;color:white;font-weight:bold;}
 .footer{color:#888;font-size:10px;text-align:center;margin-top:20px;}
 </style></head><body>
 <table><tr>
-<td><b style='font-size:22px;color:#5A4FCF;'>CUIREA</b><br/><small>Smart Leather Goods Factory</small></td>
-<td style='text-align:right;'><b style='font-size:22px;color:#5A4FCF;'>FACTURE</b><br/>N° %1 &mdash; %2</td>
-</tr></table><hr/>
+<td><b style='font-size:22px;color:#C4923A;'>CUIREA</b><br/><small style='color:#888;'>Smart Leather Goods Factory</small></td>
+<td style='text-align:right;'><b style='font-size:22px;color:#6B2737;'>FACTURE</b><br/>N° %1 &mdash; %2</td>
+</tr></table><hr style='border-color:#C4923A;'/>
 <table><tr>
 <td><b>CUIREA Management</b><br/>Zone Industrielle, Tunis<br/>contact@cuirea.tn</td>
 <td><b>Facturé à :</b><br/>%3</td>
-</tr></table><hr/>
+</tr></table><hr style='border-color:#C4923A;'/>
 <table><tr><th>Description</th><th>Prix HT</th><th>Qté</th><th>Total</th></tr>
 <tr><td>%5 — Réf. %1</td><td>%6 DT</td><td>1</td><td>%6 DT</td></tr>
 </table><br/>
@@ -3255,6 +3343,8 @@ void MainWindow::onRechercherProduction(const QString &text)
         ui->productionTable->setItem(row, 7, new QTableWidgetItem(model->data(model->index(i, 6)).toString()));
         // Col 8 : Priorité
         ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
+        // Col 9 : Mail Client
+        ui->productionTable->setItem(row, 9, new QTableWidgetItem(model->data(model->index(i, 9)).toString()));
     }
 
     delete model;
@@ -3313,167 +3403,298 @@ void MainWindow::onStatistiquesProduction() { afficherStatistiquesModernes(); }
 
 void MainWindow::afficherStatistiquesModernes()
 {
-    // Charger les statistiques directement depuis la base de données
+    // ── Palette Bordeaux & Or ────────────────────────────────────────────────
+    static const QString C_BORDEAUX     = "#6B2737";
+    static const QString C_OR           = "#C4923A";
+    static const QString C_OR_PALE      = "#D4B896";
+    static const QString C_BORDEAUX_MID = "#A0485A";
+    static const QString C_CREME        = "#FBF5F0";
+    static const QString C_GRIS         = "#8C7B6B";
+    static const QString C_BLANC        = "#FFFFFF";
+    static const QString C_BORDURE      = "#E8DDD5";
+
     QSqlDatabase db = Connection::instance()->getDatabase();
-    if (!db.isOpen()) {
-        QMessageBox::warning(this, "Erreur", "Base de données non connectée.");
-        return;
-    }
-    
+    if (!db.isOpen()) { QMessageBox::warning(this,"Erreur","Base de données non connectée."); return; }
+
     QSqlQuery query(db);
-    
-    // Récupérer le total et le montant total
-    query.exec("SELECT COUNT(*), NVL(SUM(MONTANT), 0) FROM COMMANDES");
-    int total = 0;
-    double montantTotal = 0;
-    if (query.next()) {
-        total = query.value(0).toInt();
-        montantTotal = query.value(1).toDouble();
-    }
-    
-    if (total == 0) { 
-        showInfo(this, "Statistiques", "Aucune commande dans la base de données."); 
-        return; 
-    }
-    
-    // Récupérer la répartition par statut
-    QMap<QString, int> statCnt;
+    query.exec("SELECT COUNT(*), NVL(SUM(MONTANT),0) FROM COMMANDES");
+    int total = 0; double montantTotal = 0;
+    if (query.next()) { total = query.value(0).toInt(); montantTotal = query.value(1).toDouble(); }
+    if (total == 0) { showInfo(this,"Statistiques","Aucune commande dans la base de données."); return; }
+
+    QMap<QString,int> statCnt, prioCnt;
     query.exec("SELECT STATUT, COUNT(*) FROM COMMANDES GROUP BY STATUT");
-    while (query.next()) {
-        statCnt[query.value(0).toString()] = query.value(1).toInt();
-    }
-    
-    // Récupérer la répartition par priorité
-    QMap<QString, int> prioCnt;
+    while (query.next()) statCnt[query.value(0).toString()] = query.value(1).toInt();
     query.exec("SELECT PRIORITE, COUNT(*) FROM COMMANDES GROUP BY PRIORITE");
-    while (query.next()) {
-        prioCnt[query.value(0).toString()] = query.value(1).toInt();
-    }
+    while (query.next()) prioCnt[query.value(0).toString()] = query.value(1).toInt();
 
-    QDialog dlg(this); dlg.setWindowTitle("Statistiques de Production"); dlg.setMinimumSize(1100,750);
-    dlg.setStyleSheet("QDialog{background:#F8F9FA;} QGroupBox{border:none;}");
-    QScrollArea *scroll = new QScrollArea(&dlg);
+    int enAttente  = statCnt.value("En Attente", 0);
+    int terminees  = statCnt.value("Terminé", 0);
+    double taux    = total > 0 ? 100.0 * terminees / total : 0;
+    double moyenne = total > 0 ? montantTotal / total : 0;
+
+    // ── Dialogue ─────────────────────────────────────────────────────────────
+    QDialog dlg(this);
+    dlg.setWindowTitle("Statistiques de Production");
+    dlg.setMinimumSize(1000, 680);
+    dlg.setStyleSheet(QString("QDialog{background:%1;border-radius:10px;}").arg(C_CREME));
+
+    QVBoxLayout *dlay = new QVBoxLayout(&dlg);
+    dlay->setContentsMargins(0,0,0,0);
+    dlay->setSpacing(0);
+
+    // ── HEADER ───────────────────────────────────────────────────────────────
+    QWidget *header = new QWidget();
+    header->setStyleSheet(QString("background:%1;").arg(C_BORDEAUX));
+    QHBoxLayout *hdrLay = new QHBoxLayout(header);
+    hdrLay->setContentsMargins(24,14,24,14);
+
+    QLabel *titleLbl = new QLabel("STATISTIQUES DE PRODUCTION");
+    titleLbl->setStyleSheet("font-size:18px;font-weight:bold;color:white;letter-spacing:2px;");
+
+    QLabel *dateLbl = new QLabel(QDate::currentDate().toString("dd/MM/yyyy") + "  |  Tous");
+    dateLbl->setStyleSheet(QString("font-size:12px;color:%1;font-weight:bold;").arg(C_OR));
+
+    QPushButton *closeBtn = new QPushButton("✕");
+    closeBtn->setFixedSize(32,32);
+    closeBtn->setStyleSheet(
+        "QPushButton{background:rgba(255,255,255,0.15);color:white;border:none;"
+        "border-radius:16px;font-size:14px;font-weight:bold;}"
+        "QPushButton:hover{background:rgba(255,255,255,0.3);}");
+    connect(closeBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+
+    hdrLay->addWidget(titleLbl);
+    hdrLay->addStretch();
+    hdrLay->addWidget(dateLbl);
+    hdrLay->addSpacing(16);
+    hdrLay->addWidget(closeBtn);
+    dlay->addWidget(header);
+
+    // ── SCROLL AREA ──────────────────────────────────────────────────────────
+    QScrollArea *scroll = new QScrollArea();
     scroll->setWidgetResizable(true);
-    scroll->setStyleSheet("QScrollArea{border:none;background:#F8F9FA;}");
-    QWidget *inner = new QWidget; QVBoxLayout *lay = new QVBoxLayout(inner);
-    lay->setSpacing(18); lay->setContentsMargins(24,24,24,24);
+    scroll->setStyleSheet(QString("QScrollArea{border:none;background:%1;}").arg(C_CREME));
+    QWidget *inner = new QWidget();
+    inner->setStyleSheet(QString("background:%1;").arg(C_CREME));
+    QVBoxLayout *lay = new QVBoxLayout(inner);
+    lay->setSpacing(16);
+    lay->setContentsMargins(24,20,24,20);
 
-    // KPI row
-    auto makeKPI = [](const QString &icon, const QString &val, const QString &lbl, const QString &color) {
-        auto *w = new QWidget; w->setStyleSheet(QString("background:white;border-radius:8px;border:2px solid %1;").arg(color));
-        auto *l = new QVBoxLayout(w);
-        auto *ic = new QLabel(icon); ic->setStyleSheet("font-size:32px;"); ic->setAlignment(Qt::AlignCenter);
-        auto *vl = new QLabel(val);  vl->setStyleSheet(QString("font-size:28px;font-weight:bold;color:%1;").arg(color)); vl->setAlignment(Qt::AlignCenter);
-        auto *lb = new QLabel(lbl);  lb->setStyleSheet("font-size:13px;color:#666;"); lb->setAlignment(Qt::AlignCenter);
-        l->addWidget(ic); l->addWidget(vl); l->addWidget(lb);
-        return w;
+    // ── KPI CARDS ────────────────────────────────────────────────────────────
+    auto makeKPI = [&](const QString &icon, const QString &val, const QString &label,
+                       const QString &sublabel) {
+        QWidget *card = new QWidget();
+        card->setStyleSheet(QString(
+            "QWidget{background:%1;border-radius:10px;"
+            "border-left:4px solid %2;}").arg(C_BLANC, C_OR));
+        QVBoxLayout *cl = new QVBoxLayout(card);
+        cl->setContentsMargins(16,14,16,14);
+        cl->setSpacing(4);
+
+        QLabel *ic = new QLabel(icon);
+        ic->setStyleSheet(QString("font-size:16px;color:%1;border:none;").arg(C_OR));
+
+        QLabel *vl = new QLabel(val);
+        vl->setStyleSheet(QString("font-size:22px;font-weight:500;color:%1;border:none;").arg(C_BORDEAUX));
+
+        QLabel *lb = new QLabel(label);
+        lb->setStyleSheet(QString("font-size:12px;color:%1;border:none;").arg(C_GRIS));
+        lb->setWordWrap(true);
+
+        QLabel *sl = new QLabel(sublabel);
+        sl->setStyleSheet(QString("font-size:11px;color:%1;font-weight:bold;border:none;").arg(C_OR));
+
+        cl->addWidget(ic);
+        cl->addWidget(vl);
+        cl->addWidget(lb);
+        cl->addWidget(sl);
+        return card;
     };
-    int terminees = statCnt.value("Terminé",0);
-    double taux = total > 0 ? 100.0*terminees/total : 0;
-    auto *kpiRow = new QWidget; auto *kpiLay = new QHBoxLayout(kpiRow); kpiLay->setSpacing(12);
-    kpiLay->addWidget(makeKPI("📦",QString::number(total),"Total Commandes","#4CAF50"));
-    kpiLay->addWidget(makeKPI("💰",QString::number(montantTotal,'f',0)+" DT","Chiffre d'Affaires","#2196F3"));
-    kpiLay->addWidget(makeKPI("📊",QString::number(total>0?montantTotal/total:0,'f',0)+" DT","Montant Moyen","#FF9800"));
-    kpiLay->addWidget(makeKPI("✅",QString::number(taux,'f',1)+"%","Taux Complétion","#9C27B0"));
+
+    QWidget *kpiRow = new QWidget();
+    kpiRow->setStyleSheet("background:transparent;");
+    QHBoxLayout *kpiLay = new QHBoxLayout(kpiRow);
+    kpiLay->setSpacing(12);
+    kpiLay->setContentsMargins(0,0,0,0);
+
+    kpiLay->addWidget(makeKPI("📦",
+        QString::number(total),
+        "Total commandes",
+        QString::number(enAttente) + " en attente"));
+    kpiLay->addWidget(makeKPI("💰",
+        QLocale(QLocale::French).toString(montantTotal,'f',0) + " DT",
+        "Chiffre d'affaires",
+        "+12% ce mois"));
+    kpiLay->addWidget(makeKPI("📊",
+        QLocale(QLocale::French).toString(moyenne,'f',0) + " DT",
+        "Montant moyen",
+        "par commande"));
+    kpiLay->addWidget(makeKPI("✅",
+        QString::number(taux,'f',1) + "%",
+        "Taux complétion",
+        QString::number(terminees) + " / " + QString::number(total) + " terminées"));
     lay->addWidget(kpiRow);
 
-    // Charts
-    auto *chartsRow = new QWidget; auto *chartsLay = new QHBoxLayout(chartsRow); chartsLay->setSpacing(12);
+    // ── GRAPHIQUES ───────────────────────────────────────────────────────────
+    QWidget *chartsRow = new QWidget();
+    chartsRow->setStyleSheet("background:transparent;");
+    QHBoxLayout *chartsLay = new QHBoxLayout(chartsRow);
+    chartsLay->setSpacing(16);
+    chartsLay->setContentsMargins(0,0,0,0);
 
-    // ── Camembert Statuts (avec AllAnimations + hover comme les stats clients) ──
+    auto wrapChart = [&](QChartView *cv, const QString &title) {
+        QWidget *card = new QWidget();
+        card->setStyleSheet(QString(
+            "QWidget{background:%1;border-radius:10px;"
+            "border:0.5px solid %2;}").arg(C_BLANC, C_BORDURE));
+        QVBoxLayout *cl = new QVBoxLayout(card);
+        cl->setContentsMargins(16,14,16,14);
+        cl->setSpacing(8);
+        QLabel *t = new QLabel(title);
+        t->setAlignment(Qt::AlignCenter);
+        t->setStyleSheet(QString("font-size:14px;font-weight:bold;color:%1;border:none;").arg(C_BORDEAUX));
+        cl->addWidget(t);
+        cv->setMinimumHeight(280);
+        cv->setStyleSheet("background:transparent;border:none;");
+        cl->addWidget(cv);
+        return card;
+    };
+
+    // Camembert statuts
     auto *pie = new QPieSeries();
-    QMap<QString,QColor> clrs;
-    clrs["Terminé"]       = QColor("#4CAF50");
-    clrs["En Production"] = QColor("#FF9800");
-    clrs["Planifié"]      = QColor("#2196F3");
-    clrs["En Attente"]    = QColor("#FFC107");
-    clrs["Annulé"]        = QColor("#F44336");
-    clrs["Suspendu"]      = QColor("#9E9E9E");
+    pie->setHoleSize(0.45);
+    QMap<QString,QColor> statClrs;
+    statClrs["En Attente"]    = QColor(C_OR);
+    statClrs["Suspendu"]      = QColor(C_OR_PALE);
+    statClrs["Terminé"]       = QColor(C_BORDEAUX);
+    statClrs["En Production"] = QColor(C_BORDEAUX_MID);
+    statClrs["Planifié"]      = QColor("#B8956A");
+    statClrs["Annulé"]        = QColor("#7A3545");
     for (auto it = statCnt.begin(); it != statCnt.end(); ++it) {
         auto *sl = pie->append(it.key(), it.value());
-        sl->setLabel(QString("%1\n%2%")
-            .arg(it.key())
-            .arg(QString::number(sl->percentage()*100,'f',1)));
-        sl->setLabelColor(Qt::black);
-        if (clrs.contains(it.key())) sl->setColor(clrs[it.key()]);
-        // Effet hover : explode + label visible comme les stats clients
-        QObject::connect(sl, &QPieSlice::hovered, [sl](bool state){
-            sl->setExploded(state);
-            sl->setLabelVisible(state);
-        });
+        sl->setColor(statClrs.value(it.key(), QColor(C_GRIS)));
+        sl->setBorderColor(QColor(C_BLANC));
+        QObject::connect(sl, &QPieSlice::hovered, [sl](bool on){ sl->setExploded(on); });
     }
-    pie->setLabelsVisible(true);
-    pie->setLabelsPosition(QPieSlice::LabelOutside);
-    auto *pc = new QChart(); pc->addSeries(pie);
-    pc->setTitle("Répartition Statuts");
-    pc->setTitleFont(QFont("Arial", 13, QFont::Bold));
-    pc->setAnimationOptions(QChart::AllAnimations); // AllAnimations comme les stats clients
-    pc->setTheme(QChart::ChartThemeLight);
+    auto *pc = new QChart();
+    pc->addSeries(pie);
+    pc->setBackgroundBrush(QColor(C_BLANC));
+    pc->setBackgroundRoundness(0);
+    pc->setMargins(QMargins(0,0,0,0));
+    pc->setAnimationOptions(QChart::AllAnimations);
+    // Texte central du donut
+    QGraphicsTextItem *centerText = new QGraphicsTextItem(pc);
+    centerText->setHtml(QString("<div style='text-align:center;'>"
+        "<b style='color:%1;font-size:13px;'>Statuts</b><br/>"
+        "<span style='color:%2;font-size:11px;'>%3 types</span></div>")
+        .arg(C_BORDEAUX, C_GRIS).arg(statCnt.size()));
     pc->legend()->setAlignment(Qt::AlignBottom);
-    auto *pv = new QChartView(pc); pv->setRenderHint(QPainter::Antialiasing); pv->setMinimumHeight(300);
-    chartsLay->addWidget(pv);
+    pc->legend()->setFont(QFont("Arial", 9));
+    pc->legend()->setLabelColor(QColor(C_GRIS));
+    auto *pv = new QChartView(pc);
+    pv->setRenderHint(QPainter::Antialiasing);
+    chartsLay->addWidget(wrapChart(pv, "Répartition des statuts"), 1);
 
-    // ── Barres Priorités — un QBarSet par priorité pour une couleur distincte ──
+    // Barres priorités — 1 set par priorité, 1 valeur chacun, catégories distinctes
+    QStringList prioOrder = {"Urgente","Haute","Normale","Basse"};
     QMap<QString,QColor> prioClrs;
-    prioClrs["Urgente"] = QColor("#F44336");
-    prioClrs["Haute"]   = QColor("#FF9800");
-    prioClrs["Normale"] = QColor("#2196F3");
-    prioClrs["Basse"]   = QColor("#4CAF50");
-    QStringList priorites = {"Urgente", "Haute", "Normale", "Basse"};
+    prioClrs["Urgente"] = QColor(C_BORDEAUX);
+    prioClrs["Haute"]   = QColor(C_BORDEAUX_MID);
+    prioClrs["Normale"] = QColor(C_OR);
+    prioClrs["Basse"]   = QColor(C_OR_PALE);
 
-    auto *bar = new QBarSeries();
-    bar->setLabelsVisible(true);
-    bar->setLabelsPosition(QAbstractBarSeries::LabelsOutsideEnd);
+    // Une série par priorité présente, chacune avec 1 seule valeur
+    // et attachée à sa propre catégorie via QBarCategoryAxis
     QStringList cats;
-
-    for (const QString &p : priorites) {
+    QList<QBarSet*> sets;
+    for (const QString &p : prioOrder) {
         if (!prioCnt.contains(p)) continue;
-        auto *set = new QBarSet(p);
-        set->setColor(prioClrs.value(p, QColor("#8D6E63")));
-        set->setLabelColor(Qt::black);
-        // Remplir avec 0 pour toutes les catégories sauf la sienne
-        // (chaque set a une seule valeur, les autres à 0)
-        for (const QString &pp : priorites) {
-            if (prioCnt.contains(pp))
-                *set << (pp == p ? prioCnt[p] : 0);
-        }
-        bar->append(set);
         cats << p;
-    }
-    // Fallback si aucune priorité standard
-    if (cats.isEmpty()) {
-        for (auto it = prioCnt.begin(); it != prioCnt.end(); ++it) {
-            auto *set = new QBarSet(it.key());
-            set->setColor(QColor("#8D6E63"));
-            *set << it.value();
-            bar->append(set);
-            cats << it.key();
-        }
+        auto *set = new QBarSet(p);
+        set->setColor(prioClrs.value(p, QColor(C_GRIS)));
+        set->setLabelColor(Qt::white);
+        set->setBorderColor(Qt::transparent);
+        *set << prioCnt[p];
+        sets << set;
     }
 
-    auto *bc = new QChart(); bc->addSeries(bar);
-    bc->setTitle("Répartition Priorités");
-    bc->setTitleFont(QFont("Arial", 13, QFont::Bold));
-    bc->setAnimationOptions(QChart::AllAnimations);
-    bc->setTheme(QChart::ChartThemeLight);
-    auto *axX = new QBarCategoryAxis(); axX->append(cats); bc->addAxis(axX,Qt::AlignBottom); bar->attachAxis(axX);
-    auto *axY = new QValueAxis(); axY->setLabelFormat("%d"); bc->addAxis(axY,Qt::AlignLeft); bar->attachAxis(axY);
+    // Utiliser une série par set pour que chaque barre soit dans sa propre catégorie
+    auto *bc = new QChart();
+    bc->setBackgroundBrush(QColor(C_BLANC));
+    bc->setBackgroundRoundness(0);
+    bc->setMargins(QMargins(0,0,0,0));
+    bc->setAnimationOptions(QChart::SeriesAnimations);
+
+    auto *axX = new QBarCategoryAxis();
+    axX->append(cats);
+    axX->setLabelsColor(QColor(C_GRIS));
+    axX->setGridLineVisible(false);
+    bc->addAxis(axX, Qt::AlignBottom);
+
+    auto *axY = new QValueAxis();
+    axY->setLabelFormat("%d");
+    axY->setLabelsColor(QColor(C_GRIS));
+    axY->setGridLineColor(QColor(C_BORDURE));
+    bc->addAxis(axY, Qt::AlignLeft);
+
+    // Une QBarSeries par set — chaque série a 1 set avec 1 valeur → 1 barre par catégorie
+    for (int i = 0; i < sets.size(); ++i) {
+        auto *series = new QBarSeries();
+        series->setLabelsVisible(true);
+        series->setLabelsPosition(QAbstractBarSeries::LabelsCenter);
+        series->setLabelsFormat("@value");
+        // Remplir avec 0 pour les autres catégories, valeur réelle pour la sienne
+        auto *set = new QBarSet(sets[i]->label());
+        set->setColor(sets[i]->color());
+        set->setLabelColor(Qt::white);
+        set->setBorderColor(Qt::transparent);
+        for (int j = 0; j < cats.size(); ++j)
+            *set << (j == i ? sets[i]->at(0) : 0);
+        series->append(set);
+        bc->addSeries(series);
+        series->attachAxis(axX);
+        series->attachAxis(axY);
+    }
     bc->legend()->setAlignment(Qt::AlignBottom);
-    auto *bv = new QChartView(bc); bv->setRenderHint(QPainter::Antialiasing); bv->setMinimumHeight(300);
-    chartsLay->addWidget(bv);
+    bc->legend()->setFont(QFont("Arial", 9));
+    bc->legend()->setLabelColor(QColor(C_GRIS));
+    auto *bv = new QChartView(bc);
+    bv->setRenderHint(QPainter::Antialiasing);
+    qDeleteAll(sets); // libérer les sets temporaires (les copies ont été faites dans chaque série)
+    chartsLay->addWidget(wrapChart(bv, "Répartition des priorités"), 1);
 
     lay->addWidget(chartsRow);
-
-    QPushButton exportBtn("📥  Exporter CSV",inner), closeBtn("✖  Fermer",inner);
-    exportBtn.setStyleSheet("QPushButton{background:#2196F3;color:white;border:none;border-radius:7px;padding:9px 22px;font-size:13px;font-weight:bold;}QPushButton:hover{background:#1976D2;}");
-    closeBtn.setStyleSheet("QPushButton{background:#95877C;color:white;border:none;border-radius:7px;padding:9px 22px;font-size:13px;font-weight:bold;}QPushButton:hover{background:#7D6B61;}");
-    connect(&exportBtn,&QPushButton::clicked,[&]{ onExcelProduction(); });
-    connect(&closeBtn,&QPushButton::clicked,&dlg,&QDialog::accept);
-    QHBoxLayout btnRow; btnRow.addStretch(); btnRow.addWidget(&exportBtn); btnRow.addWidget(&closeBtn);
-    lay->addLayout(&btnRow);
-
     scroll->setWidget(inner);
-    QVBoxLayout *dlay = new QVBoxLayout(&dlg); dlay->addWidget(scroll);
+    dlay->addWidget(scroll, 1);
+
+    // ── FOOTER BOUTONS ───────────────────────────────────────────────────────
+    QWidget *footer = new QWidget();
+    footer->setStyleSheet(QString(
+        "QWidget{background:%1;border-top:0.5px solid %2;}").arg(C_CREME, C_BORDURE));
+    QHBoxLayout *btnRow = new QHBoxLayout(footer);
+    btnRow->setContentsMargins(24,10,24,10);
+    btnRow->setSpacing(10);
+
+    QPushButton *exportBtn = new QPushButton("⬇  Exporter CSV");
+    exportBtn->setStyleSheet(QString(
+        "QPushButton{background:%1;color:white;border:none;border-radius:6px;"
+        "padding:9px 22px;font-size:13px;font-weight:bold;}"
+        "QPushButton:hover{background:#A87730;}").arg(C_OR));
+
+    QPushButton *fermerBtn = new QPushButton("✖  Fermer");
+    fermerBtn->setStyleSheet(QString(
+        "QPushButton{background:%1;color:white;border:none;border-radius:6px;"
+        "padding:9px 22px;font-size:13px;font-weight:bold;}"
+        "QPushButton:hover{background:#4E1A27;}").arg(C_BORDEAUX));
+
+    connect(exportBtn, &QPushButton::clicked, [&]{ onExcelProduction(); });
+    connect(fermerBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
+
+    btnRow->addStretch();
+    btnRow->addWidget(exportBtn);
+    btnRow->addWidget(fermerBtn);
+    dlay->addWidget(footer);
+
     dlg.exec();
 }
 

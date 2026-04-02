@@ -5,396 +5,541 @@
 #include <QSqlError>
 #include <QDate>
 #include <QLocale>
-#include <QProgressBar>
-#include <QSizePolicy>
 #include <QFileDialog>
 #include <QFile>
 #include <QTextStream>
 #include <QMessageBox>
+#include <QHeaderView>
+#include <QFont>
+#include <QPainter>
+#include <QMap>
+#include <QDebug>
+#include <algorithm>
 
-// ── Palette de couleurs de l'interface ───────────────────────────────────────
-static const QString BG_PAGE   = "#FAF5F0";  // Fond général (beige clair)
-static const QString BG_CARD   = "#FFFFFF";  // Fond des cartes KPI
-static const QString BROWN     = "#8D6E63";  // Couleur principale (marron)
-static const QString BROWN_LT  = "#A0826D";  // Marron clair (hover, sous-titres)
-static const QString DARK_TXT  = "#291C0E";  // Texte foncé
-static const QString BORDER    = "#E8DDD5";  // Bordures des cartes
+#include <QtCharts/QChart>
+#include <QtCharts/QChartView>
+#include <QtCharts/QPieSeries>
+#include <QtCharts/QPieSlice>
+#include <QtCharts/QBarSeries>
+#include <QtCharts/QHorizontalBarSeries>
+#include <QtCharts/QBarSet>
+#include <QtCharts/QBarCategoryAxis>
+#include <QtCharts/QValueAxis>
+#include <QtCharts/QSplineSeries>
 
-/** @brief Formate un double en monnaie locale française (ex: "1 234,56 DT"). */
+// Qt6: QtCharts n'a plus de namespace, les classes sont directement accessibles
+typedef QChart               QCChart;
+typedef QChartView           QCChartView;
+typedef QPieSeries           QCPieSeries;
+typedef QPieSlice            QCPieSlice;
+typedef QBarSeries           QCBarSeries;
+typedef QHorizontalBarSeries QCHBarSeries;
+typedef QBarSet              QCBarSet;
+typedef QBarCategoryAxis     QCBarCategoryAxis;
+typedef QValueAxis           QCValueAxis;
+typedef QSplineSeries        QCSplineSeries;
+
+static const QString BG_PAGE  = "#FBF5F0";
+static const QString BG_CARD  = "#FBF5F0";
+static const QString ACCENT   = "#C4923A";   // Or chaud
+static const QString PRIMARY  = "#6B2737";   // Bordeaux profond
+static const QString DARK_TXT = "#6B2737";
+static const QString BORDER   = "#C4923A";
+static const QString BG_ALT   = "#F5EBE0";
+
 static QString fmt(double v) {
     return QLocale(QLocale::French).toString(v, 'f', 2) + " DT";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-BilanDialog::BilanDialog(QWidget *parent)
-    : QDialog(parent)
-{
-    setWindowTitle("Bilan Financier — CUIREA");
-    setMinimumSize(820, 640);
-    setStyleSheet(QString("QDialog { background: %1; }").arg(BG_PAGE));
-    setupUI();    // Construction de l'interface
-    loadData();   // Chargement des données depuis la DB
+// Macro helper pour récupérer le QChart* depuis un QWidget* stocké
+static QCChart *chartOf(QWidget *w) {
+    auto *cv = qobject_cast<QCChartView*>(w);
+    return cv ? cv->chart() : nullptr;
 }
 
-// ── Construction de l'interface ───────────────────────────────────────────────
+BilanDialog::BilanDialog(QWidget *parent) : QDialog(parent)
+{
+    setWindowTitle("Bilan Financier — CUIREA");
+    setMinimumSize(1100, 720);
+    setStyleSheet(QString(
+        "QDialog{background:%1}"
+        "QGroupBox{background:%2;border:none;border-left:3px solid %3;"
+         "border-radius:8px;padding:8px}"
+        "QGroupBox::title{color:%4;font-size:10px;font-weight:bold;"
+         "subcontrol-origin:margin;left:10px;padding:0 4px}"
+        "QComboBox{background:%3;color:white;border:none;border-radius:6px;"
+         "padding:6px 12px;font-size:12px;font-weight:bold}"
+        "QComboBox::drop-down{border:none}"
+        "QComboBox QAbstractItemView{background:white;color:%4;"
+         "selection-background-color:%3}"
+        "QPushButton{border-radius:7px;padding:8px 22px;font-size:12px;font-weight:bold}"
+        "QScrollBar:vertical{width:8px;background:#E8D8C4;border-radius:4px}"
+        "QScrollBar::handle:vertical{background:%3;border-radius:4px}"
+    ).arg(BG_PAGE, BG_CARD, ACCENT, PRIMARY));
+    setupUI();
+    loadData();
+}
+
 void BilanDialog::setupUI()
 {
     auto *rootLay = new QVBoxLayout(this);
-    rootLay->setContentsMargins(0, 0, 0, 0);
+    rootLay->setContentsMargins(0,0,0,0);
     rootLay->setSpacing(0);
 
-    // Zone scrollable pour le contenu principal
-    auto *scroll = new QScrollArea(this);
+    // Barre supérieure terracotta
+    auto *topBar = new QFrame();
+    topBar->setStyleSheet(QString("QFrame{background:%1}").arg(PRIMARY));
+    auto *topLay = new QHBoxLayout(topBar);
+    topLay->setContentsMargins(20,12,20,12);
+    topLay->setSpacing(16);
+
+    auto *titleLbl = new QLabel("BILAN FINANCIER");
+    titleLbl->setStyleSheet("font-size:18px;font-weight:bold;color:white;letter-spacing:2px");
+    m_lblDate = new QLabel();
+    m_lblDate->setStyleSheet(QString("font-size:11px;color:%1;font-weight:bold").arg(ACCENT));
+    m_comboPeriod = new QComboBox();
+    m_comboPeriod->setFixedWidth(180);
+    connect(m_comboPeriod, QOverload<int>::of(&QComboBox::currentIndexChanged),
+            this, &BilanDialog::onPeriodChanged);
+
+    topLay->addWidget(titleLbl);
+    topLay->addStretch();
+    topLay->addWidget(m_lblDate);
+    topLay->addWidget(m_comboPeriod);
+    rootLay->addWidget(topBar);
+
+    // Zone scrollable
+    auto *scroll = new QScrollArea();
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
-    scroll->setStyleSheet("QScrollArea { background: " + BG_PAGE + "; border: none; }"
-                          "QScrollBar:vertical { width: 8px; background: #EDE0D8; border-radius: 4px; }"
-                          "QScrollBar::handle:vertical { background: " + BROWN + "; border-radius: 4px; }");
+    scroll->setStyleSheet(QString("QScrollArea{background:%1;border:none}").arg(BG_PAGE));
 
     auto *content = new QWidget();
-    content->setStyleSheet("background: " + BG_PAGE + ";");
+    content->setStyleSheet(QString("background:%1").arg(BG_PAGE));
     auto *mainLay = new QVBoxLayout(content);
-    mainLay->setContentsMargins(28, 28, 28, 28);
-    mainLay->setSpacing(20);
+    mainLay->setContentsMargins(20,20,20,20);
+    mainLay->setSpacing(16);
 
-    // ── En-tête dégradé avec titre et date ──────────────────────────────────
-    auto *header = new QFrame();
-    header->setStyleSheet(
-        "QFrame { background: qlineargradient(x1:0,y1:0,x2:1,y2:0,"
-        "stop:0 #8D6E63, stop:1 #A0826D);"
-        "border-radius: 12px; }");
-    auto *hLay = new QVBoxLayout(header);
-    hLay->setContentsMargins(24, 18, 24, 18);
-    hLay->setSpacing(4);
+    // KPIs + Charts
+    auto *midRow = new QHBoxLayout();
+    midRow->setSpacing(16);
 
-    auto *hTitle = new QLabel("BILAN FINANCIER");
-    hTitle->setStyleSheet("font-size: 22px; font-weight: bold; color: white; letter-spacing: 2px;");
-    hTitle->setAlignment(Qt::AlignCenter);
+    auto *kpiCol = new QVBoxLayout();
+    kpiCol->setSpacing(12);
+    kpiCol->addWidget(makeKpiBox("Chiffre d'affaires total", m_lblCA));
+    kpiCol->addWidget(makeKpiBox("Meilleur produit du mois", m_lblBestProduct, true));
+    kpiCol->addWidget(makeKpiBox("Bénéfice net",             m_lblBenefice));
+    kpiCol->addWidget(makeKpiBox("Marge brute",              m_lblMarge));
+    kpiCol->addWidget(makeKpiBox("Commandes totales",        m_lblCommandes));
+    kpiCol->addStretch();
+    auto *kpiWidget = new QWidget();
+    kpiWidget->setLayout(kpiCol);
+    kpiWidget->setFixedWidth(240);
 
-    auto *hSub = new QLabel("CUIREA — Usine de Cuir");
-    hSub->setStyleSheet("font-size: 12px; color: #FFF0E6;");
-    hSub->setAlignment(Qt::AlignCenter);
+    // make*Chart() retournent QWidget* — pas de problème de type
+    m_pieView    = makePieChart();
+    m_barView    = makeBarChart();
+    m_splineView = makeSplineChart();
+    m_produitView = makeHBarChart("CA par produit");
+    m_regionView  = makeHBarChart("CA par région");
+    m_pieView->setMinimumSize(260,220);
+    m_barView->setMinimumSize(260,220);
+    m_splineView->setMinimumHeight(200);
+    m_produitView->setMinimumHeight(220);
+    m_regionView->setMinimumHeight(220);
 
-    // Label de date mis à jour dans loadData()
-    m_lblDate = new QLabel();
-    m_lblDate->setStyleSheet("font-size: 11px; color: #FFE8D6;");
-    m_lblDate->setAlignment(Qt::AlignCenter);
+    auto *topCharts = new QHBoxLayout();
+    topCharts->setSpacing(12);
+    topCharts->addWidget(m_pieView, 1);
+    topCharts->addWidget(m_barView, 1);
 
-    hLay->addWidget(hTitle);
-    hLay->addWidget(hSub);
-    hLay->addWidget(m_lblDate);
-    mainLay->addWidget(header);
+    auto *botCharts = new QHBoxLayout();
+    botCharts->setSpacing(12);
+    botCharts->addWidget(m_produitView, 1);
+    botCharts->addWidget(m_regionView, 1);
 
-    // ── Titre de section KPI ─────────────────────────────────────────────────
-    auto *kpiTitle = new QLabel("Indicateurs Clés");
-    kpiTitle->setStyleSheet(QString("font-size: 13px; font-weight: bold; color: %1;").arg(BROWN));
-    mainLay->addWidget(kpiTitle);
+    auto *chartsCol = new QVBoxLayout();
+    chartsCol->setSpacing(12);
+    chartsCol->addLayout(topCharts);
+    chartsCol->addWidget(m_splineView);
+    chartsCol->addLayout(botCharts);
 
-    // ── Grille 2 cartes KPI ──────────────────────────────────────────────────
-    auto *kpiGrid = new QGridLayout();
-    kpiGrid->setSpacing(14);
+    midRow->addWidget(kpiWidget);
+    midRow->addLayout(chartsCol, 1);
+    mainLay->addLayout(midRow);
 
-    // Labels de valeur — initialisés vides, remplis par loadData()
-    m_lblCA    = new QLabel("—");
-    m_lblMoyen = new QLabel("—");
 
-    // Style commun des valeurs KPI
-    auto styleVal = [](QLabel *l, const QString &color) {
-        l->setStyleSheet(QString("font-size: 20px; font-weight: bold; color: %1;").arg(color));
-        l->setAlignment(Qt::AlignCenter);
-        l->setMinimumHeight(32);
-    };
-    styleVal(m_lblCA,    BROWN);
-    styleVal(m_lblMoyen, "#5C8FA8");
-
-    kpiGrid->addWidget(makeKpiCard("💰", "Chiffre d'Affaires", m_lblCA,    BROWN),    0, 0);
-    kpiGrid->addWidget(makeKpiCard("📊", "Moyenne / Commande", m_lblMoyen, "#5C8FA8"), 0, 1);
-    mainLay->addLayout(kpiGrid);
-
-    // ── Section répartition CA par priorité ──────────────────────────────────
-    auto *prioSection = new QFrame();
-    prioSection->setStyleSheet(
-        QString("QFrame { background: %1; border-radius: 12px; border: 1px solid %2; }")
-        .arg(BG_CARD, BORDER));
-    auto *prioLay = new QVBoxLayout(prioSection);
-    prioLay->setContentsMargins(20, 18, 20, 18);
-    prioLay->setSpacing(14);
-
-    auto *prioTitle = new QLabel("Répartition du CA par Priorité");
-    prioTitle->setStyleSheet(
-        QString("font-size: 13px; font-weight: bold; color: %1; border: none;").arg(BROWN));
-    prioLay->addWidget(prioTitle);
-
-    // Séparateur horizontal
-    auto *sep = new QFrame();
-    sep->setFrameShape(QFrame::HLine);
-    sep->setStyleSheet(QString("color: %1; border: none; border-top: 1px solid %1;").arg(BORDER));
-    prioLay->addWidget(sep);
-
-    // Labels de montant par priorité — mis à jour dans loadData()
-    m_lblBasse   = new QLabel("—");
-    m_lblNormale = new QLabel("—");
-    m_lblUrgente = new QLabel("—");
-
-    // Barres de progression proportionnelles au CA de chaque priorité
-    m_barBasse   = new QFrame(); m_barBasse->setFixedHeight(8);
-    m_barNormale = new QFrame(); m_barNormale->setFixedHeight(8);
-    m_barUrgente = new QFrame(); m_barUrgente->setFixedHeight(8);
-
-    // Fonction locale pour ajouter une ligne priorité (icône + nom + barre + montant)
-    auto addPrioRow = [&](const QString &icon, const QString &label,
-                          QLabel *valLbl, QFrame *bar, const QString &color)
-    {
-        auto *row = new QHBoxLayout();
-        row->setSpacing(10);
-
-        auto *iconLbl = new QLabel(icon);
-        iconLbl->setFixedWidth(22);
-        iconLbl->setStyleSheet("font-size: 15px; border: none;");
-
-        auto *nameLbl = new QLabel(label);
-        nameLbl->setFixedWidth(80);
-        nameLbl->setStyleSheet(
-            QString("font-size: 12px; font-weight: bold; color: %1; border: none;").arg(DARK_TXT));
-
-        // Barre colorée dont la largeur est proportionnelle au CA
-        bar->setStyleSheet(
-            QString("QFrame { background: %1; border-radius: 4px; }").arg(color));
-        bar->setMinimumWidth(0);
-        bar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-
-        valLbl->setStyleSheet(
-            QString("font-size: 12px; font-weight: bold; color: %1; border: none;").arg(color));
-        valLbl->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        valLbl->setFixedWidth(160);
-
-        row->addWidget(iconLbl);
-        row->addWidget(nameLbl);
-        row->addWidget(bar, 1);
-        row->addWidget(valLbl);
-        prioLay->addLayout(row);
-    };
-
-    addPrioRow("🟢", "Basse",   m_lblBasse,   m_barBasse,   "#66BB6A");
-    addPrioRow("🟡", "Normale", m_lblNormale, m_barNormale, "#FFA726");
-    addPrioRow("🔴", "Urgente", m_lblUrgente, m_barUrgente, "#EF5350");
-
-    // Séparateur bas + total commandes
-    auto *sepBot = new QFrame();
-    sepBot->setFrameShape(QFrame::HLine);
-    sepBot->setStyleSheet(QString("border: none; border-top: 1px solid %1;").arg(BORDER));
-    prioLay->addWidget(sepBot);
-
-    m_lblNbTotal = new QLabel();
-    m_lblNbTotal->setStyleSheet(
-        QString("font-size: 11px; color: %1; border: none;").arg(BROWN_LT));
-    m_lblNbTotal->setAlignment(Qt::AlignRight);
-    prioLay->addWidget(m_lblNbTotal);
-
-    mainLay->addWidget(prioSection);
-    mainLay->addStretch();
 
     scroll->setWidget(content);
-    rootLay->addWidget(scroll);
+    rootLay->addWidget(scroll, 1);
 
-    // ── Barre de boutons en bas de la fenêtre ────────────────────────────────
+    // Boutons
     auto *btnBar = new QFrame();
     btnBar->setStyleSheet(
-        "QFrame { background: white; border-top: 1px solid " + BORDER + "; }");
+        QString("QFrame{background:%1;border-top:2px solid %2}").arg(BG_CARD, ACCENT));
     auto *btnLay = new QHBoxLayout(btnBar);
-    btnLay->setContentsMargins(20, 12, 20, 12);
+    btnLay->setContentsMargins(20,10,20,10);
     btnLay->setSpacing(10);
 
-    auto *btnExport = new QPushButton("📥 Exporter CSV");
+    auto *btnExport = new QPushButton("Exporter CSV");
     btnExport->setStyleSheet(
-        "QPushButton { background: #6D9B6A; color: white; border: none;"
-        "border-radius: 7px; padding: 9px 28px; font-size: 12px; font-weight: bold; }"
-        "QPushButton:hover { background: #7DB87A; }");
-
+        QString("QPushButton{background:%1;color:white;border:none}"
+                "QPushButton:hover{background:#A87730}").arg(ACCENT));
     auto *btnClose = new QPushButton("Fermer");
     btnClose->setStyleSheet(
-        "QPushButton { background: " + BROWN + "; color: white; border: none;"
-        "border-radius: 7px; padding: 9px 28px; font-size: 12px; font-weight: bold; }"
-        "QPushButton:hover { background: " + BROWN_LT + "; }");
+        QString("QPushButton{background:%1;color:white;border:none}"
+                "QPushButton:hover{background:#4E1A27}").arg(PRIMARY));
 
     connect(btnExport, &QPushButton::clicked, this, &BilanDialog::exportCSV);
     connect(btnClose,  &QPushButton::clicked, this, &QDialog::accept);
-
     btnLay->addStretch();
     btnLay->addWidget(btnExport);
     btnLay->addWidget(btnClose);
     rootLay->addWidget(btnBar);
 }
 
-// ── Chargement des données depuis la base de données ─────────────────────────
+QGroupBox *BilanDialog::makeKpiBox(const QString &title, QLabel *&valLabel, bool highlight)
+{
+    auto *box = new QGroupBox(title);
+    if (highlight) {
+        box->setStyleSheet(
+            QString("QGroupBox{background:%1;border:none;border-radius:8px;padding:8px}"
+                    "QGroupBox::title{color:%2;font-size:10px;font-weight:bold;"
+                    "subcontrol-origin:margin;left:10px;padding:0 4px}").arg(PRIMARY, ACCENT));
+    }
+    auto *lay = new QVBoxLayout(box);
+    lay->setContentsMargins(10,18,10,10);
+    valLabel = new QLabel("—");
+    valLabel->setAlignment(Qt::AlignCenter);
+    valLabel->setWordWrap(true);
+    valLabel->setStyleSheet(
+        QString("font-size:22px;font-weight:bold;color:%1;border:none")
+        .arg(highlight ? ACCENT : PRIMARY));
+    lay->addWidget(valLabel);
+    return box;
+}
+
+// Retourne QWidget* — QChartView hérite de QWidget, cast implicite valide
+QWidget *BilanDialog::makePieChart()
+{
+    auto *series = new QCPieSeries();
+    series->append("Basse",   1)->setColor(QColor("#C4923A"));  // Or
+    series->append("Normale", 1)->setColor(QColor("#A0485A"));  // Bordeaux rosé
+    series->append("Urgente", 1)->setColor(QColor("#6B2737"));  // Bordeaux profond
+
+    auto *chart = new QCChart();
+    chart->addSeries(series);
+    chart->setTitle("Répartition par priorité");
+    chart->setTitleFont(QFont("Arial", 9, QFont::Bold));
+    chart->setTitleBrush(QColor(DARK_TXT));
+    chart->setBackgroundBrush(QColor(BG_CARD));
+    chart->setBackgroundRoundness(8);
+    chart->legend()->setAlignment(Qt::AlignBottom);
+    chart->legend()->setFont(QFont("Arial", 8));
+    chart->setMargins(QMargins(8,8,8,8));
+
+    auto *view = new QCChartView(chart);
+    view->setRenderHint(QPainter::Antialiasing);
+    view->setStyleSheet(QString("border:1px solid %1;border-radius:8px").arg(BORDER));
+    return view;  // QChartView* -> QWidget* implicite
+}
+
+QWidget *BilanDialog::makeBarChart()
+{
+    auto *set = new QCBarSet("CA");
+    set->setColor(QColor(ACCENT));
+    *set << 0 << 0 << 0;
+    auto *series = new QCBarSeries();
+    series->append(set);
+
+    auto *chart = new QCChart();
+    chart->addSeries(series);
+    chart->setTitle("CA par priorité");
+    chart->setTitleFont(QFont("Arial", 9, QFont::Bold));
+    chart->setTitleBrush(QColor(DARK_TXT));
+    chart->setBackgroundBrush(QColor(BG_CARD));
+    chart->setBackgroundRoundness(8);
+
+    QStringList cats; cats << "Basse" << "Normale" << "Urgente";
+    auto *axisX = new QCBarCategoryAxis();
+    axisX->append(cats);
+    axisX->setLabelsFont(QFont("Arial", 8));
+    chart->addAxis(axisX, Qt::AlignBottom);
+    series->attachAxis(axisX);
+
+    auto *axisY = new QCValueAxis();
+    axisY->setLabelsFont(QFont("Arial", 8));
+    chart->addAxis(axisY, Qt::AlignLeft);
+    series->attachAxis(axisY);
+
+    chart->legend()->hide();
+    chart->setMargins(QMargins(8,8,8,8));
+
+    auto *view = new QCChartView(chart);
+    view->setRenderHint(QPainter::Antialiasing);
+    view->setStyleSheet(QString("border:1px solid %1;border-radius:8px").arg(BORDER));
+    return view;
+}
+
+QWidget *BilanDialog::makeSplineChart()
+{
+    auto *series = new QCSplineSeries();
+    series->setName("CA quotidien");
+    series->setColor(QColor(PRIMARY));
+    series->setPen(QPen(QColor(PRIMARY), 2));
+
+    auto *chart = new QCChart();
+    chart->addSeries(series);
+    chart->setTitle("Évolution quotidienne du CA (30 derniers jours)");
+    chart->setTitleFont(QFont("Arial", 9, QFont::Bold));
+    chart->setTitleBrush(QColor(DARK_TXT));
+    chart->setBackgroundBrush(QColor(BG_CARD));
+    chart->setBackgroundRoundness(8);
+    chart->legend()->hide();
+    chart->setMargins(QMargins(8,8,8,8));
+    // Pas de createDefaultAxes ici — fait dans onPeriodChanged après remplissage
+
+    auto *view = new QCChartView(chart);
+    view->setRenderHint(QPainter::Antialiasing);
+    view->setStyleSheet(QString("border:1px solid %1;border-radius:8px").arg(BORDER));
+    return view;
+}
+
+
+
+QWidget *BilanDialog::makeHBarChart(const QString &title)
+{
+    auto *set = new QCBarSet("");
+    set->setColor(QColor(ACCENT));
+    auto *series = new QCHBarSeries();
+    series->append(set);
+
+    auto *chart = new QCChart();
+    chart->addSeries(series);
+    chart->setTitle(title);
+    chart->setTitleFont(QFont("Arial", 9, QFont::Bold));
+    chart->setTitleBrush(QColor(DARK_TXT));
+    chart->setBackgroundBrush(QColor(BG_CARD));
+    chart->setBackgroundRoundness(8);
+    chart->legend()->hide();
+    chart->setMargins(QMargins(8,8,8,8));
+
+    auto *view = new QCChartView(chart);
+    view->setRenderHint(QPainter::Antialiasing);
+    view->setStyleSheet(QString("border:1px solid %1;border-radius:8px").arg(BORDER));
+    return view;
+}
+
+void BilanDialog::refreshHBar(QWidget *view, const QMap<QString,double> &data)
+{
+    auto *cv = qobject_cast<QCChartView*>(view);
+    if (!cv) return;
+    QCChart *chart = cv->chart();
+
+    const auto axisList = chart->axes();
+    for (auto *ax : axisList) chart->removeAxis(ax);
+    chart->removeAllSeries();
+
+    auto *set = new QCBarSet("");
+    set->setColor(QColor(ACCENT));
+
+    QStringList labels;
+    // Trier par valeur décroissante
+    QList<QPair<QString,double>> sorted;
+    for (auto it = data.cbegin(); it != data.cend(); ++it)
+        sorted.append({it.key(), it.value()});
+    std::sort(sorted.begin(), sorted.end(),
+              [](const QPair<QString,double> &a, const QPair<QString,double> &b){ return a.second < b.second; });
+
+    for (const auto &p : sorted) {
+        *set << p.second;
+        labels << p.first;
+    }
+
+    auto *series = new QCHBarSeries();
+    series->append(set);
+    chart->addSeries(series);
+
+    auto *axisY = new QCBarCategoryAxis();
+    axisY->append(labels);
+    axisY->setLabelsFont(QFont("Arial", 8));
+    chart->addAxis(axisY, Qt::AlignLeft);
+    series->attachAxis(axisY);
+
+    auto *axisX = new QCValueAxis();
+    axisX->setLabelsFont(QFont("Arial", 8));
+    chart->addAxis(axisX, Qt::AlignBottom);
+    series->attachAxis(axisX);
+}
+
 void BilanDialog::loadData()
 {
-    // Afficher la date de génération
-    m_lblDate->setText(
-        QString("Généré le %1").arg(QDate::currentDate().toString("dd MMMM yyyy")));
+    m_comboPeriod->blockSignals(true);
+    m_comboPeriod->clear();
+    m_comboPeriod->addItem("Tous");
 
-    QSqlQuery q(Connection::instance()->getDatabase());
+    QSqlQuery q;
+    q.exec("SELECT DISTINCT TO_CHAR(date_creation, 'YYYY-MM') AS mois "
+           "FROM Commandes ORDER BY mois DESC");
+    while (q.next())
+        m_comboPeriod->addItem(q.value(0).toString());
 
-    // ── KPI globaux : CA total et nombre de commandes ────────────────────────
-    q.prepare(
-        "SELECT "
-        "  NVL(SUM(MONTANT), 0) AS ca_total, "
-        "  COUNT(*)             AS nb "
-        "FROM COMMANDES"
-    );
-
-    double ca = 0;
-    int    nb = 0;
-
-    if (q.exec() && q.next()) {
-        ca = q.value(0).toDouble();
-        nb = q.value(1).toInt();
-    } else {
-        qDebug() << "BilanDialog KPI query error:" << q.lastError().text();
-    }
-
-    // Calcul de la moyenne (évite la division par zéro)
-    double moyen = (nb > 0) ? (ca / nb) : 0.0;
-
-    m_lblCA->setText(fmt(ca));
-    m_lblMoyen->setText(fmt(moyen));
-
-    // ── Répartition CA par priorité ──────────────────────────────────────────
-    // GROUP BY sur UPPER(TRIM(PRIORITE)) pour normaliser les valeurs
-    q.prepare(
-        "SELECT UPPER(TRIM(PRIORITE)), NVL(SUM(MONTANT), 0), COUNT(*) "
-        "FROM COMMANDES "
-        "WHERE PRIORITE IS NOT NULL "
-        "GROUP BY UPPER(TRIM(PRIORITE))"
-    );
-
-    double mBasse = 0, mNormale = 0, mUrgente = 0;
-    int    nBasse = 0, nNormale = 0, nUrgente = 0;
-
-    if (q.exec()) {
-        while (q.next()) {
-            QString prio = q.value(0).toString().trimmed();
-            double  mont = q.value(1).toDouble();
-            int     cnt  = q.value(2).toInt();
-            qDebug() << "BilanDialog priorite:" << prio << "montant:" << mont;
-            if      (prio == "BASSE")   { mBasse   = mont; nBasse   = cnt; }
-            else if (prio == "NORMALE") { mNormale = mont; nNormale = cnt; }
-            else if (prio == "URGENTE") { mUrgente = mont; nUrgente = cnt; }
-            else if (prio == "HAUTE")   { mUrgente += mont; nUrgente += cnt; } // alias
-        }
-    } else {
-        qDebug() << "BilanDialog priorite query error:" << q.lastError().text();
-    }
-
-    // Calcul du total pour les proportions des barres (évite division par zéro)
-    double total = mBasse + mNormale + mUrgente;
-    if (total <= 0) total = 1;
-
-    // Largeur max des barres = 300px, minimum 4px pour rester visible
-    int maxW = 300;
-    m_barBasse->setFixedWidth(qMax(4, (int)(mBasse   / total * maxW)));
-    m_barNormale->setFixedWidth(qMax(4, (int)(mNormale / total * maxW)));
-    m_barUrgente->setFixedWidth(qMax(4, (int)(mUrgente / total * maxW)));
-
-    // Mise à jour des labels montant + nombre de commandes
-    m_lblBasse->setText(  QString("%1  (%2 cmd)").arg(fmt(mBasse)).arg(nBasse));
-    m_lblNormale->setText(QString("%1  (%2 cmd)").arg(fmt(mNormale)).arg(nNormale));
-    m_lblUrgente->setText(QString("%1  (%2 cmd)").arg(fmt(mUrgente)).arg(nUrgente));
-
-    m_lblNbTotal->setText(QString("Total : %1 commande(s)").arg(nb));
+    m_comboPeriod->blockSignals(false);
+    m_lblDate->setText(QDate::currentDate().toString("dd/MM/yyyy"));
+    onPeriodChanged();
 }
 
-// ── Fabrique de carte KPI ─────────────────────────────────────────────────────
-QFrame *BilanDialog::makeKpiCard(const QString &icon, const QString &title,
-                                  QLabel *valLabel, const QString &color,
-                                  const QString &subtitle)
+void BilanDialog::onPeriodChanged()
 {
-    auto *card = new QFrame();
-    card->setStyleSheet(
-        QString("QFrame { background: %1; border-radius: 12px;"
-                "border: 1px solid %2; }").arg(BG_CARD, BORDER));
-    card->setMinimumHeight(110);
+    QString filtre = m_comboPeriod->currentText();
+    QString where  = (filtre == "Tous") ? "" :
+                     QString(" WHERE TO_CHAR(date_creation,'YYYY-MM') = '%1'").arg(filtre);
 
-    auto *lay = new QVBoxLayout(card);
-    lay->setContentsMargins(18, 16, 18, 16);
-    lay->setSpacing(6);
+    QSqlQuery q;
 
-    // Ligne icône + titre
-    auto *topRow = new QHBoxLayout();
-    auto *iconLbl = new QLabel(icon);
-    iconLbl->setStyleSheet("font-size: 20px; border: none;");
-    auto *titleLbl = new QLabel(title);
-    titleLbl->setStyleSheet(
-        QString("font-size: 11px; color: %1; font-weight: bold; border: none;").arg(BROWN_LT));
-    topRow->addWidget(iconLbl);
-    topRow->addWidget(titleLbl);
-    topRow->addStretch();
-    lay->addLayout(topRow);
+    // --- KPIs ---
+    q.exec("SELECT SUM(montant) FROM Commandes" + where);
+    double ca = (q.next() && !q.value(0).isNull()) ? q.value(0).toDouble() : 0.0;
+    m_lblCA->setText(fmt(ca));
 
-    // Séparateur coloré sous le titre
-    auto *sep = new QFrame();
-    sep->setFixedHeight(2);
-    sep->setStyleSheet(QString("background: %1; border: none;").arg(color));
-    lay->addWidget(sep);
+    double benefice = ca * 0.3;
+    m_lblBenefice->setText(fmt(benefice));
+    m_lblMarge->setText(QString::number(ca > 0 ? 30.0 : 0.0, 'f', 1) + " %");
 
-    // Le label valeur est passé depuis l'extérieur et mis à jour par loadData()
-    valLabel->setParent(card);
-    lay->addWidget(valLabel);
+    q.exec("SELECT produit, COUNT(*) AS nb FROM Commandes" + where +
+           " GROUP BY produit ORDER BY nb DESC");
+    m_lblBestProduct->setText(q.next() ? q.value(0).toString() : "—");
 
-    if (!subtitle.isEmpty()) {
-        auto *subLbl = new QLabel(subtitle);
-        subLbl->setStyleSheet("font-size: 10px; color: #999; border: none;");
-        lay->addWidget(subLbl);
+    // KPI commandes totales + en attente
+    q.exec("SELECT COUNT(*) FROM Commandes" + where);
+    int total = q.next() ? q.value(0).toInt() : 0;
+    QString whereAtt = where.isEmpty()
+        ? " WHERE LOWER(statut)='en attente'"
+        : where + " AND LOWER(statut)='en attente'";
+    q.exec("SELECT COUNT(*) FROM Commandes" + whereAtt);
+    int enAttente = q.next() ? q.value(0).toInt() : 0;
+    m_lblCommandes->setText(QString("%1\n(%2 en attente)").arg(total).arg(enAttente));
+
+    // --- Pie chart ---
+    if (auto *cv = qobject_cast<QCChartView*>(m_pieView)) {
+        auto *series = qobject_cast<QCPieSeries*>(cv->chart()->series().first());
+        if (series) {
+            QMap<QString,double> prio;
+            q.exec("SELECT priorite, SUM(montant) FROM Commandes" + where +
+                   " GROUP BY priorite");
+            while (q.next()) prio[q.value(0).toString()] = q.value(1).toDouble();
+            // Retrouver chaque slice par son label pour éviter les décalages d'index
+            for (auto *slice : series->slices())
+                slice->setValue(prio.value(slice->label(), 0.01));
+        }
     }
 
-    return card;
+    // --- Bar chart ---
+    if (auto *cv = qobject_cast<QCChartView*>(m_barView)) {
+        auto *series = qobject_cast<QCBarSeries*>(cv->chart()->series().first());
+        if (series && !series->barSets().isEmpty()) {
+            auto *set = series->barSets().first();
+            QMap<QString,double> prio;
+            q.exec("SELECT priorite, SUM(montant) FROM Commandes" + where +
+                   " GROUP BY priorite");
+            while (q.next()) prio[q.value(0).toString()] = q.value(1).toDouble();
+            set->replace(0, prio.value("Basse",   0));
+            set->replace(1, prio.value("Normale", 0));
+            set->replace(2, prio.value("Urgente", 0));
+            // Recalcule les axes Y après mise à jour
+            if (auto *axisY = qobject_cast<QCValueAxis*>(cv->chart()->axes(Qt::Vertical).first())) {
+                double maxVal = std::max({prio.value("Basse",0), prio.value("Normale",0), prio.value("Urgente",0)});
+                axisY->setRange(0, maxVal > 0 ? maxVal * 1.15 : 100);
+            }
+        }
+    }
+
+    // --- Spline chart ---
+    if (auto *cv = qobject_cast<QCChartView*>(m_splineView)) {
+        QCChart *chart = cv->chart();
+
+        // Retirer proprement axes et série sans les détruire
+        const auto axisList = chart->axes();
+        for (auto *ax : axisList) chart->removeAxis(ax);
+        chart->removeAllSeries();
+
+        // Créer une nouvelle série fraîche
+        auto *series = new QCSplineSeries();
+        series->setColor(QColor(PRIMARY));
+        series->setPen(QPen(QColor(PRIMARY), 2));
+
+        q.exec("SELECT EXTRACT(DAY FROM date_creation), SUM(montant) "
+               "FROM Commandes" + where +
+               " GROUP BY EXTRACT(DAY FROM date_creation) "
+               "ORDER BY EXTRACT(DAY FROM date_creation)");
+        while (q.next())
+            series->append(q.value(0).toDouble(), q.value(1).toDouble());
+
+        chart->addSeries(series);
+        chart->createDefaultAxes();
+        if (!chart->axes(Qt::Horizontal).isEmpty())
+            chart->axes(Qt::Horizontal).first()->setLabelsFont(QFont("Arial", 8));
+        if (!chart->axes(Qt::Vertical).isEmpty())
+            chart->axes(Qt::Vertical).first()->setLabelsFont(QFont("Arial", 8));
+    }
+
+    // --- CA par produit ---
+    {
+        QMap<QString,double> data;
+        q.exec("SELECT produit, SUM(montant) FROM Commandes" + where +
+               " GROUP BY produit ORDER BY SUM(montant) DESC");
+        while (q.next()) data[q.value(0).toString()] = q.value(1).toDouble();
+        refreshHBar(m_produitView, data);
+    }
+
+    // --- CA par région (ville du client via mail_client) ---
+    {
+        QMap<QString,double> data;
+        QString joinWhere = where.isEmpty()
+            ? " WHERE c.ville IS NOT NULL"
+            : where.replace("WHERE", "WHERE c.ville IS NOT NULL AND");
+        q.exec("SELECT c.ville, SUM(co.montant) "
+               "FROM Commandes co "
+               "JOIN Clients c ON c.email = co.mail_client" +
+               (where.isEmpty()
+                    ? QString(" WHERE c.ville IS NOT NULL")
+                    : QString(" WHERE c.ville IS NOT NULL AND TO_CHAR(co.date_creation,'YYYY-MM') = '%1'").arg(filtre)) +
+               " GROUP BY c.ville ORDER BY SUM(co.montant) DESC");
+        while (q.next()) data[q.value(0).toString()] = q.value(1).toDouble();
+        refreshHBar(m_regionView, data);
+    }
 }
 
-// ── Export CSV ────────────────────────────────────────────────────────────────
 void BilanDialog::exportCSV()
 {
-    // Demander à l'utilisateur où sauvegarder le fichier
-    QString fn = QFileDialog::getSaveFileName(
-        this, "Exporter le bilan",
-        QString("Bilan_CUIREA_%1.csv").arg(QDate::currentDate().toString("yyyy-MM-dd")),
-        "CSV (*.csv)");
-    if (fn.isEmpty()) return;
+    QString path = QFileDialog::getSaveFileName(this, "Exporter CSV", "bilan.csv",
+                                                "CSV (*.csv)");
+    if (path.isEmpty()) return;
 
-    QFile file(fn);
+    QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QMessageBox::critical(this, "Erreur", "Impossible d'écrire le fichier.");
+        QMessageBox::warning(this, "Erreur", "Impossible d'ouvrir le fichier.");
         return;
     }
-
     QTextStream out(&file);
     out.setEncoding(QStringConverter::Utf8);
 
-    // En-tête du fichier CSV
-    out << "BILAN FINANCIER — CUIREA\n";
-    out << "Généré le;" << QDate::currentDate().toString("dd/MM/yyyy") << "\n\n";
+    // En-têtes
+    out << "Date;Référence;Produit;Montant;Priorité;Statut;ID Employé;État\n";
 
-    // Section KPI
-    out << "Indicateur;Valeur\n";
-    out << "Chiffre d'Affaires;" << m_lblCA->text() << "\n";
-    out << "Moyenne / Commande;" << m_lblMoyen->text() << "\n\n";
-
-    // Section répartition par priorité — relecture DB pour données brutes
-    out << "Priorité;Montant;Commandes\n";
-    QSqlQuery q(Connection::instance()->getDatabase());
-    q.prepare(
-        "SELECT UPPER(TRIM(PRIORITE)), NVL(SUM(MONTANT),0), COUNT(*) "
-        "FROM COMMANDES WHERE PRIORITE IS NOT NULL "
-        "GROUP BY UPPER(TRIM(PRIORITE)) ORDER BY 1"
-    );
-    if (q.exec()) {
-        while (q.next()) {
-            out << q.value(0).toString() << ";"
-                << QString::number(q.value(1).toDouble(), 'f', 2) << ";"
-                << q.value(2).toInt() << "\n";
+    // Données directement depuis la BDD
+    QSqlQuery q;
+    q.exec("SELECT date_creation, reference, produit, montant, priorite, statut, id_employe, etat "
+           "FROM Commandes ORDER BY date_creation DESC");
+    while (q.next()) {
+        QStringList row;
+        row << q.value(0).toDate().toString("dd/MM/yyyy");
+        for (int c = 1; c < 8; ++c) {
+            QString v = (c == 3) ? fmt(q.value(c).toDouble()) : q.value(c).toString().trimmed();
+            row << (v.isEmpty() ? "—" : v);
         }
+        out << row.join(";") << "\n";
     }
-
     file.close();
-    QMessageBox::information(this, "Succès",
-        QString("Bilan exporté :\n%1").arg(fn));
+    QMessageBox::information(this, "Export", "Fichier exporté avec succès.");
 }
