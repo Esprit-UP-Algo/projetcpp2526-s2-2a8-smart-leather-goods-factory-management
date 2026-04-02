@@ -1089,22 +1089,30 @@ void MainWindow::setupMatiereTable()
         QString photoPath = model->data(model->index(row, 7)).toString();
         QTableWidgetItem* photoItem = new QTableWidgetItem();
         if (!photoPath.isEmpty() && QFile::exists(photoPath)) {
-            photoItem->setIcon(QIcon(QPixmap(photoPath).scaled(40, 40, Qt::KeepAspectRatio, Qt::SmoothTransformation)));
-            photoItem->setToolTip(photoPath);
+            // Utiliser setCellWidget avec QLabel pour afficher la photo en grand
+            QLabel *photoLabel = new QLabel();
+            QPixmap pix(photoPath);
+            photoLabel->setPixmap(pix.scaled(120, 120, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            photoLabel->setAlignment(Qt::AlignCenter);
+            photoLabel->setToolTip("Double-cliquez pour agrandir");
+            ui->matiereTable->setCellWidget(row, 6, photoLabel);
         } else {
             photoItem->setText("—");
+            ui->matiereTable->setItem(row, 6, photoItem);
         }
-        ui->matiereTable->setItem(row, 6, photoItem);
         
         // Stocker l'ID et le chemin photo
         ui->matiereTable->item(row, 0)->setData(Qt::UserRole, model->data(model->index(row, 0)).toInt());
         ui->matiereTable->item(row, 0)->setData(Qt::UserRole + 1, photoPath);
         
-        // Définir la hauteur de ligne
-        ui->matiereTable->setRowHeight(row, 50);
+        // Hauteur de ligne pour la photo
+        ui->matiereTable->setRowHeight(row, 130);
     }
     delete model;
     ui->matiereTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    // Fixer la largeur de la colonne PHOTO
+    ui->matiereTable->horizontalHeader()->setSectionResizeMode(6, QHeaderView::Fixed);
+    ui->matiereTable->setColumnWidth(6, 140);
     ui->matiereTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     updateMatiereStatistics();
 }
