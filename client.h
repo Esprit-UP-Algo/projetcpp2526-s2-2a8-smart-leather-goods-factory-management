@@ -4,6 +4,7 @@
 #include <QString>
 #include <QSqlQueryModel>
 #include <QMap>
+#include <QTableWidget>
 
 class Client {
 private:
@@ -60,13 +61,16 @@ public:
     // ========================
     // Méthodes CRUD (Qt/SQL)
     // ========================
-    QSqlQueryModel* afficherClients();  // SELECT tous les clients → colonnes: id, nom, prenom, sexe, cin, pays, ville, adresse, email, date_inscription
+    QSqlQueryModel* afficherClients();    // SELECT tous les clients → colonnes: id, nom, prenom, sexe, cin, pays, ville, adresse, email, date_inscription
+    QSqlQueryModel* afficherHistorique();
     bool ajouter();                     // INSERT avec les attributs de l'instance courante
     bool modifier();                    // UPDATE basé sur id_client de l'instance courante
     bool supprimer(int id);
 
     QList<Client> getAll();//this
     QMap<QString, int> statistiquesParVille();//this
+    static bool exporterListe(QTableWidget* table, const QString& fileName);
+
 };
 
 #endif // CLIENT_H

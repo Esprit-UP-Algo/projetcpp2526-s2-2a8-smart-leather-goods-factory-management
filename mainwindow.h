@@ -81,7 +81,7 @@ private slots:
     void on_btnRefreshClient_clicked();
     void on_btnTriClient_clicked();
     void on_btnFidelityClassification_clicked();
-    void on_btnAIAgent_clicked();
+    void on_btnhistorique_clicked();
     void on_searchBoxClient_textChanged(const QString &text);
     void on_btntrie_clicked();
     void on_btnStatsByRegion_clicked();

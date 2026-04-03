@@ -235,8 +235,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnExportMatiere,&QPushButton::clicked, this, &MainWindow::onExportMatiere);
 
     // ── Client extra buttons ────────────────────────────────────────────────
-    connect(ui->btnAIAgent, &QPushButton::clicked, this, &MainWindow::on_btnAIAgent_clicked);
-    connect(ui->btnStatsByRegion, &QPushButton::clicked, this, &MainWindow::on_btnStatsByRegion_clicked);
     connect(ui->btnFidelityClassification, &QPushButton::clicked, this, &MainWindow::on_btnFidelityClassification_clicked);
 
     // ── Fournisseurs ────────────────────────────────────────────────────────
@@ -1062,9 +1060,83 @@ void MainWindow::on_btnStatsByRegion_clicked()
     window->show();
 }
 void MainWindow::on_btnFidelityClassification_clicked() {}
-void MainWindow::on_btnAIAgent_clicked() {}
-void MainWindow::on_btnExportClient_clicked() {}
 void MainWindow::on_btnTriClient_clicked() {}
+
+//--exportclient
+
+
+void MainWindow::on_btnExportClient_clicked()
+{
+    QString filePath = QFileDialog::getSaveFileName(
+        this,
+        "Exporter les clients",
+        "",
+        "CSV (*.csv);;PDF (*.pdf);;Word (*.docx)"
+    );
+
+    if (filePath.isEmpty())
+        return;
+
+    if (Client::exporterListe(ui->clientTable, filePath)) {
+        QMessageBox::information(this, "Succès", "Export réussi !");
+    } else {
+        QMessageBox::critical(this, "Erreur", "Échec de l'export !");
+    }
+}
+//historique client
+
+void MainWindow::on_btnhistorique_clicked()
+{
+    QWidget *window = new QWidget();
+    window->setWindowTitle("Historique des clients");
+    window->resize(700, 450);
+
+    QVBoxLayout *layout = new QVBoxLayout(window);
+
+    // Title
+    QLabel *title = new QLabel("Historique des clients");
+    title->setAlignment(Qt::AlignCenter);
+    title->setStyleSheet(
+        "font-size: 20px;"
+        "font-weight: bold;"
+        "color: #291C0E;"   // dark brown (CUIREA theme)
+        "padding: 8px;"
+    );
+
+    // Table
+    QTableView *table = new QTableView();
+    Client c;
+    table->setModel(c.afficherHistorique());
+    // Styling (CUIREA palette)
+    table->setStyleSheet(
+        "QTableView {"
+        "background-color: #FAF5F0;"          // light beige
+        "alternate-background-color: #F3E9DD;"
+        "gridline-color: #D8C3A5;"
+        "color: #291C0E;"                     // text color
+        "selection-background-color: #C19A6B;"
+        "selection-color: white;"
+        "border: 1px solid #D8C3A5;"
+        "}"
+        "QHeaderView::section {"
+        "background-color: #6B4F3B;"          // dark brown header
+        "color: white;"
+        "padding: 6px;"
+        "border: none;"
+        "font-weight: bold;"
+        "}"
+    );
+
+    table->setAlternatingRowColors(true);
+    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table->verticalHeader()->setVisible(false);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    layout->addWidget(title);
+    layout->addWidget(table);
+    window->setLayout(layout);
+    window->show();
+}
+
 // ── Raw Materials ─────────────────────────────────────────────────────────────
 void MainWindow::setupMatiereTable()
 {

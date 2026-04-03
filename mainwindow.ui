@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1965</width>
-    <height>780</height>
+    <height>839</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -700,7 +700,7 @@ QPushButton:hover { background-color: #4E342E; }</string>
        </property>
        <item>
         <widget class="QWidget" name="contentArea" native="true">
-         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1,0">
+         <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="1">
           <property name="spacing">
            <number>20</number>
           </property>
@@ -719,7 +719,7 @@ QPushButton:hover { background-color: #4E342E; }</string>
           <item>
            <widget class="QStackedWidget" name="stackedWidget">
             <property name="currentIndex">
-             <number>4</number>
+             <number>1</number>
             </property>
             <widget class="QWidget" name="employeePage">
              <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -1065,15 +1065,15 @@ QPushButton:hover { background-color: #4E342E; }</string>
                      <height>16777215</height>
                     </size>
                    </property>
-                   <property name="frameShape">
-                    <enum>QFrame::Shape::StyledPanel</enum>
-                   </property>
                    <property name="styleSheet">
                     <string notr="true">QFrame#employeeProfilePanel {
     background-color: #E7DDD1;
     border: 2px solid #BCAAA4;
     border-radius: 10px;
 }</string>
+                   </property>
+                   <property name="frameShape">
+                    <enum>QFrame::Shape::StyledPanel</enum>
                    </property>
                    <layout class="QVBoxLayout" name="verticalLayout_profile">
                     <property name="spacing">
@@ -1395,85 +1395,85 @@ QPushButton:hover { background-color: #4E342E; }</string>
                  </item>
                  <item>
                   <widget class="QTableWidget" name="employeeTable">
-                <property name="enabled">
-                 <bool>true</bool>
-                </property>
-                <property name="editTriggers">
-                 <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
-                </property>
-                <property name="alternatingRowColors">
-                 <bool>true</bool>
-                </property>
-                <property name="selectionBehavior">
-                 <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
-                </property>
-                <property name="showGrid">
-                 <bool>true</bool>
-                </property>
-                <property name="sortingEnabled">
-                 <bool>true</bool>
-                </property>
-                <attribute name="horizontalHeaderStretchLastSection">
-                 <bool>true</bool>
-                </attribute>
-                <column>
-                 <property name="text">
-                  <string>ID</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>Matricule</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>Nom</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>Prenom</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>CIN</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>Date Naissance</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>Departement</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>Poste</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>Telephone</string>
-                 </property>
-                </column>
-                <column>
-                 <property name="text">
-                  <string>Email</string>
-                 </property>
-                </column>
+                   <property name="enabled">
+                    <bool>true</bool>
+                   </property>
+                   <property name="editTriggers">
+                    <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+                   </property>
+                   <property name="alternatingRowColors">
+                    <bool>true</bool>
+                   </property>
+                   <property name="selectionBehavior">
+                    <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
+                   </property>
+                   <property name="showGrid">
+                    <bool>true</bool>
+                   </property>
+                   <property name="sortingEnabled">
+                    <bool>true</bool>
+                   </property>
+                   <attribute name="horizontalHeaderStretchLastSection">
+                    <bool>true</bool>
+                   </attribute>
+                   <column>
+                    <property name="text">
+                     <string>ID</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Matricule</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Nom</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Prenom</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>CIN</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Date Naissance</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Departement</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Poste</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Telephone</string>
+                    </property>
+                   </column>
+                   <column>
+                    <property name="text">
+                     <string>Email</string>
+                    </property>
+                   </column>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
              </layout>
             </widget>
-           </item>
-          </layout>
-         </widget>
-         <widget class="QWidget" name="clientPage">
+            <widget class="QWidget" name="clientPage">
              <layout class="QVBoxLayout" name="verticalLayout_8">
               <property name="spacing">
                <number>16</number>
@@ -1687,7 +1687,7 @@ QPushButton:hover {
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="btnAIAgent">
+                  <widget class="QPushButton" name="btnhistorique">
                    <property name="styleSheet">
                     <string notr="true">QPushButton {
   background-color: #8D6E63;
@@ -1935,7 +1935,6 @@ QPushButton:hover {
                   <number>10</number>
                  </property>
                  <property name="leftMargin">
-                 
                   <number>0</number>
                  </property>
                  <property name="topMargin">
