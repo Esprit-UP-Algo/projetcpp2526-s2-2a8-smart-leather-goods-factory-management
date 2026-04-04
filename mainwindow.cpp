@@ -1846,7 +1846,7 @@ void MainWindow::refreshFournisseurTable()
     ui->fournisseurTable->setRowCount(n);
     
     for (int i = 0; i < n; ++i) {
-        for (int col = 0; col < 8; ++col) {
+        for (int col = 0; col < 9; ++col) {
             QString value = model->data(model->index(i, col)).toString();
             ui->fournisseurTable->setItem(i, col, new QTableWidgetItem(value));
         }
@@ -1889,6 +1889,7 @@ void MainWindow::on_btnAddFournisseur_clicked()
         f.setTypeProduit(dlg.getTypeProduit());
         f.setConditionPaiement(dlg.getConditionPaiement());
         f.setStatut(dlg.getStatut());
+        f.setAdresse(dlg.getAdresse());
         
         if (f.ajouter()) {
             refreshFournisseurTable();
@@ -1915,8 +1916,9 @@ void MainWindow::on_btnEditFournisseur_clicked()
     QString conditionPaiement = ui->fournisseurTable->item(row, 6) ? ui->fournisseurTable->item(row, 6)->text() : "";
     QString matriculeFiscal = ui->fournisseurTable->item(row, 4) ? ui->fournisseurTable->item(row, 4)->text() : "";
     QString statut = ui->fournisseurTable->item(row, 7) ? ui->fournisseurTable->item(row, 7)->text() : "";
+    QString adresse = ui->fournisseurTable->item(row, 8) ? ui->fournisseurTable->item(row, 8)->text() : "";
     
-    dlg.setFournisseurData(id, nomEntreprise, email, telephone, typeProduit, conditionPaiement, matriculeFiscal, statut);
+    dlg.setFournisseurData(id, nomEntreprise, email, telephone, typeProduit, conditionPaiement, matriculeFiscal, statut, adresse);
     
     if (dlg.exec() == QDialog::Accepted) {
         FournisseurData f;
@@ -1930,6 +1932,7 @@ void MainWindow::on_btnEditFournisseur_clicked()
         f.setTypeProduit(dlg.getTypeProduit());
         f.setConditionPaiement(dlg.getConditionPaiement());
         f.setStatut(dlg.getStatut());
+        f.setAdresse(dlg.getAdresse());
         
         if (f.modifier()) {
             refreshFournisseurTable();
