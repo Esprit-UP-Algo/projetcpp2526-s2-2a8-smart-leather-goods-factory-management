@@ -1,7 +1,6 @@
 QT       += core gui charts printsupport sql network multimedia
-
+QT += charts
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-
 CONFIG += c++17
 
 # Windows Speech API (SAPI) — utilisé par mainwindow.cpp pour les commandes vocales
@@ -25,6 +24,7 @@ SOURCES += \
     matiere.cpp \
     matieredialog.cpp \
     matieredetection.cpp \
+    statscharts.cpp \
     voicematieres.cpp \
     fournisseur.cpp \
     fournisseurdialog.cpp \
@@ -52,6 +52,7 @@ HEADERS += \
     matiere.h \
     matieredialog.h \
     matieredetection.h \
+    statscharts.h \
     voicematieres.h \
     fournisseur.h \
     fournisseurdialog.h \

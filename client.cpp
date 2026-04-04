@@ -430,3 +430,30 @@ QSqlQueryModel* Client::afficherHistorique()
 
     return model;
 }
+
+
+//taux
+QMap<QString, int> Client::statistiquesParMois()
+{
+    QMap<QString, int> stats;
+
+    QSqlQuery query;
+    query.prepare(
+        "SELECT TO_CHAR(date_inscription, 'YYYY-MM') AS mois, COUNT(*) "
+        "FROM clients "
+        "GROUP BY TO_CHAR(date_inscription, 'YYYY-MM') "
+        "ORDER BY mois"
+        );
+
+    if(query.exec())
+    {
+        while(query.next())
+        {
+            QString mois = query.value(0).toString();
+            int count = query.value(1).toInt();
+            stats[mois] = count;
+        }
+    }
+
+    return stats;
+}

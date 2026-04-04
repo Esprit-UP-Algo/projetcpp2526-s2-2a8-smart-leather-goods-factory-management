@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "notificationwidget.h"
 #include "bilandialog.h"
+#include "statscharts.h"
 #include <QStatusBar>
 #include <QRegularExpression>
 #include <QMouseEvent>
@@ -955,108 +956,14 @@ void MainWindow::on_btntrie_clicked()
 void MainWindow::on_btnStatsByRegion_clicked()
 {
     Client c;
+
     QMap<QString, int> stats = c.statistiquesParVille();
+    QMap<QString, int> monthlyStats = c.statistiquesParMois();
+
     if(stats.isEmpty())
         return;
-    // ===== PREP DATA =====
-    QList<QPair<QString,int>> list;
-    int total = 0;
-    for(auto it = stats.begin(); it != stats.end(); ++it)
-    {
-        list.append(qMakePair(it.key(), it.value()));
-        total += it.value();
-    }
-    std::sort(list.begin(), list.end(), [](auto a, auto b){
-        return a.second > b.second;
-    });
-    // ===== PIE =====
-    QPieSeries *pieSeries = new QPieSeries();
-    int limit = 5, others = 0;
-    for(int i = 0; i < list.size(); i++)
-    {
-        if(i < limit)
-            pieSeries->append(list[i].first, list[i].second);
-        else
-            others += list[i].second;
-    }
-    if(others > 0)
-        pieSeries->append("Others", others);
 
-    QList<QColor> colors = {
-        QColor("#4CAF50"), QColor("#2196F3"), QColor("#FF9800"),
-        QColor("#E91E63"), QColor("#9C27B0"), QColor("#009688")
-    };
-    int i = 0;
-    for(QPieSlice *slice : pieSeries->slices())
-    {
-        slice->setBrush(colors[i % colors.size()]);
-        i++;
-    }
-    for(QPieSlice *slice : pieSeries->slices())
-    {
-        slice->setLabel(QString("%1 (%2%)")
-            .arg(slice->label())
-            .arg(slice->percentage()*100, 0, 'f', 1));
-    }
-    pieSeries->setLabelsVisible(true);
-    pieSeries->setLabelsPosition(QPieSlice::LabelOutside);
-    // ===== PIE CHART =====
-    QChart *pieChart = new QChart();
-    pieChart->addSeries(pieSeries);
-    // 🔥 restore nice title style
-    pieChart->setTitle(QString("Clients par ville (Total: %1)").arg(total));
-    pieChart->setTitleFont(QFont("Arial", 14, QFont::Bold));
-    pieChart->setAnimationOptions(QChart::AllAnimations);
-    pieChart->legend()->setAlignment(Qt::AlignRight);
-    QChartView *pieView = new QChartView(pieChart);
-    pieView->setRenderHint(QPainter::Antialiasing);
-    // ===== BAR (STICKS) =====
-    QBarSeries *barSeries = new QBarSeries();
-    QBarSet *set = new QBarSet("Clients");
-    *set << 0; // initial empty
-    barSeries->append(set);
-    QChart *barChart = new QChart();
-    barChart->addSeries(barSeries);
-    barChart->setTitle("Détails de la région");
-    barChart->setTitleFont(QFont("Arial", 13, QFont::Bold));
-    barChart->createDefaultAxes();
-    barChart->axes(Qt::Vertical).first()->setLabelsColor(Qt::black);
-    barChart->axes(Qt::Horizontal).first()->setLabelsColor(Qt::black);
-    QChartView *barView = new QChartView(barChart);
-    barView->setMinimumWidth(300);
-    barView->setRenderHint(QPainter::Antialiasing);
-    // ===== HOVER INTERACTION =====
-    for(QPieSlice *slice : pieSeries->slices())
-    {
-        QObject::connect(slice, &QPieSlice::hovered, [=](bool state){
-            slice->setExploded(state);
-            if(state)
-            {
-                int value = slice->value();
-                // Clear old data
-                set->remove(0, set->count());
-                *set << value;
-                // Update X label (no recreation spam)
-                QStringList categories;
-                categories << slice->label();
-                QBarCategoryAxis *axisX = qobject_cast<QBarCategoryAxis*>(barChart->axes(Qt::Horizontal).first());
-                axisX->clear();
-                axisX->append(categories);
-                // ✅ FIX Y AXIS RANGE
-                QValueAxis *axisY = qobject_cast<QValueAxis*>(barChart->axes(Qt::Vertical).first());
-                axisY->setRange(0, value + 1);
-                // ✅ SHOW VALUE ON TOP OF BAR
-                set->setLabel(QString::number(value));
-            }
-        });
-    }
-    // ===== MAIN WINDOW =====
-    QWidget *window = new QWidget;
-    QHBoxLayout *layout = new QHBoxLayout(window);
-    layout->addWidget(pieView, 3);
-    layout->addWidget(barView, 2);
-    window->setWindowTitle("Statistiques des clients");
-    window->resize(1000, 500);
+    QWidget *window = StatsCharts::createStatsWindow(stats, monthlyStats);
     window->show();
 }
 void MainWindow::on_btnFidelityClassification_clicked() {}
@@ -1088,7 +995,6 @@ void MainWindow::on_btnExportClient_clicked()
 void MainWindow::on_btnhistorique_clicked()
 {
     QWidget *window = new QWidget();
-    window->setWindowTitle("Historique des clients");
     window->resize(700, 450);
 
     QVBoxLayout *layout = new QVBoxLayout(window);
@@ -1099,7 +1005,7 @@ void MainWindow::on_btnhistorique_clicked()
     title->setStyleSheet(
         "font-size: 20px;"
         "font-weight: bold;"
-        "color: #291C0E;"   // dark brown (CUIREA theme)
+        "color: white;"   // dark brown (CUIREA theme)
         "padding: 8px;"
     );
 
@@ -1109,21 +1015,22 @@ void MainWindow::on_btnhistorique_clicked()
     table->setModel(c.afficherHistorique());
     // Styling (CUIREA palette)
     table->setStyleSheet(
-        "QTableView {"
-        "background-color: #FAF5F0;"          // light beige
-        "alternate-background-color: #F3E9DD;"
-        "gridline-color: #D8C3A5;"
-        "color: #291C0E;"                     // text color
-        "selection-background-color: #C19A6B;"
-        "selection-color: white;"
-        "border: 1px solid #D8C3A5;"
-        "}"
-        "QHeaderView::section {"
-        "background-color: #6B4F3B;"          // dark brown header
-        "color: white;"
-        "padding: 6px;"
-        "border: none;"
-        "font-weight: bold;"
+            "QTableView {"
+            "background-color: #FAF5F0;"
+            "alternate-background-color: #F3E9DD;"
+            "gridline-color: #D8C3A5;"
+            "color: #291C0E;"
+            "selection-background-color: #C19A6B;"
+            "selection-color: white;"
+            "border: 1px solid #D8C3A5;"
+            "}"
+
+            "QHeaderView::section {"
+            "background-color: #6B4F3B;"
+            "color: white;"
+            "padding: 6px;"
+            "border: none;"
+            "font-weight: bold;"
         "}"
     );
 
