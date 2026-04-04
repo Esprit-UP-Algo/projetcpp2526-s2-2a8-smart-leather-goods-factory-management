@@ -78,6 +78,15 @@ BilanDialog::BilanDialog(QWidget *parent) : QDialog(parent)
     ).arg(BG_PAGE, BG_CARD, ACCENT, PRIMARY));
     setupUI();
     loadData();
+
+    // Fixer.io — taux de change en temps réel
+    m_networkManager = new QNetworkAccessManager(this);
+    connect(m_networkManager, &QNetworkAccessManager::finished,
+            this, &BilanDialog::onTauxReceived);
+    fetchTauxChange();
+    auto *timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, &BilanDialog::fetchTauxChange);
+    timer->start(60000);
 }
 
 void BilanDialog::setupUI()
@@ -126,7 +135,7 @@ void BilanDialog::setupUI()
 
     auto *kpiCol = new QVBoxLayout();
     kpiCol->setSpacing(12);
-    kpiCol->addWidget(makeKpiBox("Chiffre d'affaires total", m_lblCA));
+    kpiCol->addWidget(makeKpiBox("Chiffre d'affaires total", m_lblCA, false, true));
     kpiCol->addWidget(makeKpiBox("Meilleur produit du mois", m_lblBestProduct, true));
     kpiCol->addWidget(makeKpiBox("Bénéfice net",             m_lblBenefice));
     kpiCol->addWidget(makeKpiBox("Marge brute",              m_lblMarge));
@@ -198,7 +207,7 @@ void BilanDialog::setupUI()
     rootLay->addWidget(btnBar);
 }
 
-QGroupBox *BilanDialog::makeKpiBox(const QString &title, QLabel *&valLabel, bool highlight)
+QGroupBox *BilanDialog::makeKpiBox(const QString &title, QLabel *&valLabel, bool highlight, bool withCurrency)
 {
     auto *box = new QGroupBox(title);
     if (highlight) {
@@ -216,6 +225,17 @@ QGroupBox *BilanDialog::makeKpiBox(const QString &title, QLabel *&valLabel, bool
         QString("font-size:22px;font-weight:bold;color:%1;border:none")
         .arg(highlight ? ACCENT : PRIMARY));
     lay->addWidget(valLabel);
+
+    if (withCurrency) {
+        m_lblCA_EUR = new QLabel("≈ ... €");
+        m_lblCA_USD = new QLabel("≈ ... $");
+        m_lblCA_EUR->setAlignment(Qt::AlignCenter);
+        m_lblCA_USD->setAlignment(Qt::AlignCenter);
+        m_lblCA_EUR->setStyleSheet("color:#639922;font-size:12px;font-weight:600;border:none");
+        m_lblCA_USD->setStyleSheet("color:#185FA5;font-size:12px;font-weight:600;border:none");
+        lay->addWidget(m_lblCA_EUR);
+        lay->addWidget(m_lblCA_USD);
+    }
     return box;
 }
 
@@ -400,6 +420,7 @@ void BilanDialog::onPeriodChanged()
     // --- KPIs ---
     q.exec("SELECT SUM(montant) FROM Commandes" + where);
     double ca = (q.next() && !q.value(0).isNull()) ? q.value(0).toDouble() : 0.0;
+    m_totalCA = ca;
     m_lblCA->setText(fmt(ca));
 
     double benefice = ca * 0.3;
@@ -415,7 +436,8 @@ void BilanDialog::onPeriodChanged()
     int total = q.next() ? q.value(0).toInt() : 0;
     QString whereAtt = where.isEmpty()
         ? " WHERE LOWER(statut)='en attente'"
-        : where + " AND LOWER(statut)='en attente'";
+
+                           : where + " AND LOWER(statut)='en attente'";
     q.exec("SELECT COUNT(*) FROM Commandes" + whereAtt);
     int enAttente = q.next() ? q.value(0).toInt() : 0;
     m_lblCommandes->setText(QString("%1\n(%2 en attente)").arg(total).arg(enAttente));
@@ -542,4 +564,41 @@ void BilanDialog::exportCSV()
     }
     file.close();
     QMessageBox::information(this, "Export", "Fichier exporté avec succès.");
+}
+
+void BilanDialog::fetchTauxChange()
+{
+    // Clé gratuite sur https://fixer.io — colle ta clé ici
+    QString apiKey = "65a39a8f559bcde817876cc401ec5ded";
+    QUrl url("https://data.fixer.io/api/latest?access_key="
+             + apiKey + "&base=EUR&symbols=TND,USD");
+    m_networkManager->get(QNetworkRequest(url));
+}
+
+void BilanDialog::onTauxReceived(QNetworkReply *reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        m_lblCA_EUR->setText("≈ hors ligne");
+        m_lblCA_USD->setText("≈ hors ligne");
+        reply->deleteLater();
+        return;
+    }
+    QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+    QJsonObject rates = doc["rates"].toObject();
+
+    double eurToTND = rates["TND"].toDouble(); // 1 EUR = X TND
+    double eurToUSD = rates["USD"].toDouble(); // 1 EUR = X USD
+
+    if (eurToTND > 0 && m_totalCA > 0) {
+        double caEUR = m_totalCA / eurToTND;
+        double caUSD = caEUR * eurToUSD;
+        m_lblCA_EUR->setText(QString("≈ %1 €")
+            .arg(QLocale(QLocale::French).toString(caEUR, 'f', 0)));
+        m_lblCA_USD->setText(QString("≈ %1 $")
+            .arg(QLocale(QLocale::French).toString(caUSD, 'f', 0)));
+    } else {
+        m_lblCA_EUR->setText("≈ ... €");
+        m_lblCA_USD->setText("≈ ... $");
+    }
+    reply->deleteLater();
 }

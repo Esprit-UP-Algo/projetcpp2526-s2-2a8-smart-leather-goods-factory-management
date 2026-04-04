@@ -12,6 +12,11 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QWidget>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QTimer>
 
 // On stocke les chart views comme QWidget* dans le .h
 // pour éviter tout problème de namespace/type incomplet avec QtCharts.
@@ -26,12 +31,16 @@ public:
 private slots:
     void onPeriodChanged();
     void exportCSV();
+    void fetchTauxChange();
+    void onTauxReceived(QNetworkReply *reply);
 
 private:
     void setupUI();
     void loadData();
 
     QLabel *m_lblCA          = nullptr;
+    QLabel *m_lblCA_EUR      = nullptr;
+    QLabel *m_lblCA_USD      = nullptr;
     QLabel *m_lblBestProduct = nullptr;
     QLabel *m_lblBenefice    = nullptr;
     QLabel *m_lblMarge       = nullptr;
@@ -46,8 +55,10 @@ private:
     QWidget *m_regionView     = nullptr;
 
     QComboBox    *m_comboPeriod = nullptr;
+    double        m_totalCA    = 0.0;
+    QNetworkAccessManager *m_networkManager = nullptr;
 
-    QGroupBox *makeKpiBox(const QString &title, QLabel *&valLabel, bool highlight = false);
+    QGroupBox *makeKpiBox(const QString &title, QLabel *&valLabel, bool highlight = false, bool withCurrency = false);
     QWidget   *makePieChart();
     QWidget   *makeBarChart();
     QWidget   *makeSplineChart();
