@@ -2921,31 +2921,6 @@ QPushButton:hover {
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="sendEmailButton">
-                   <property name="styleSheet">
-                    <string notr="true">QPushButton {
-  background-color: #8D6E63;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 20px;
-  font-family: Arial, sans-serif;
-  font-size: 12px;
-  font-weight: bold;
-  text-align: center;
-}
-
-QPushButton:hover {
-  background-color: #A98273;
-}
-</string>
-                   </property>
-                   <property name="text">
-                    <string>Confirmer</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
                   <widget class="QPushButton" name="btnFactureProduction">
                    <property name="minimumSize">
                     <size>

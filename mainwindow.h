@@ -112,8 +112,6 @@ private slots:
     void onStatistiquesProduction();
     void onTrierProduction();
     void checkRetards();
-    void onSendEmailButtonClicked();
-
 
     // Raw materials
     void onAddMatiere();

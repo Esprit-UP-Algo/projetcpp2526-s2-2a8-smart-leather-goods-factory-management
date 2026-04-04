@@ -188,10 +188,6 @@ MainWindow::MainWindow(QWidget *parent)
     // Masquer le panneau de profil au démarrage
     ui->employeeProfilePanel->setVisible(false);
 
-    // ── Clients ─────────────────────────────────────────────────────────────
-    connect(ui->sendEmailButton, &QPushButton::clicked,
-            this, &MainWindow::onSendEmailButtonClicked);
-
     // ── Raw materials ───────────────────────────────────────────────────────
     ui->matiereTable->verticalHeader()->setVisible(false);
     setupMatiereTable();
@@ -3123,7 +3119,7 @@ void MainWindow::onFactureProduction()
     };
 
     QHBoxLayout *infoRow = new QHBoxLayout();
-    infoRow->addWidget(makeInfoBox("Émetteur", {
+    infoRow->addWidget(makeInfoBox("", {
         "<b>CUIREA Management</b>", "Zone Industrielle, Tunis, Tunisie",
         "Tél : +216 71 000 000", "contact@cuirea.tn"
     }));
@@ -3242,16 +3238,21 @@ void MainWindow::onFactureProduction()
     // ── BOUTONS ───────────────────────────────────────────────────────────────
     QHBoxLayout *btns = new QHBoxLayout();
     QPushButton *pdf   = new QPushButton("⬇  Exporter PDF", &dlg);
+    QPushButton *email = new QPushButton("📧  Envoyer Email", &dlg);
     QPushButton *close = new QPushButton("✖  Fermer",       &dlg);
     pdf->setStyleSheet(
         "QPushButton{background:#C4923A;color:white;border:none;border-radius:6px;"
         "padding:9px 22px;font-size:13px;font-weight:bold;}"
         "QPushButton:hover{background:#A87730;}");
+    email->setStyleSheet(
+        "QPushButton{background:#8D6E63;color:white;border:none;border-radius:6px;"
+        "padding:9px 22px;font-size:13px;font-weight:bold;}"
+        "QPushButton:hover{background:#A0826D;}");
     close->setStyleSheet(
         "QPushButton{background:#6B2737;color:white;border:none;border-radius:6px;"
         "padding:9px 22px;font-size:13px;font-weight:bold;}"
         "QPushButton:hover{background:#4E1A27;}");
-    btns->addStretch(); btns->addWidget(pdf); btns->addWidget(close);
+    btns->addStretch(); btns->addWidget(pdf); btns->addWidget(email); btns->addWidget(close);
     root->addLayout(btns);
 
     // HTML pour export PDF
@@ -3299,6 +3300,20 @@ td{padding:9px 12px;font-size:12px;border-bottom:1px solid #E8D5C0;}
             QTextDocument doc; doc.setHtml(htmlPdf); doc.print(&p);
             QMessageBox::information(&dlg, "Succès", "Facture exportée :\n" + fn);
         }
+    });
+    connect(email, &QPushButton::clicked, [&] {
+        if (mailClient.isEmpty()) {
+            QMessageBox::warning(&dlg, "Email manquant", "❌ Aucun email client associé à cette commande.");
+            return;
+        }
+        Mail mailer;
+        QString subject = "Confirmation de votre commande";
+        QString body = "<p>Merci pour votre commande !</p>";
+        bool ok = mailer.sendEmail(mailClient, subject, body);
+        if (ok)
+            QMessageBox::information(&dlg, "Email envoyé", "✅ Email envoyé à " + mailClient);
+        else
+            QMessageBox::critical(&dlg, "Erreur", "❌ Échec de l'envoi à " + mailClient);
     });
     connect(close, &QPushButton::clicked, &dlg, &QDialog::accept);
     dlg.exec();
@@ -5179,29 +5194,4 @@ void MainWindow::stopSAPI()
 #endif
 
 //send email
-void MainWindow::onSendEmailButtonClicked()
-{
-    QModelIndexList selection = ui->productionTable->selectionModel()->selectedRows();
-    if (selection.isEmpty()) {
-        QMessageBox::warning(this, "Sélection requise", "❌ Aucune commande sélectionnée");
-        return;
-    }
-    QModelIndex index = selection.first();
-    int id_commande = index.sibling(index.row(), 0).data().toInt();
-    QString mail_client = index.sibling(index.row(), 9).data().toString();
-    if (mail_client.isEmpty()) {
-        QMessageBox::warning(this, "Email manquant", "❌ Email client vide pour cette commande");
-        return;
-    }
-    Mail mailer;
-    QString subject = "Confirmation de votre commande";
-    QString body = "<p>Merci pour votre commande !</p>";
-    bool ok = mailer.sendEmail(mail_client, subject, body);
-    if(ok)
-        QMessageBox::information(this, "Email envoyé",
-                                 "✅ Email envoyé à " + mail_client +
-                                 " pour la commande ID = " + QString::number(id_commande));
-    else
-        QMessageBox::critical(this, "Erreur",
-                              "❌ Échec de l'envoi pour la commande ID = " + QString::number(id_commande));
-}
+

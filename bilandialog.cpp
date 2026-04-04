@@ -78,6 +78,14 @@ BilanDialog::BilanDialog(QWidget *parent) : QDialog(parent)
     ).arg(BG_PAGE, BG_CARD, ACCENT, PRIMARY));
     setupUI();
     loadData();
+
+    m_networkManager = new QNetworkAccessManager(this);
+    connect(m_networkManager, &QNetworkAccessManager::finished,
+            this, &BilanDialog::onTauxReceived);
+    fetchTauxChange();
+    auto *timer = new QTimer(this);
+    connect(timer, &QTimer::timeout, this, &BilanDialog::fetchTauxChange);
+    timer->start(60000);
 }
 
 void BilanDialog::setupUI()
@@ -126,7 +134,19 @@ void BilanDialog::setupUI()
 
     auto *kpiCol = new QVBoxLayout();
     kpiCol->setSpacing(12);
-    kpiCol->addWidget(makeKpiBox("Chiffre d'affaires total", m_lblCA));
+
+    // Box CA avec labels de conversion
+    auto *caBox = makeKpiBox("Chiffre d'affaires total", m_lblCA);
+    m_lblCA_EUR = new QLabel("≈ … €");
+    m_lblCA_EUR->setAlignment(Qt::AlignCenter);
+    m_lblCA_EUR->setStyleSheet(QString("font-size:12px;color:%1;border:none").arg(ACCENT));
+    m_lblCA_USD = new QLabel("≈ … $");
+    m_lblCA_USD->setAlignment(Qt::AlignCenter);
+    m_lblCA_USD->setStyleSheet(QString("font-size:12px;color:%1;border:none").arg(ACCENT));
+    qobject_cast<QVBoxLayout*>(caBox->layout())->addWidget(m_lblCA_EUR);
+    qobject_cast<QVBoxLayout*>(caBox->layout())->addWidget(m_lblCA_USD);
+
+    kpiCol->addWidget(caBox);
     kpiCol->addWidget(makeKpiBox("Meilleur produit du mois", m_lblBestProduct, true));
     kpiCol->addWidget(makeKpiBox("Bénéfice net",             m_lblBenefice));
     kpiCol->addWidget(makeKpiBox("Marge brute",              m_lblMarge));
@@ -400,6 +420,7 @@ void BilanDialog::onPeriodChanged()
     // --- KPIs ---
     q.exec("SELECT SUM(montant) FROM Commandes" + where);
     double ca = (q.next() && !q.value(0).isNull()) ? q.value(0).toDouble() : 0.0;
+    m_totalCA = ca;
     m_lblCA->setText(fmt(ca));
 
     double benefice = ca * 0.3;
@@ -542,4 +563,38 @@ void BilanDialog::exportCSV()
     }
     file.close();
     QMessageBox::information(this, "Export", "Fichier exporté avec succès.");
+}
+
+void BilanDialog::fetchTauxChange()
+{
+    // Clé gratuite Fixer.io — remplacer par votre clé
+    QString apiKey = "VOTRE_CLE_FIXER";
+    QUrl url("https://data.fixer.io/api/latest?access_key="
+             + apiKey + "&base=EUR&symbols=TND,USD");
+    m_networkManager->get(QNetworkRequest(url));
+}
+
+void BilanDialog::onTauxReceived(QNetworkReply *reply)
+{
+    if (reply->error() != QNetworkReply::NoError) {
+        m_lblCA_EUR->setText("≈ hors ligne");
+        m_lblCA_USD->setText("");
+        reply->deleteLater();
+        return;
+    }
+    QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
+    QJsonObject rates = doc["rates"].toObject();
+
+    double eurToTND = rates["TND"].toDouble();
+    double eurToUSD = rates["USD"].toDouble();
+
+    if (eurToTND > 0 && m_totalCA > 0) {
+        double caEUR = m_totalCA / eurToTND;
+        double caUSD = caEUR * eurToUSD;
+        m_lblCA_EUR->setText(QString("≈ %1 €")
+            .arg(QLocale(QLocale::French).toString(caEUR, 'f', 0)));
+        m_lblCA_USD->setText(QString("≈ %1 $")
+            .arg(QLocale(QLocale::French).toString(caUSD, 'f', 0)));
+    }
+    reply->deleteLater();
 }
