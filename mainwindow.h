@@ -1,4 +1,4 @@
-#ifndef MAINWINDOW_H
+﻿#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
@@ -28,7 +28,7 @@
 #include <sapi.h>
 #include <sphelper.h>
 #endif
-
+#include "map.h"
 #include "client.h"
 #include "matiere.h"
 #include "fournisseur.h"
@@ -51,7 +51,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
     
-    // Méthodes publiques pour les classes extraites
+    // M├®thodes publiques pour les classes extraites
     void setupMatiereTable();
     void updateMatiereStatistics();
     void onDeleteMatiere();
@@ -81,7 +81,7 @@ private slots:
     void on_btnRefreshClient_clicked();
     void on_btnTriClient_clicked();
     void on_btnFidelityClassification_clicked();
-    void on_btnAIAgent_clicked();
+    void on_btnhistorique_clicked();
     void on_searchBoxClient_textChanged(const QString &text);
     void on_btntrie_clicked();
     void on_btnStatsByRegion_clicked();
@@ -129,6 +129,7 @@ private slots:
     void on_btnSmsFournisseur_clicked();
     void on_btnQrFournisseur_clicked();
     void on_searchBoxFournisseur_textChanged(const QString &text);
+    void on_btnmap_clicked();
 
     // Articles
     void on_btnAddArticle_clicked();
@@ -151,14 +152,14 @@ private:
     bool isEditMode;
     int editingRow;
     
-    // Détection de défauts - Mode API (Flask)
+    // D├®tection de d├®fauts - Mode API (Flask)
     QNetworkAccessManager *networkManager;
     QProcess *apiProcess;
     QString apiUrl;
     QLabel *detectionResultLabel;
     QProgressBar *detectionProgress;
     
-    // Classes extraites pour matières premières
+    // Classes extraites pour mati├¿res premi├¿res
     MatiereDetection *matiereDetection;
     VoiceMatieres *voiceMatieres;
 
@@ -189,6 +190,8 @@ private:
     void setupFournisseurTable();
     void refreshFournisseurTable();
     void updateFournisseurStatistics();
+    void openMap(double lat, double lon);
+    Map *mapService;
 
     // Articles
     void setupArticleTable();
@@ -216,7 +219,7 @@ private:
 
     // Retard notifications
     QTimer *m_retardTimer;
-    QSet<int> m_notifiedIds;  // évite de notifier 2x la même commande
+    QSet<int> m_notifiedIds;  // ├®vite de notifier 2x la m├¬me commande
 };
 
 #endif // MAINWINDOW_H

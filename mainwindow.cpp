@@ -2,6 +2,7 @@
 #include "ui_mainwindow.h"
 #include "notificationwidget.h"
 #include "bilandialog.h"
+#include "statscharts.h"
 #include <QStatusBar>
 #include <QRegularExpression>
 #include <QMouseEvent>
@@ -75,6 +76,8 @@
 #include <QValueAxis>
 #include <QtCharts>
 #include <QRandomGenerator>
+#include <QDesktopServices>
+#include <QUrl>
 // ── Shared style constants ────────────────────────────────────────────────────
 static const QString DIALOG_STYLE =
     "QDialog { background-color: #FAF5F0; }"
@@ -150,20 +153,12 @@ MainWindow::MainWindow(QWidget *parent)
     // Initialiser les classes extraites pour matières premières
     matiereDetection = new MatiereDetection(this, ui->matiereTable, networkManager, apiUrl);
     voiceMatieres = new VoiceMatieres(this, ui->matiereTable);
-    
-    // ══════════════════════════════════════════════════════════════════════
-    // ANCIEN CODE (API Locale) - Désactivé car on utilise maintenant l'API Cloud
-    // ══════════════════════════════════════════════════════════════════════
-    // apiProcess = nullptr;
-    // QString vbsScript = "C:/Users/omard/OneDrive/Bureau/integratin finalee/launch_api.vbs";
-    // if (QFile::exists(vbsScript)) {
-    //     QStringList args;
-    //     args << vbsScript.replace("/", "\\");
-    //     QProcess::startDetached("wscript.exe", args);
-    //     qDebug() << "Démarrage du serveur Python via VBS";
-    // }
-    // ══════════════════════════════════════════════════════════════════════
+    //=========================MAPFOURNISSEUR
+    mapService = new Map(this);
 
+        connect(mapService, &Map::coordinatesReady, this, [=](double lat, double lon){
+            openMap(lat, lon);
+        });
     // ── Employee table ──────────────────────────────────────────────────────
     ui->employeeTable->verticalHeader()->setVisible(false);
     // Colonnes: 0=Matricule, 1=Nom, 2=Prénom, 3=CIN, 4=DateNaissance, 5=Sexe,
@@ -235,8 +230,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnExportMatiere,&QPushButton::clicked, this, &MainWindow::onExportMatiere);
 
     // ── Client extra buttons ────────────────────────────────────────────────
-    connect(ui->btnAIAgent, &QPushButton::clicked, this, &MainWindow::on_btnAIAgent_clicked);
-    connect(ui->btnStatsByRegion, &QPushButton::clicked, this, &MainWindow::on_btnStatsByRegion_clicked);
     connect(ui->btnFidelityClassification, &QPushButton::clicked, this, &MainWindow::on_btnFidelityClassification_clicked);
 
     // ── Fournisseurs ────────────────────────────────────────────────────────
@@ -957,114 +950,94 @@ void MainWindow::on_btntrie_clicked()
 void MainWindow::on_btnStatsByRegion_clicked()
 {
     Client c;
+
     QMap<QString, int> stats = c.statistiquesParVille();
+    QMap<QString, int> monthlyStats = c.statistiquesParMois();
+
     if(stats.isEmpty())
         return;
-    // ===== PREP DATA =====
-    QList<QPair<QString,int>> list;
-    int total = 0;
-    for(auto it = stats.begin(); it != stats.end(); ++it)
-    {
-        list.append(qMakePair(it.key(), it.value()));
-        total += it.value();
-    }
-    std::sort(list.begin(), list.end(), [](auto a, auto b){
-        return a.second > b.second;
-    });
-    // ===== PIE =====
-    QPieSeries *pieSeries = new QPieSeries();
-    int limit = 5, others = 0;
-    for(int i = 0; i < list.size(); i++)
-    {
-        if(i < limit)
-            pieSeries->append(list[i].first, list[i].second);
-        else
-            others += list[i].second;
-    }
-    if(others > 0)
-        pieSeries->append("Others", others);
 
-    QList<QColor> colors = {
-        QColor("#4CAF50"), QColor("#2196F3"), QColor("#FF9800"),
-        QColor("#E91E63"), QColor("#9C27B0"), QColor("#009688")
-    };
-    int i = 0;
-    for(QPieSlice *slice : pieSeries->slices())
-    {
-        slice->setBrush(colors[i % colors.size()]);
-        i++;
-    }
-    for(QPieSlice *slice : pieSeries->slices())
-    {
-        slice->setLabel(QString("%1 (%2%)")
-            .arg(slice->label())
-            .arg(slice->percentage()*100, 0, 'f', 1));
-    }
-    pieSeries->setLabelsVisible(true);
-    pieSeries->setLabelsPosition(QPieSlice::LabelOutside);
-    // ===== PIE CHART =====
-    QChart *pieChart = new QChart();
-    pieChart->addSeries(pieSeries);
-    // 🔥 restore nice title style
-    pieChart->setTitle(QString("Clients par ville (Total: %1)").arg(total));
-    pieChart->setTitleFont(QFont("Arial", 14, QFont::Bold));
-    pieChart->setAnimationOptions(QChart::AllAnimations);
-    pieChart->legend()->setAlignment(Qt::AlignRight);
-    QChartView *pieView = new QChartView(pieChart);
-    pieView->setRenderHint(QPainter::Antialiasing);
-    // ===== BAR (STICKS) =====
-    QBarSeries *barSeries = new QBarSeries();
-    QBarSet *set = new QBarSet("Clients");
-    *set << 0; // initial empty
-    barSeries->append(set);
-    QChart *barChart = new QChart();
-    barChart->addSeries(barSeries);
-    barChart->setTitle("Détails de la région");
-    barChart->setTitleFont(QFont("Arial", 13, QFont::Bold));
-    barChart->createDefaultAxes();
-    barChart->axes(Qt::Vertical).first()->setLabelsColor(Qt::black);
-    barChart->axes(Qt::Horizontal).first()->setLabelsColor(Qt::black);
-    QChartView *barView = new QChartView(barChart);
-    barView->setMinimumWidth(300);
-    barView->setRenderHint(QPainter::Antialiasing);
-    // ===== HOVER INTERACTION =====
-    for(QPieSlice *slice : pieSeries->slices())
-    {
-        QObject::connect(slice, &QPieSlice::hovered, [=](bool state){
-            slice->setExploded(state);
-            if(state)
-            {
-                int value = slice->value();
-                // Clear old data
-                set->remove(0, set->count());
-                *set << value;
-                // Update X label (no recreation spam)
-                QStringList categories;
-                categories << slice->label();
-                QBarCategoryAxis *axisX = qobject_cast<QBarCategoryAxis*>(barChart->axes(Qt::Horizontal).first());
-                axisX->clear();
-                axisX->append(categories);
-                // ✅ FIX Y AXIS RANGE
-                QValueAxis *axisY = qobject_cast<QValueAxis*>(barChart->axes(Qt::Vertical).first());
-                axisY->setRange(0, value + 1);
-                // ✅ SHOW VALUE ON TOP OF BAR
-                set->setLabel(QString::number(value));
-            }
-        });
-    }
-    // ===== MAIN WINDOW =====
-    QWidget *window = new QWidget;
-    QHBoxLayout *layout = new QHBoxLayout(window);
-    layout->addWidget(pieView, 3);
-    layout->addWidget(barView, 2);
-    window->setWindowTitle("Statistiques des clients");
-    window->resize(1000, 500);
+    QWidget *window = StatsCharts::createStatsWindow(stats, monthlyStats);
     window->show();
 }
 void MainWindow::on_btnFidelityClassification_clicked() {}
-void MainWindow::on_btnAIAgent_clicked() {}
-void MainWindow::on_btnExportClient_clicked() {}
 void MainWindow::on_btnTriClient_clicked() {}
+
+//--exportclient
+
+
+void MainWindow::on_btnExportClient_clicked()
+{
+    QString filePath = QFileDialog::getSaveFileName(
+        this,
+        "Exporter les clients",
+        "",
+        "CSV (*.csv);;PDF (*.pdf);;Word (*.docx)"
+    );
+
+    if (filePath.isEmpty())
+        return;
+
+    if (Client::exporterListe(ui->clientTable, filePath)) {
+        QMessageBox::information(this, "Succès", "Export réussi !");
+    } else {
+        QMessageBox::critical(this, "Erreur", "Échec de l'export !");
+    }
+}
+//historique client
+
+void MainWindow::on_btnhistorique_clicked()
+{
+    QWidget *window = new QWidget();
+    window->resize(700, 450);
+
+    QVBoxLayout *layout = new QVBoxLayout(window);
+
+    // Title
+    QLabel *title = new QLabel("Historique des clients");
+    title->setAlignment(Qt::AlignCenter);
+    title->setStyleSheet(
+        "font-size: 20px;"
+        "font-weight: bold;"
+        "color: white;"   // dark brown (CUIREA theme)
+        "padding: 8px;"
+    );
+
+    // Table
+    QTableView *table = new QTableView();
+    Client c;
+    table->setModel(c.afficherHistorique());
+    // Styling (CUIREA palette)
+    table->setStyleSheet(
+            "QTableView {"
+            "background-color: #FAF5F0;"
+            "alternate-background-color: #F3E9DD;"
+            "gridline-color: #D8C3A5;"
+            "color: #291C0E;"
+            "selection-background-color: #C19A6B;"
+            "selection-color: white;"
+            "border: 1px solid #D8C3A5;"
+            "}"
+
+            "QHeaderView::section {"
+            "background-color: #6B4F3B;"
+            "color: white;"
+            "padding: 6px;"
+            "border: none;"
+            "font-weight: bold;"
+        "}"
+    );
+
+    table->setAlternatingRowColors(true);
+    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    table->verticalHeader()->setVisible(false);
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    layout->addWidget(title);
+    layout->addWidget(table);
+    window->setLayout(layout);
+    window->show();
+}
+
 // ── Raw Materials ─────────────────────────────────────────────────────────────
 void MainWindow::setupMatiereTable()
 {
@@ -1867,7 +1840,7 @@ void MainWindow::refreshFournisseurTable()
     ui->fournisseurTable->setRowCount(n);
     
     for (int i = 0; i < n; ++i) {
-        for (int col = 0; col < 8; ++col) {
+        for (int col = 0; col < 9; ++col) {
             QString value = model->data(model->index(i, col)).toString();
             ui->fournisseurTable->setItem(i, col, new QTableWidgetItem(value));
         }
@@ -1910,6 +1883,7 @@ void MainWindow::on_btnAddFournisseur_clicked()
         f.setTypeProduit(dlg.getTypeProduit());
         f.setConditionPaiement(dlg.getConditionPaiement());
         f.setStatut(dlg.getStatut());
+        f.setAdresse(dlg.getAdresse());
         
         if (f.ajouter()) {
             refreshFournisseurTable();
@@ -1936,8 +1910,9 @@ void MainWindow::on_btnEditFournisseur_clicked()
     QString conditionPaiement = ui->fournisseurTable->item(row, 6) ? ui->fournisseurTable->item(row, 6)->text() : "";
     QString matriculeFiscal = ui->fournisseurTable->item(row, 4) ? ui->fournisseurTable->item(row, 4)->text() : "";
     QString statut = ui->fournisseurTable->item(row, 7) ? ui->fournisseurTable->item(row, 7)->text() : "";
+    QString adresse = ui->fournisseurTable->item(row, 8) ? ui->fournisseurTable->item(row, 8)->text() : "";
     
-    dlg.setFournisseurData(id, nomEntreprise, email, telephone, typeProduit, conditionPaiement, matriculeFiscal, statut);
+    dlg.setFournisseurData(id, nomEntreprise, email, telephone, typeProduit, conditionPaiement, matriculeFiscal, statut, adresse);
     
     if (dlg.exec() == QDialog::Accepted) {
         FournisseurData f;
@@ -1951,6 +1926,7 @@ void MainWindow::on_btnEditFournisseur_clicked()
         f.setTypeProduit(dlg.getTypeProduit());
         f.setConditionPaiement(dlg.getConditionPaiement());
         f.setStatut(dlg.getStatut());
+        f.setAdresse(dlg.getAdresse());
         
         if (f.modifier()) {
             refreshFournisseurTable();
@@ -2427,7 +2403,42 @@ void MainWindow::setupProductionTable()
     connect(ui->productionTable, &QTableWidget::customContextMenuRequested,
             this, &MainWindow::onProductionTableContextMenu);
 }
+//----mapfournisseur---------------------------------------------------
 
+void MainWindow::openMap(double lat, double lon)
+{
+    QString url = QString("https://www.google.com/maps?q=%1,%2")
+                      .arg(lat)
+                      .arg(lon);
+
+    QDesktopServices::openUrl(QUrl(url));
+}
+
+void MainWindow::on_btnmap_clicked()
+{
+    int row = ui->fournisseurTable->currentRow();
+
+    if (row < 0)
+        return;
+
+    const int ADDRESS_COLUMN = 8; // make sure this is correct
+
+    QTableWidgetItem *item = ui->fournisseurTable->item(row, ADDRESS_COLUMN);
+
+    if (!item)
+        return;
+
+    QString address = item->text();
+
+    if (address.isEmpty())
+        return;
+
+    mapService->geocodeAddress(address);
+}
+
+
+
+//--------------------------------------------------------------------
 void MainWindow::loadProductionData()
 {
     ui->productionTable->setRowCount(0);

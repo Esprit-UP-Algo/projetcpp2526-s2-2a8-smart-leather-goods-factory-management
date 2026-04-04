@@ -15,6 +15,8 @@ SOURCES += \
     articleviewer3d.cpp \
     bilandialog.cpp \
     client.cpp \
+    map.cpp \
+    statscharts.cpp \
     connection.cpp \
     email.cpp \
     employe.cpp \
@@ -49,6 +51,8 @@ HEADERS += \
     employeedialog.h \
     client.h \
     clientmanagerdialog.h \
+    map.h \
+    statscharts.h \
     matiere.h \
     matieredialog.h \
     matieredetection.h \

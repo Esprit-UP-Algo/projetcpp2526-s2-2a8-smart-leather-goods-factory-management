@@ -1,4 +1,4 @@
-#ifndef CLIENTMANAGERDIALOG_H
+﻿#ifndef CLIENTMANAGERDIALOG_H
 #define CLIENTMANAGERDIALOG_H
 
 #include <QDialog>
@@ -31,22 +31,27 @@ public:
                        const QString &cin, const QString &pays, const QString &ville,
                        const QString &adresse, const QString &email);
 
-    // Récupère un Client construit à partir des champs du formulaire
+    // R├®cup├¿re un Client construit ├á partir des champs du formulaire
     Client getClient() const;
 
-    // Getters individuels (même pattern que EmployeeDialog)
-    QString getNom()             const { return nomEdit     ? nomEdit->text().trimmed()     : ""; }
-    QString getPrenom()          const { return prenomEdit  ? prenomEdit->text().trimmed()  : ""; }
-    QString getSexe()            const { return sexeCombo   ? sexeCombo->currentText()      : ""; }
-    QString getCin()             const { return cinEdit     ? cinEdit->text().trimmed()     : ""; }
-    QString getPays()            const { return paysEdit    ? paysEdit->text().trimmed()    : ""; }
-    QString getVille()           const { return villeEdit   ? villeEdit->text().trimmed()   : ""; }
-    QString getAdresse()         const { return adresseEdit ? adresseEdit->text().trimmed() : ""; }
-    QString getEmail()           const { return emailEdit   ? emailEdit->text().trimmed()   : ""; }
-    QString getDateInscription() const { return dateInscrit
-                                                    ? dateInscrit->date().toString("yyyy-MM-dd") : ""; }
+    // Getters individuels
+    QString getNom() const { return nomEdit ? nomEdit->text().trimmed() : ""; }
+    QString getPrenom() const { return prenomEdit ? prenomEdit->text().trimmed() : ""; }
+    QString getSexe() const { return sexeCombo ? sexeCombo->currentText() : ""; }
+    QString getCin() const { return cinEdit ? cinEdit->text().trimmed() : ""; }
 
-    // Permet de passer l'id lors de l'édition ou suppression
+    // Ô£à FIXED HERE
+    QString getPays() const { return paysCombo ? paysCombo->currentText().trimmed() : ""; }
+
+    QString getVille() const { return villeEdit ? villeEdit->text().trimmed() : ""; }
+    QString getAdresse() const { return adresseEdit ? adresseEdit->text().trimmed() : ""; }
+    QString getEmail() const { return emailEdit ? emailEdit->text().trimmed() : ""; }
+
+    QString getDateInscription() const {
+        return dateInscrit ? dateInscrit->date().toString("yyyy-MM-dd") : "";
+    }
+
+    // Permet de passer l'id lors de l'├®dition ou suppression
     void setEditingId(int id) { editingId = id; }
     void setDeleteId(int id)  { deleteId  = id; }
 
@@ -61,18 +66,18 @@ private:
 
     DialogMode mode;
 
-    // ── Champs Add / Edit ──────────────────────────────────────
+    // ÔöÇÔöÇ Champs Add / Edit ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     QLineEdit *nomEdit;
     QLineEdit *prenomEdit;
     QComboBox *sexeCombo;
     QLineEdit *cinEdit;
-    QLineEdit *paysEdit;
+    QComboBox *paysCombo;   // Ô£à correct
     QLineEdit *villeEdit;
     QLineEdit *adresseEdit;
     QLineEdit *emailEdit;
-    QDateEdit *dateInscrit;       // mapped → client.date_inscription
+    QDateEdit *dateInscrit;
 
-    // ── Données conservées pour le mode Delete ─────────────────
+    // ÔöÇÔöÇ Donn├®es Delete ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     QString deleteNom;
     QString deletePrenom;
     QString deleteSexe;
@@ -80,7 +85,7 @@ private:
     QString deletePays;
     QString deleteVille;
 
-    // ── Champs Export ──────────────────────────────────────────
+    // ÔöÇÔöÇ Champs Export ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     QComboBox  *formatCombo;
     QLineEdit  *fileNameEdit;
     QLineEdit  *locationEdit;
@@ -96,9 +101,9 @@ private:
     QRadioButton *radioSelected;
     QRadioButton *radioFiltered;
 
-    // ── IDs ────────────────────────────────────────────────────
-    int deleteId;     // id du client à supprimer
-    int editingId;    // id du client en cours de modification
+    // ÔöÇÔöÇ IDs ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    int deleteId;
+    int editingId;
 };
 
 #endif // CLIENTMANAGERDIALOG_H
