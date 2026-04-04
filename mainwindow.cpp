@@ -1883,8 +1883,7 @@ void MainWindow::on_btnAddFournisseur_clicked()
         f.setTypeProduit(dlg.getTypeProduit());
         f.setConditionPaiement(dlg.getConditionPaiement());
         f.setStatut(dlg.getStatut());
-        f.setAdresse(dlg.getAdresse());
-        
+
         if (f.ajouter()) {
             refreshFournisseurTable();
             QMessageBox::information(this, "Succès", "Fournisseur ajouté avec succès dans la base de données!");
@@ -1911,12 +1910,12 @@ void MainWindow::on_btnEditFournisseur_clicked()
     QString matriculeFiscal = ui->fournisseurTable->item(row, 4) ? ui->fournisseurTable->item(row, 4)->text() : "";
     QString statut = ui->fournisseurTable->item(row, 7) ? ui->fournisseurTable->item(row, 7)->text() : "";
     QString adresse = ui->fournisseurTable->item(row, 8) ? ui->fournisseurTable->item(row, 8)->text() : "";
-    
-    dlg.setFournisseurData(id, nomEntreprise, email, telephone, typeProduit, conditionPaiement, matriculeFiscal, statut, adresse);
-    
+
+    dlg.setFournisseurData(id, nomEntreprise, email, telephone, typeProduit, conditionPaiement, matriculeFiscal, statut);
+
     if (dlg.exec() == QDialog::Accepted) {
         FournisseurData f;
-        
+
         // Toujours sauvegarder dans la BD
         f.setId(id);
         f.setNomEntreprise(dlg.getNomEntreprise());
@@ -1926,7 +1925,6 @@ void MainWindow::on_btnEditFournisseur_clicked()
         f.setTypeProduit(dlg.getTypeProduit());
         f.setConditionPaiement(dlg.getConditionPaiement());
         f.setStatut(dlg.getStatut());
-        f.setAdresse(dlg.getAdresse());
         
         if (f.modifier()) {
             refreshFournisseurTable();
