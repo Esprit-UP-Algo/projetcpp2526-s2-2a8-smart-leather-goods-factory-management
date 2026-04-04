@@ -194,6 +194,26 @@ QWidget* StatsCharts::createStatsWindow(const QMap<QString,int>& stats,
     lineSeries->attachAxis(axisX_line);
     lineSeries->attachAxis(axisY_line);
 
+    QVector<QPointF> points = lineSeries->pointsVector();
+    lineSeries->clear();
+
+    QTimer *timer = new QTimer(window);
+    int *i_anim = new int(0);
+
+    QObject::connect(timer, &QTimer::timeout, [=]() mutable {
+        if(*i_anim < points.size())
+        {
+            lineSeries->append(points[*i_anim]);
+            (*i_anim)++;
+        }
+        else
+        {
+            timer->stop();
+        }
+    });
+
+    timer->start(100); // smooth animation
+
     QChartView *lineView = new QChartView(lineChart);
     lineView->setRenderHint(QPainter::Antialiasing);
     lineView->setMinimumHeight(300);

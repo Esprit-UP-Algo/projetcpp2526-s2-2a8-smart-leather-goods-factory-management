@@ -21,6 +21,7 @@ SOURCES += \
     mainwindow.cpp \
     employeedialog.cpp \
     clientmanagerdialog.cpp \
+    map.cpp \
     matiere.cpp \
     matieredialog.cpp \
     matieredetection.cpp \
@@ -49,6 +50,7 @@ HEADERS += \
     employeedialog.h \
     client.h \
     clientmanagerdialog.h \
+    map.h \
     matiere.h \
     matieredialog.h \
     matieredetection.h \

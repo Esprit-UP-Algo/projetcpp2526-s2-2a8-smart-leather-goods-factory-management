@@ -28,7 +28,7 @@
 #include <sapi.h>
 #include <sphelper.h>
 #endif
-
+#include "map.h"
 #include "client.h"
 #include "matiere.h"
 #include "fournisseur.h"
@@ -129,6 +129,7 @@ private slots:
     void on_btnSmsFournisseur_clicked();
     void on_btnQrFournisseur_clicked();
     void on_searchBoxFournisseur_textChanged(const QString &text);
+    void on_btnmap_clicked();
 
     // Articles
     void on_btnAddArticle_clicked();
@@ -189,6 +190,8 @@ private:
     void setupFournisseurTable();
     void refreshFournisseurTable();
     void updateFournisseurStatistics();
+    void openMap(double lat, double lon);
+    Map *mapService;
 
     // Articles
     void setupArticleTable();

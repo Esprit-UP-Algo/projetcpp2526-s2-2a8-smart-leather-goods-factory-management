@@ -76,6 +76,8 @@
 #include <QValueAxis>
 #include <QtCharts>
 #include <QRandomGenerator>
+#include <QDesktopServices>
+#include <QUrl>
 // ── Shared style constants ────────────────────────────────────────────────────
 static const QString DIALOG_STYLE =
     "QDialog { background-color: #FAF5F0; }"
@@ -151,20 +153,12 @@ MainWindow::MainWindow(QWidget *parent)
     // Initialiser les classes extraites pour matières premières
     matiereDetection = new MatiereDetection(this, ui->matiereTable, networkManager, apiUrl);
     voiceMatieres = new VoiceMatieres(this, ui->matiereTable);
-    
-    // ══════════════════════════════════════════════════════════════════════
-    // ANCIEN CODE (API Locale) - Désactivé car on utilise maintenant l'API Cloud
-    // ══════════════════════════════════════════════════════════════════════
-    // apiProcess = nullptr;
-    // QString vbsScript = "C:/Users/omard/OneDrive/Bureau/integratin finalee/launch_api.vbs";
-    // if (QFile::exists(vbsScript)) {
-    //     QStringList args;
-    //     args << vbsScript.replace("/", "\\");
-    //     QProcess::startDetached("wscript.exe", args);
-    //     qDebug() << "Démarrage du serveur Python via VBS";
-    // }
-    // ══════════════════════════════════════════════════════════════════════
+    //=========================MAPFOURNISSEUR
+    mapService = new Map(this);
 
+        connect(mapService, &Map::coordinatesReady, this, [=](double lat, double lon){
+            openMap(lat, lon);
+        });
     // ── Employee table ──────────────────────────────────────────────────────
     ui->employeeTable->verticalHeader()->setVisible(false);
     // Colonnes: 0=Matricule, 1=Nom, 2=Prénom, 3=CIN, 4=DateNaissance, 5=Sexe,
@@ -2409,7 +2403,42 @@ void MainWindow::setupProductionTable()
     connect(ui->productionTable, &QTableWidget::customContextMenuRequested,
             this, &MainWindow::onProductionTableContextMenu);
 }
+//----mapfournisseur---------------------------------------------------
 
+void MainWindow::openMap(double lat, double lon)
+{
+    QString url = QString("https://www.google.com/maps?q=%1,%2")
+                      .arg(lat)
+                      .arg(lon);
+
+    QDesktopServices::openUrl(QUrl(url));
+}
+
+void MainWindow::on_btnmap_clicked()
+{
+    int row = ui->fournisseurTable->currentRow();
+
+    if (row < 0)
+        return;
+
+    const int ADDRESS_COLUMN = 8; // make sure this is correct
+
+    QTableWidgetItem *item = ui->fournisseurTable->item(row, ADDRESS_COLUMN);
+
+    if (!item)
+        return;
+
+    QString address = item->text();
+
+    if (address.isEmpty())
+        return;
+
+    mapService->geocodeAddress(address);
+}
+
+
+
+//--------------------------------------------------------------------
 void MainWindow::loadProductionData()
 {
     ui->productionTable->setRowCount(0);
