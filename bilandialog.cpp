@@ -1,5 +1,6 @@
 #include "bilandialog.h"
 #include "connection.h"
+#include "notification.h"
 
 #include <QSqlQuery>
 #include <QSqlError>
@@ -441,6 +442,21 @@ void BilanDialog::onPeriodChanged()
     int enAttente = q.next() ? q.value(0).toInt() : 0;
     m_lblCommandes->setText(QString("%1\n(%2 en attente)").arg(total).arg(enAttente));
 
+    // Notifications bilan
+    if (ca == 0.0 && total > 0) {
+        NotificationWidget::show(
+            "Bilan — Aucun CA",
+            "Aucun chiffre d'affaires pour la période sélectionnée.",
+            NotificationWidget::Warning
+        );
+    } else if (total > 0 && enAttente > 0 && (enAttente * 100 / total) >= 30) {
+        NotificationWidget::show(
+            "Commandes en attente",
+            QString("%1 commandes en attente sur %2 — action requise.").arg(enAttente).arg(total),
+            NotificationWidget::Warning
+        );
+    }
+
     // --- Pie chart ---
     if (auto *cv = qobject_cast<QCChartView*>(m_pieView)) {
         auto *series = qobject_cast<QCPieSeries*>(cv->chart()->series().first());
@@ -562,13 +578,17 @@ void BilanDialog::exportCSV()
         out << row.join(";") << "\n";
     }
     file.close();
-    QMessageBox::information(this, "Export", "Fichier exporté avec succès.");
+    NotificationWidget::show(
+        "Export réussi",
+        "Bilan exporté : " + QFileInfo(path).fileName(),
+        NotificationWidget::Success
+    );
 }
 
 void BilanDialog::fetchTauxChange()
 {
     // Clé gratuite Fixer.io — remplacer par votre clé
-    QString apiKey = "VOTRE_CLE_FIXER";
+    QString apiKey = "65a39a8f559bcde817876cc401ec5ded";
     QUrl url("https://data.fixer.io/api/latest?access_key="
              + apiKey + "&base=EUR&symbols=TND,USD");
     m_networkManager->get(QNetworkRequest(url));

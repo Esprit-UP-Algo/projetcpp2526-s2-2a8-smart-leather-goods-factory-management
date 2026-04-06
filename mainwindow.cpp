@@ -1,6 +1,7 @@
 ﻿#include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "notificationwidget.h"
+#include "notification.h"
+#include "envloader.h"
 #include "bilandialog.h"
 #include "statscharts.h"
 #include <QStatusBar>
@@ -250,6 +251,13 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_retardTimer, &QTimer::timeout, this, &MainWindow::checkRetards);
     m_retardTimer->start(20000); // vérifie toutes les 20 secondes
     QTimer::singleShot(3000, this, &MainWindow::checkRetards); // 1er check 3s après démarrage
+
+    // ── Pipeline IA Gemini pour les notifications intelligentes ──────────────
+    const QString geminiKey = EnvLoader::get("GEMINI_API_KEY");
+    if (!geminiKey.isEmpty()) {
+        m_pipeline = new NotificationPipeline(geminiKey, this);
+        m_pipeline->start();
+    }
 
     // ── Articles ────────────────────────────────────────────────────────────
     setupArticleTable();
@@ -2547,8 +2555,7 @@ void MainWindow::checkRetards()
                             .arg(jours)
                             .arg(statut);
 
-        auto *notif = new NotificationWidget(titre, msg, ntype);
-        notif->show();
+        NotificationWidget::show(titre, msg, ntype);
     }
 }
 
@@ -3015,6 +3022,8 @@ void MainWindow::onPlanificationProduction()
 {
     // Ouvrir la vue complète de production avec ProductionView
     ProductionView *productionView = new ProductionView(this);
+    if (m_pipeline)
+        productionView->setNotificationPipeline(m_pipeline);
     productionView->setAttribute(Qt::WA_DeleteOnClose);
     productionView->show();
 }

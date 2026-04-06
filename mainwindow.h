@@ -35,7 +35,7 @@
 #include "article.h"
 #include "articleviewer3d.h"
 #include "aichatwidget.h"
-#include "notificationwidget.h"
+#include "notification.h"
 #include "matieredetection.h"
 #include "voicematieres.h"
 
@@ -218,6 +218,9 @@ private:
     // Retard notifications
     QTimer *m_retardTimer;
     QSet<int> m_notifiedIds;  // évite de notifier 2x la même commande
+
+    // Pipeline IA Gemini pour les notifications intelligentes
+    NotificationPipeline *m_pipeline = nullptr;
 };
 
 #endif // MAINWINDOW_H

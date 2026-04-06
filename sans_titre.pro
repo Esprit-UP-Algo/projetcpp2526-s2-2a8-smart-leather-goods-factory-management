@@ -36,7 +36,7 @@ SOURCES += \
     article.cpp \
     articledialog.cpp \
     logindialog.cpp \
-    notificationwidget.cpp
+    notification.cpp
 
 HEADERS += \
     aichatwidget.h \
@@ -65,7 +65,7 @@ HEADERS += \
     article.h \
     articledialog.h \
     logindialog.h \
-    notificationwidget.h
+    notification.h
 
 FORMS += \
     mainwindow.ui
