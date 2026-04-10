@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QGraphicsDropShadowEffect>
 #include <QMouseEvent>
+#include <QShowEvent>
 #include <QNetworkRequest>
 #include <QJsonDocument>
 #include <QJsonArray>
@@ -17,8 +18,20 @@
 //  NotificationWidget
 // ===============================================================
 
-int NotificationWidget::s_stackOffset = 0;
 QList<NotificationWidget*> NotificationWidget::s_active;
+
+void NotificationWidget::repositionAll()
+{
+    const QRect screen = QApplication::primaryScreen()->availableGeometry();
+    int offsetY = 20;
+    for (int i = s_active.size() - 1; i >= 0; --i) {
+        auto *w = s_active[i];
+        int targetX = screen.right() - w->width() - 20;
+        int targetY = screen.bottom() - offsetY - w->height();
+        w->move(targetX, targetY);
+        offsetY += w->height() + 10;
+    }
+}
 
 void NotificationWidget::show(const QString &title, const QString &message, Type type,
                                const QString &action1Label, std::function<void()> action1,
@@ -33,7 +46,6 @@ void NotificationWidget::show(const QString &title, const QString &message, Type
                                      action2Label, action2,
                                      durationMs, aiGenerated);
     s_active.append(w);
-    connect(w, &QObject::destroyed, [w]() { s_active.removeAll(w); });
 }
 
 void NotificationWidget::closeAll()
@@ -168,18 +180,50 @@ NotificationWidget::NotificationWidget(const QString &title, const QString &mess
         .arg(theme.progressColor));
     lay->addWidget(m_progress);
 
-    // Position
-    adjustSize();
-    const QRect screen = QApplication::primaryScreen()->availableGeometry();
-    const int finalX = screen.right() - width() - 20;
-    const int finalY = screen.bottom() - height() - 20 - s_stackOffset;
-    s_stackOffset += height() + 10;
-
-    move(screen.right() + 10, finalY);
+    setFixedWidth(340);
     setWindowOpacity(0.0);
-    QWidget::show();
 
-    // Animations
+    // Timers (démarrent après show via showEvent)
+    m_autoClose = new QTimer(this);
+    m_autoClose->setSingleShot(true);
+    connect(m_autoClose, &QTimer::timeout, this, &NotificationWidget::fadeOut);
+
+    m_progressTimer = new QTimer(this);
+    connect(m_progressTimer, &QTimer::timeout, this, [this]() {
+        if (m_paused) return;
+        m_elapsed += 50;
+        m_progress->setValue(m_durationMs - m_elapsed);
+    });
+
+    // Positionner hors écran puis afficher — showEvent fait le vrai positionnement
+    const QRect screen = QApplication::primaryScreen()->availableGeometry();
+    move(screen.right() + 10, screen.bottom());
+    QWidget::show();
+}
+
+void NotificationWidget::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+
+    // Ici la taille est garantie finale
+    ensurePolished();
+    if (layout()) layout()->activate();
+    adjustSize();
+
+    const QRect screen = QApplication::primaryScreen()->availableGeometry();
+    const int finalX   = screen.right() - width() - 20;
+
+    // Calcul Y : empiler depuis le bas en comptant les toasts déjà affichés
+    int offsetY = 20;
+    for (auto *w : std::as_const(s_active)) {
+        if (w != this)
+            offsetY += w->height() + 10;
+    }
+    const int finalY = screen.bottom() - offsetY - height();
+
+    // Slide depuis la droite
+    move(screen.right() + 10, finalY);
+
     m_slideIn = new QPropertyAnimation(this, "pos", this);
     m_slideIn->setDuration(350);
     m_slideIn->setStartValue(QPoint(screen.right() + 10, finalY));
@@ -193,18 +237,7 @@ NotificationWidget::NotificationWidget(const QString &title, const QString &mess
     m_fadeIn->setEndValue(1.0);
     m_fadeIn->start(QAbstractAnimation::DeleteWhenStopped);
 
-    // Timers
-    m_autoClose = new QTimer(this);
-    m_autoClose->setSingleShot(true);
-    connect(m_autoClose, &QTimer::timeout, this, &NotificationWidget::fadeOut);
-    m_autoClose->start(durationMs);
-
-    m_progressTimer = new QTimer(this);
-    connect(m_progressTimer, &QTimer::timeout, this, [this]() {
-        if (m_paused) return;
-        m_elapsed += 50;
-        m_progress->setValue(m_durationMs - m_elapsed);
-    });
+    m_autoClose->start(m_durationMs);
     m_progressTimer->start(50);
 }
 
@@ -218,7 +251,8 @@ void NotificationWidget::fadeOut()
     m_fadeOut->setStartValue(windowOpacity());
     m_fadeOut->setEndValue(0.0);
     connect(m_fadeOut, &QPropertyAnimation::finished, this, [this]() {
-        s_stackOffset = qMax(0, s_stackOffset - height() - 10);
+        s_active.removeAll(this);
+        repositionAll(); // réempile les toasts restants
         close();
     });
     m_fadeOut->start(QAbstractAnimation::DeleteWhenStopped);

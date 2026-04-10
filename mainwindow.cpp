@@ -79,6 +79,8 @@
 #include <QRandomGenerator>
 #include <QDesktopServices>
 #include <QUrl>
+#include <QResizeEvent>
+#include <cmath>
 // ── Shared style constants ────────────────────────────────────────────────────
 static const QString DIALOG_STYLE =
     "QDialog { background-color: #FAF5F0; }"
@@ -132,6 +134,94 @@ static void filterTable(QTableWidget *table, const QString &text)
         }
         table->setRowHidden(row, !match);
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FloatingAIButton — cercle animé style Meta AI
+// ─────────────────────────────────────────────────────────────────────────────
+FloatingAIButton::FloatingAIButton(QWidget *parent)
+    : QWidget(parent)
+{
+    setFixedSize(64, 64);
+    // Pas de WA_TranslucentBackground — on peint le fond nous-mêmes
+    setCursor(Qt::PointingHandCursor);
+    setToolTip("Assistant IA");
+
+    m_animTimer = new QTimer(this);
+    connect(m_animTimer, &QTimer::timeout, this, [this]() {
+        m_angle     = std::fmod(m_angle     + 2.0f, 360.0f); // anneau : rapide
+        m_logoAngle = std::fmod(m_logoAngle + 0.4f, 360.0f); // logo   : lent
+        update();
+    });
+    m_animTimer->start(16);
+}
+
+void FloatingAIButton::paintEvent(QPaintEvent *)
+{
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setRenderHint(QPainter::SmoothPixmapTransform);
+
+    // Fond : couleur du parent
+    p.fillRect(rect(), parentWidget() ? parentWidget()->palette().window() : Qt::transparent);
+
+    // Ombre portée
+    p.setPen(Qt::NoPen);
+    p.setBrush(QColor(0, 0, 0, 50));
+    p.drawEllipse(5, 7, 58, 58);
+
+    // Anneau tournant aux couleurs CUIREA
+    QConicalGradient g(32, 32, m_angle);
+    g.setColorAt(0.0,  QColor("#C4795A"));
+    g.setColorAt(0.35, QColor("#E8A87C"));
+    g.setColorAt(0.65, QColor("#7A3E1F"));
+    g.setColorAt(1.0,  QColor("#C4795A"));
+    p.setPen(QPen(QBrush(g), 4));
+    p.setBrush(Qt::NoBrush);
+    p.drawEllipse(3, 3, 58, 58);
+
+    // Cercle intérieur beige CUIREA
+    p.setPen(Qt::NoPen);
+    p.setBrush(QColor("#FAF5F0"));
+    p.drawEllipse(7, 7, 50, 50);
+
+    // Logo CUIREA qui tourne lentement au centre
+    p.save();
+    p.translate(32, 32);
+    p.rotate(m_logoAngle);
+
+    // Clip circulaire pour que le logo reste dans le cercle
+    QPainterPath clip;
+    clip.addEllipse(-22, -22, 44, 44);
+    p.setClipPath(clip);
+
+    static QPixmap logo;
+    if (logo.isNull())
+        logo = QPixmap(":/logo.png");
+
+    if (!logo.isNull()) {
+        QPixmap scaled = logo.scaled(44, 44, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        p.drawPixmap(-scaled.width() / 2, -scaled.height() / 2, scaled);
+    }
+
+    p.restore();
+}
+
+void FloatingAIButton::mousePressEvent(QMouseEvent *)
+{
+    emit clicked();
+}
+
+void FloatingAIButton::enterEvent(QEnterEvent *)
+{
+    m_hovered = true;
+    update();
+}
+
+void FloatingAIButton::leaveEvent(QEvent *)
+{
+    m_hovered = false;
+    update();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -268,13 +358,25 @@ MainWindow::MainWindow(QWidget *parent)
     ui->stackedWidget->setCurrentIndex(0);
     ui->btnEmployees->setStyleSheet(NAV_ACTIVE_STYLE);
     
+    // ── AI floating button ───────────────────────────────────────────────────
+    m_aiWidget = new AIChatWidget(this);
+    m_aiWidget->setContext("Gestion des Employés");
+
+    m_floatingBtn = new FloatingAIButton(this);
+    connect(m_floatingBtn, &FloatingAIButton::clicked, this, [this]() {
+        m_aiWidget->toggleChat();
+    });
+
     // Forcer le plein écran au démarrage
     showMaximized();
 
-    // ── AI floating button ───────────────────────────────────────────────────
-    m_aiWidget = new AIChatWidget(ui->mainContent);
-    m_aiWidget->setContext("Gestion des Employés");
-    connect(ui->btnAIChat, &QPushButton::clicked, this, [this](){ m_aiWidget->toggleChat(); });
+    // Positionner et afficher le bouton flottant après que la fenêtre soit visible
+    QTimer::singleShot(100, this, [this]() {
+        // Juste après la sidebar (180px) en bas
+        m_floatingBtn->move(190, height() - 84);
+        m_floatingBtn->show();
+        m_floatingBtn->raise();
+    });
 }
 
 MainWindow::~MainWindow() 
@@ -303,6 +405,17 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
     return QMainWindow::eventFilter(obj, event);
 }
 
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+    if (m_floatingBtn) {
+        // Juste après la sidebar (180px) en bas
+        m_floatingBtn->move(190, height() - 84);
+        m_floatingBtn->show();
+        m_floatingBtn->raise();
+    }
+}
+
 // ── Navigation helpers ────────────────────────────────────────────────────────
 void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &title)
 {
@@ -316,6 +429,9 @@ void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &ti
     ui->stackedWidget->setCurrentIndex(index);
 
     if (!title.isEmpty()) setWindowTitle(title);
+
+    // Garder le bouton flottant toujours au-dessus
+    if (m_floatingBtn) m_floatingBtn->raise();
 }
 
 void MainWindow::on_btnEmployees_clicked()  
@@ -370,8 +486,6 @@ void MainWindow::on_btnProduction_clicked()
     m_notifiedIds.clear();
     QTimer::singleShot(3000, this, &MainWindow::checkRetards);
 }
-
-void MainWindow::on_btnAIChat_clicked() { /* géré via connect dans le constructeur */ }
 
 // ── Employee CRUD ─────────────────────────────────────────────────────────────
 void MainWindow::on_btnAdd_clicked()

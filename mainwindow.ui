@@ -651,32 +651,7 @@ Management</string>
          </property>
         </spacer>
        </item>
-       <item>
-        <widget class="QPushButton" name="btnAIChat">
-         <property name="minimumSize">
-          <size>
-           <width>0</width>
-           <height>50</height>
-          </size>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">QPushButton {
-    background-color: #6D4C41;
-    color: #FFFFFF;
-    border: none;
-    border-top: 1px solid rgba(255,255,255,0.2);
-    font-size: 13px;
-    font-weight: bold;
-    text-align: left;
-    padding-left: 16px;
-}
-QPushButton:hover { background-color: #4E342E; }</string>
-         </property>
-         <property name="text">
-          <string> 🤖 Assistant IA</string>
-         </property>
-        </widget>
-       </item>
+
       </layout>
      </widget>
     </item>

@@ -28,7 +28,6 @@
 #include <QtCharts/QValueAxis>
 #include <QtCharts/QSplineSeries>
 
-// Qt6: QtCharts n'a plus de namespace, les classes sont directement accessibles
 typedef QChart               QCChart;
 typedef QChartView           QCChartView;
 typedef QPieSeries           QCPieSeries;
@@ -140,10 +139,10 @@ void BilanDialog::setupUI()
     auto *caBox = makeKpiBox("Chiffre d'affaires total", m_lblCA);
     m_lblCA_EUR = new QLabel("≈ … €");
     m_lblCA_EUR->setAlignment(Qt::AlignCenter);
-    m_lblCA_EUR->setStyleSheet(QString("font-size:12px;color:%1;border:none").arg(ACCENT));
+    m_lblCA_EUR->setStyleSheet("font-size:12px;color:#27ae60;border:none");
     m_lblCA_USD = new QLabel("≈ … $");
     m_lblCA_USD->setAlignment(Qt::AlignCenter);
-    m_lblCA_USD->setStyleSheet(QString("font-size:12px;color:%1;border:none").arg(ACCENT));
+    m_lblCA_USD->setStyleSheet("font-size:12px;color:#2980b9;border:none");
     qobject_cast<QVBoxLayout*>(caBox->layout())->addWidget(m_lblCA_EUR);
     qobject_cast<QVBoxLayout*>(caBox->layout())->addWidget(m_lblCA_USD);
 
@@ -157,7 +156,6 @@ void BilanDialog::setupUI()
     kpiWidget->setLayout(kpiCol);
     kpiWidget->setFixedWidth(240);
 
-    // make*Chart() retournent QWidget* — pas de problème de type
     m_pieView    = makePieChart();
     m_barView    = makeBarChart();
     m_splineView = makeSplineChart();
@@ -415,7 +413,6 @@ void BilanDialog::onPeriodChanged()
     QString filtre = m_comboPeriod->currentText();
     QString where  = (filtre == "Tous") ? "" :
                      QString(" WHERE TO_CHAR(date_creation,'YYYY-MM') = '%1'").arg(filtre);
-
     QSqlQuery q;
 
     // --- KPIs ---
@@ -424,9 +421,30 @@ void BilanDialog::onPeriodChanged()
     m_totalCA = ca;
     m_lblCA->setText(fmt(ca));
 
-    double benefice = ca * 0.3;
+    // Bénéfice et marge réels depuis Articles liés aux commandes
+    QString whereArt = where.isEmpty()
+        ? ""
+        : QString(" WHERE co.id_commande IN (SELECT id_commande FROM Commandes%1)").arg(where);
+
+    q.exec(QString(
+        "SELECT SUM(a.prix_unitaire - a.cout_fabrication), "
+        "       SUM(a.prix_unitaire) "
+        "FROM Articles a "
+        "JOIN Commandes co ON co.id_commande = a.id_commande"
+    ) + (where.isEmpty() ? "" :
+        QString(" WHERE TO_CHAR(co.date_creation,'YYYY-MM') = '%1'").arg(filtre)));
+
+    double benefice = 0.0, totalPrix = 0.0;
+    if (q.next() && !q.value(0).isNull()) {
+        benefice   = q.value(0).toDouble();
+        totalPrix  = q.value(1).toDouble();
+    }
+    // Fallback si pas d'articles liés : estimation 30%
+    if (totalPrix <= 0 && ca > 0) { benefice = ca * 0.30; totalPrix = ca; }
+    double marge = (totalPrix > 0) ? (benefice / totalPrix * 100.0) : 0.0;
+
     m_lblBenefice->setText(fmt(benefice));
-    m_lblMarge->setText(QString::number(ca > 0 ? 30.0 : 0.0, 'f', 1) + " %");
+    m_lblMarge->setText(QString::number(marge, 'f', 1) + " %");
 
     q.exec("SELECT produit, COUNT(*) AS nb FROM Commandes" + where +
            " GROUP BY produit ORDER BY nb DESC");
@@ -459,58 +477,98 @@ void BilanDialog::onPeriodChanged()
 
     // --- Pie chart ---
     if (auto *cv = qobject_cast<QCChartView*>(m_pieView)) {
-        auto *series = qobject_cast<QCPieSeries*>(cv->chart()->series().first());
-        if (series) {
-            QMap<QString,double> prio;
-            q.exec("SELECT priorite, SUM(montant) FROM Commandes" + where +
-                   " GROUP BY priorite");
-            while (q.next()) prio[q.value(0).toString()] = q.value(1).toDouble();
-            // Retrouver chaque slice par son label pour éviter les décalages d'index
-            for (auto *slice : series->slices())
-                slice->setValue(prio.value(slice->label(), 0.01));
+        QCChart *chart = cv->chart();
+        chart->removeAllSeries();
+
+        QMap<QString,double> prio;
+        q.exec("SELECT priorite, COUNT(*) FROM Commandes" + where +
+               " GROUP BY priorite");
+        while (q.next()) prio[q.value(0).toString()] = q.value(1).toDouble();
+
+        auto *series = new QCPieSeries();
+        const QMap<QString,QColor> colors = {
+            {"Basse",   QColor("#C4923A")},
+            {"Normale", QColor("#A0485A")},
+            {"Urgente", QColor("#6B2737")}
+        };
+        for (auto it = prio.cbegin(); it != prio.cend(); ++it) {
+            auto *slice = series->append(it.key(), it.value());
+            slice->setColor(colors.value(it.key(), QColor(ACCENT)));
+            slice->setLabelVisible(true);
+            slice->setLabel(QString("%1\n%2").arg(it.key()).arg((int)it.value()));
         }
+        chart->addSeries(series);
     }
 
     // --- Bar chart ---
     if (auto *cv = qobject_cast<QCChartView*>(m_barView)) {
-        auto *series = qobject_cast<QCBarSeries*>(cv->chart()->series().first());
-        if (series && !series->barSets().isEmpty()) {
-            auto *set = series->barSets().first();
-            QMap<QString,double> prio;
-            q.exec("SELECT priorite, SUM(montant) FROM Commandes" + where +
-                   " GROUP BY priorite");
-            while (q.next()) prio[q.value(0).toString()] = q.value(1).toDouble();
-            set->replace(0, prio.value("Basse",   0));
-            set->replace(1, prio.value("Normale", 0));
-            set->replace(2, prio.value("Urgente", 0));
-            // Recalcule les axes Y après mise à jour
-            if (auto *axisY = qobject_cast<QCValueAxis*>(cv->chart()->axes(Qt::Vertical).first())) {
-                double maxVal = std::max({prio.value("Basse",0), prio.value("Normale",0), prio.value("Urgente",0)});
-                axisY->setRange(0, maxVal > 0 ? maxVal * 1.15 : 100);
-            }
+        QCChart *chart = cv->chart();
+        const auto axisList = chart->axes();
+        for (auto *ax : axisList) chart->removeAxis(ax);
+        chart->removeAllSeries();
+
+        QMap<QString,double> prio;
+        q.exec("SELECT priorite, SUM(montant) FROM Commandes" + where +
+               " GROUP BY priorite");
+        while (q.next()) prio[q.value(0).toString()] = q.value(1).toDouble();
+
+        QStringList cats;
+        auto *set = new QCBarSet("CA");
+        set->setColor(QColor(ACCENT));
+        for (const QString &p : {"Basse", "Normale", "Urgente"}) {
+            *set << prio.value(p, 0.0);
+            cats << p;
         }
+        auto *series = new QCBarSeries();
+        series->append(set);
+        chart->addSeries(series);
+
+        auto *axisX = new QCBarCategoryAxis();
+        axisX->append(cats);
+        axisX->setLabelsFont(QFont("Arial", 8));
+        chart->addAxis(axisX, Qt::AlignBottom);
+        series->attachAxis(axisX);
+
+        double maxVal = *std::max_element(prio.cbegin(), prio.cend());
+        auto *axisY = new QCValueAxis();
+        axisY->setRange(0, maxVal > 0 ? maxVal * 1.15 : 100);
+        axisY->setLabelsFont(QFont("Arial", 8));
+        chart->addAxis(axisY, Qt::AlignLeft);
+        series->attachAxis(axisY);
     }
 
     // --- Spline chart ---
     if (auto *cv = qobject_cast<QCChartView*>(m_splineView)) {
         QCChart *chart = cv->chart();
-
-        // Retirer proprement axes et série sans les détruire
         const auto axisList = chart->axes();
         for (auto *ax : axisList) chart->removeAxis(ax);
         chart->removeAllSeries();
 
-        // Créer une nouvelle série fraîche
         auto *series = new QCSplineSeries();
         series->setColor(QColor(PRIMARY));
         series->setPen(QPen(QColor(PRIMARY), 2));
 
-        q.exec("SELECT EXTRACT(DAY FROM date_creation), SUM(montant) "
-               "FROM Commandes" + where +
-               " GROUP BY EXTRACT(DAY FROM date_creation) "
-               "ORDER BY EXTRACT(DAY FROM date_creation)");
-        while (q.next())
-            series->append(q.value(0).toDouble(), q.value(1).toDouble());
+        if (filtre == "Tous") {
+            // Évolution mensuelle sur toute la période
+            chart->setTitle("Évolution mensuelle du CA");
+            q.exec("SELECT TO_CHAR(date_creation,'YYYY-MM'), SUM(montant) "
+                   "FROM Commandes "
+                   "GROUP BY TO_CHAR(date_creation,'YYYY-MM') "
+                   "ORDER BY TO_CHAR(date_creation,'YYYY-MM')");
+            int idx = 0;
+            while (q.next()) series->append(idx++, q.value(1).toDouble());
+        } else {
+            // Évolution quotidienne pour le mois sélectionné
+            chart->setTitle("Évolution quotidienne du CA — " + filtre);
+            q.exec(QString(
+                "SELECT EXTRACT(DAY FROM date_creation), SUM(montant) "
+                "FROM Commandes "
+                "WHERE TO_CHAR(date_creation,'YYYY-MM') = '%1' "
+                "GROUP BY EXTRACT(DAY FROM date_creation) "
+                "ORDER BY EXTRACT(DAY FROM date_creation)").arg(filtre));
+            while (q.next())
+                series->append(q.value(0).toDouble(), q.value(1).toDouble());
+        }
 
         chart->addSeries(series);
         chart->createDefaultAxes();
@@ -529,19 +587,19 @@ void BilanDialog::onPeriodChanged()
         refreshHBar(m_produitView, data);
     }
 
-    // --- CA par région (ville du client via mail_client) ---
+    // --- CA par région (ville du client) ---
     {
         QMap<QString,double> data;
-        QString joinWhere = where.isEmpty()
-            ? " WHERE c.ville IS NOT NULL"
-            : where.replace("WHERE", "WHERE c.ville IS NOT NULL AND");
-        q.exec("SELECT c.ville, SUM(co.montant) "
-               "FROM Commandes co "
-               "JOIN Clients c ON c.email = co.mail_client" +
-               (where.isEmpty()
-                    ? QString(" WHERE c.ville IS NOT NULL")
-                    : QString(" WHERE c.ville IS NOT NULL AND TO_CHAR(co.date_creation,'YYYY-MM') = '%1'").arg(filtre)) +
-               " GROUP BY c.ville ORDER BY SUM(co.montant) DESC");
+        QString regionQuery = QString(
+            "SELECT c.ville, SUM(co.montant) "
+            "FROM Commandes co "
+            "JOIN Clients c ON c.email = co.mail_client "
+            "WHERE c.ville IS NOT NULL"
+        );
+        if (filtre != "Tous")
+            regionQuery += QString(" AND TO_CHAR(co.date_creation,'YYYY-MM') = '%1'").arg(filtre);
+        regionQuery += " GROUP BY c.ville ORDER BY SUM(co.montant) DESC";
+        q.exec(regionQuery);
         while (q.next()) data[q.value(0).toString()] = q.value(1).toDouble();
         refreshHBar(m_regionView, data);
     }
@@ -587,7 +645,7 @@ void BilanDialog::exportCSV()
 
 void BilanDialog::fetchTauxChange()
 {
-    // Clé gratuite Fixer.io — remplacer par votre clé
+    // Clé gratuite Fixer.io 
     QString apiKey = "65a39a8f559bcde817876cc401ec5ded";
     QUrl url("https://data.fixer.io/api/latest?access_key="
              + apiKey + "&base=EUR&symbols=TND,USD");

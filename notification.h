@@ -42,7 +42,7 @@ public:
 
     static void closeAll();
     static int activeCount() { return s_active.size(); }
-    static int s_stackOffset;
+    static void repositionAll();
 
 signals:
     void clicked();
@@ -51,6 +51,7 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
     void enterEvent(QEnterEvent *event) override;
     void leaveEvent(QEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 private:
     explicit NotificationWidget(const QString &title,

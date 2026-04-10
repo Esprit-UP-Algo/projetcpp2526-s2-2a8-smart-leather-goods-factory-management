@@ -38,6 +38,32 @@
 #include "notification.h"
 #include "matieredetection.h"
 #include "voicematieres.h"
+#include <QTimer>
+#include <QPainter>
+#include <QConicalGradient>
+
+// ── Bouton flottant style Meta AI ─────────────────────────────────────────────
+class FloatingAIButton : public QWidget
+{
+    Q_OBJECT
+public:
+    explicit FloatingAIButton(QWidget *parent = nullptr);
+
+signals:
+    void clicked();
+
+protected:
+    void paintEvent(QPaintEvent *e) override;
+    void mousePressEvent(QMouseEvent *e) override;
+    void enterEvent(QEnterEvent *e) override;
+    void leaveEvent(QEvent *e) override;
+
+private:
+    QTimer *m_animTimer;
+    float   m_angle     = 0.0f;
+    float   m_logoAngle = 0.0f;
+    bool    m_hovered   = false;
+};
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -63,6 +89,7 @@ public:
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
 
 private slots:
     // Employee
@@ -94,7 +121,6 @@ private slots:
     void on_btnRawMaterials_clicked();
     void on_btnSuppliers_clicked();
     void on_btnProduction_clicked();
-    void on_btnAIChat_clicked();
 
     // Employee table
     void onEmployeeSelected();
@@ -209,7 +235,8 @@ private:
     QPixmap generateQRCode(const QString &text, int size = 200);
 
     // AI floating button
-    AIChatWidget *m_aiWidget;
+    AIChatWidget     *m_aiWidget;
+    FloatingAIButton *m_floatingBtn;
 
     // Production sort state
     int  m_productionSortCol;
