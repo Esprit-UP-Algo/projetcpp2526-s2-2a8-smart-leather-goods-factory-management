@@ -35,7 +35,7 @@
 #include "article.h"
 #include "articleviewer3d.h"
 #include "aichatwidget.h"
-#include "notificationwidget.h"
+#include "notification.h"
 #include "matieredetection.h"
 #include "voicematieres.h"
 

@@ -1,5 +1,7 @@
 #include "statsrh.h"
-#include "employe.h"
+#include "connection.h"
+#include <QSqlQuery>
+#include <QSqlError>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
@@ -305,13 +307,32 @@ QWidget* StatsRHDialog::createPariteTab()
 
 void StatsRHDialog::loadStatistics()
 {
-    // Charger les données depuis la base
-    effectifDepartement = Employe::getEffectifParDepartement();
-    effectifPoste = Employe::getEffectifParPoste();
-    effectifSexe = Employe::getEffectifParSexe();
-    totalEmployes = Employe::getTotalEmployes();
-    nombreDepartements = Employe::getNombreDepartements();
-    nombrePostes = Employe::getNombrePostes();
+    // Charger les données directement via SQL
+    QSqlQuery q;
+
+    effectifDepartement.clear();
+    q.exec("SELECT DEPARTEMENT, COUNT(*) FROM EMPLOYES GROUP BY DEPARTEMENT");
+    while (q.next())
+        effectifDepartement[q.value(0).toString()] = q.value(1).toInt();
+
+    effectifPoste.clear();
+    q.exec("SELECT POSTE, COUNT(*) FROM EMPLOYES GROUP BY POSTE");
+    while (q.next())
+        effectifPoste[q.value(0).toString()] = q.value(1).toInt();
+
+    effectifSexe.clear();
+    q.exec("SELECT SEXE, COUNT(*) FROM EMPLOYES GROUP BY SEXE");
+    while (q.next()) {
+        QString sexe = q.value(0).toString().toLower();
+        QString key = (sexe == "m" || sexe == "homme" || sexe == "masculin") ? "Hommes" : "Femmes";
+        effectifSexe[key] += q.value(1).toInt();
+    }
+
+    q.exec("SELECT COUNT(*) FROM EMPLOYES");
+    totalEmployes = q.next() ? q.value(0).toInt() : 0;
+
+    nombreDepartements = effectifDepartement.size();
+    nombrePostes       = effectifPoste.size();
     
     // Mettre à jour les KPI
     if (totalLabel) totalLabel->setText(QString::number(totalEmployes));
