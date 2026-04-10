@@ -19,6 +19,7 @@
 #include <QSet>
 #include <QMap>
 #include "production.h"
+#include "notification.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -219,6 +220,9 @@ public:
     /** @brief Intervalle en minutes entre deux vérifications automatiques des alertes. */
     void setIntervalleVerification(int min) { m_intervalleVerification = min; }
 
+    /** @brief Injecte le pipeline IA pour les notifications intelligentes. */
+    void setNotificationPipeline(NotificationPipeline *pipeline) { m_pipeline = pipeline; }
+
 private slots:
     /** @brief Filtre le tableau en temps réel sur la colonne Référence. */
     void onSearchTextChanged(const QString &text);
@@ -290,9 +294,12 @@ private:
 
     /**
      * @brief Ensemble des clés d'alertes déjà notifiées.
-     * Clé = idCommande * 10 + type_alerte — évite les notifications en double.
+     * Clé = idCommande * 100 + typeAlerte
      */
     QSet<int> m_alertesNotifiees;
+
+    /** @brief Pipeline IA pour les toasts intelligents (optionnel). */
+    NotificationPipeline *m_pipeline = nullptr;
 };
 
 #endif // PRODUCTIONVIEW_H

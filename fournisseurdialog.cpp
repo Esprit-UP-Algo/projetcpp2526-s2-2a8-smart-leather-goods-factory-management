@@ -3,6 +3,7 @@
 #include <QHBoxLayout>
 #include <QGridLayout>
 #include <QMessageBox>
+#include <QRegularExpressionValidator>
 
 FournisseurDialog::FournisseurDialog(QWidget *parent, DialogMode mode)
     : QDialog(parent), m_mode(mode)
@@ -47,52 +48,59 @@ void FournisseurDialog::setupUI()
     formLayout->setSpacing(15);
     formLayout->setColumnStretch(1, 1);
     
-    // ID
+    // ID (hidden)
     lblId = new QLabel("ID Fournisseur :", this);
     txtId = new QLineEdit(this);
     txtId->setReadOnly(true);
+    lblId->setVisible(false);
+    txtId->setVisible(false);
     formLayout->addWidget(lblId, 0, 0);
     formLayout->addWidget(txtId, 0, 1);
-    
+
     // Nom Entreprise
     lblNomEntreprise = new QLabel("Nom Entreprise * :", this);
     txtNomEntreprise = new QLineEdit(this);
     txtNomEntreprise->setPlaceholderText("Entrez le nom de l'entreprise");
     formLayout->addWidget(lblNomEntreprise, 1, 0);
     formLayout->addWidget(txtNomEntreprise, 1, 1);
-    
+
     // Email
     lblEmail = new QLabel("Email * :", this);
     txtEmail = new QLineEdit(this);
     txtEmail->setPlaceholderText("exemple@email.com");
     formLayout->addWidget(lblEmail, 2, 0);
     formLayout->addWidget(txtEmail, 2, 1);
-    
-    // Telephone
+
+    // Telephone — chiffres uniquement, 8 max
     lblTelephone = new QLabel("Téléphone * :", this);
     txtTelephone = new QLineEdit(this);
-    txtTelephone->setPlaceholderText("+216 XX XXX XXX");
+    txtTelephone->setPlaceholderText("Ex: 58405688");
+    txtTelephone->setValidator(new QRegularExpressionValidator(
+        QRegularExpression("[0-9]{0,8}"), this));
     formLayout->addWidget(lblTelephone, 3, 0);
     formLayout->addWidget(txtTelephone, 3, 1);
-    
+
     // Type Produit
     lblTypeProduit = new QLabel("Type Produit :", this);
     cmbTypeProduit = new QComboBox(this);
     cmbTypeProduit->addItems({"Vêtements", "Sacs", "Accessoires", "Tissus", "Cuir", "Autres"});
     formLayout->addWidget(lblTypeProduit, 4, 0);
     formLayout->addWidget(cmbTypeProduit, 4, 1);
-    
+
     // Condition Paiement
     lblConditionPaiement = new QLabel("Condition Paiement :", this);
     cmbConditionPaiement = new QComboBox(this);
     cmbConditionPaiement->addItems({"Chèque", "Carte Bancaire", "Virement", "Espèces", "Crédit 30 jours", "Crédit 60 jours"});
     formLayout->addWidget(lblConditionPaiement, 5, 0);
     formLayout->addWidget(cmbConditionPaiement, 5, 1);
-    
-    // Matricule Fiscal
-    lblMatriculeFiscal = new QLabel("Matricule Fiscal :", this);
+
+    // Matricule Fiscal — obligatoire, format 1234567/A/M/000
+    lblMatriculeFiscal = new QLabel("Matricule Fiscal * :", this);
     txtMatriculeFiscal = new QLineEdit(this);
     txtMatriculeFiscal->setPlaceholderText("Ex: 1234567/A/M/000");
+    txtMatriculeFiscal->setMaxLength(15);
+    txtMatriculeFiscal->setValidator(new QRegularExpressionValidator(
+        QRegularExpression("[0-9]{0,7}(/[A-Za-z](/[A-Za-z](/[0-9]{0,3})?)?)?"), this));
     formLayout->addWidget(lblMatriculeFiscal, 6, 0);
     formLayout->addWidget(txtMatriculeFiscal, 6, 1);
     
@@ -102,6 +110,13 @@ void FournisseurDialog::setupUI()
     cmbStatut->addItems({"Actif", "Suspendu"});
     formLayout->addWidget(lblStatut, 7, 0);
     formLayout->addWidget(cmbStatut, 7, 1);
+
+    // Adresse
+    QLabel *lblAdresse = new QLabel("Adresse :", this);
+    txtAdresse = new QLineEdit(this);
+    txtAdresse->setPlaceholderText("Ex: 12 Rue de la Paix, Tunis");
+    formLayout->addWidget(lblAdresse, 8, 0);
+    formLayout->addWidget(txtAdresse, 8, 1);
     
     mainLayout->addLayout(formLayout);
     
@@ -227,29 +242,20 @@ void FournisseurDialog::setupDeleteMode()
 void FournisseurDialog::setFournisseurData(const QString &id, const QString &nomEntreprise, const QString &email,
                                            const QString &telephone, const QString &typeProduit,
                                            const QString &conditionPaiement, const QString &matriculeFiscal,
-                                           const QString &statut)
+                                           const QString &statut, const QString &adresse)
 {
     txtId->setText(id);
     txtNomEntreprise->setText(nomEntreprise);
     txtEmail->setText(email);
     txtTelephone->setText(telephone);
-    
     int typeIndex = cmbTypeProduit->findText(typeProduit);
-    if (typeIndex >= 0) {
-        cmbTypeProduit->setCurrentIndex(typeIndex);
-    }
-    
+    if (typeIndex >= 0) cmbTypeProduit->setCurrentIndex(typeIndex);
     int conditionIndex = cmbConditionPaiement->findText(conditionPaiement);
-    if (conditionIndex >= 0) {
-        cmbConditionPaiement->setCurrentIndex(conditionIndex);
-    }
-    
+    if (conditionIndex >= 0) cmbConditionPaiement->setCurrentIndex(conditionIndex);
     txtMatriculeFiscal->setText(matriculeFiscal);
-    
     int statutIndex = cmbStatut->findText(statut);
-    if (statutIndex >= 0) {
-        cmbStatut->setCurrentIndex(statutIndex);
-    }
+    if (statutIndex >= 0) cmbStatut->setCurrentIndex(statutIndex);
+    txtAdresse->setText(adresse);
 }
 
 QString FournisseurDialog::getId() const
@@ -292,6 +298,11 @@ QString FournisseurDialog::getStatut() const
     return cmbStatut->currentText();
 }
 
+QString FournisseurDialog::getAdresse() const
+{
+    return txtAdresse ? txtAdresse->text().trimmed() : QString();
+}
+
 void FournisseurDialog::onSaveClicked()
 {
     QStringList errors;
@@ -326,13 +337,18 @@ void FournisseurDialog::onSaveClicked()
         txtTelephone->setStyleSheet("");
     }
 
-    // Matricule Fiscal (optionnel mais si renseigné, format basique)
-    if (!txtMatriculeFiscal->text().trimmed().isEmpty() &&
-        txtMatriculeFiscal->text().trimmed().length() < 5) {
-        errors << "- Le matricule fiscal semble invalide (trop court)";
+    // Matricule Fiscal obligatoire, format exact
+    if (txtMatriculeFiscal->text().trimmed().isEmpty()) {
+        errors << "- Le matricule fiscal est obligatoire";
         txtMatriculeFiscal->setStyleSheet("border: 2px solid red;");
     } else {
-        txtMatriculeFiscal->setStyleSheet("");
+        QRegularExpression re("^[0-9]{7}/[A-Za-z]/[A-Za-z]/[0-9]{3}$");
+        if (!re.match(txtMatriculeFiscal->text().trimmed()).hasMatch()) {
+            errors << "- Le matricule fiscal doit être au format : 1234567/A/M/000";
+            txtMatriculeFiscal->setStyleSheet("border: 2px solid red;");
+        } else {
+            txtMatriculeFiscal->setStyleSheet("");
+        }
     }
 
     if (!errors.isEmpty()) {

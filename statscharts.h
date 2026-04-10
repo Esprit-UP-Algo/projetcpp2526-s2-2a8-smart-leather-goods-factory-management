@@ -1,4 +1,4 @@
-﻿#ifndef STATSCHARTS_H
+#ifndef STATSCHARTS_H
 #define STATSCHARTS_H
 
 #include <QWidget>

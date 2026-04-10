@@ -23,9 +23,9 @@ public:
     ~FournisseurDialog();
 
     void setFournisseurData(const QString &id, const QString &nomEntreprise, const QString &email,
-                           const QString &telephone, const QString &typeProduit, 
+                           const QString &telephone, const QString &typeProduit,
                            const QString &conditionPaiement, const QString &matriculeFiscal,
-                           const QString &statut);
+                           const QString &statut, const QString &adresse = QString());
 
     QString getId() const;
     QString getNomEntreprise() const;
@@ -35,6 +35,7 @@ public:
     QString getConditionPaiement() const;
     QString getMatriculeFiscal() const;
     QString getStatut() const;
+    QString getAdresse() const;
 
 private slots:
     void onSaveClicked();
@@ -68,6 +69,7 @@ private:
     QComboBox *cmbConditionPaiement;
     QLineEdit *txtMatriculeFiscal;
     QComboBox *cmbStatut;
+    QLineEdit *txtAdresse;
     
     QPushButton *btnSave;
     QPushButton *btnCancel;

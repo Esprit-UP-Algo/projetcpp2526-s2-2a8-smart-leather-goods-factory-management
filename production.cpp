@@ -255,7 +255,8 @@ bool ProductionDAO::modifier(const Production &production)
     query.prepare("UPDATE COMMANDES SET "
                   "REFERENCE=:reference, PRODUIT=:produit, DATE_CREATION=:dateCreation, "
                   "DATE_LIVRAISON=:dateLivraison, STATUT=:statut, PRIORITE=:priorite, "
-                  "MONTANT=:montant, QUANTITE=:quantite, ETAT=:etat, MAIL_CLIENT=:mailClient "
+                  "MONTANT=:montant, QUANTITE=:quantite, ETAT=:etat, "
+                  "MAIL_CLIENT=:mailClient, ID_EMPLOYE=:idEmploye "
                   "WHERE ID_COMMANDE=:id");
     query.bindValue(":id",           production.getIdCommande());
     query.bindValue(":reference",    production.getReference());
@@ -268,6 +269,7 @@ bool ProductionDAO::modifier(const Production &production)
     query.bindValue(":quantite",     production.getQuantite());
     query.bindValue(":etat",         production.getEtatPaiement());
     query.bindValue(":mailClient",   production.getMailClient());
+    query.bindValue(":idEmploye",    production.getIdEmploye());
 
     if (!query.exec()) { qDebug() << "❌ Erreur modification production:" << query.lastError().text(); return false; }
     return true;

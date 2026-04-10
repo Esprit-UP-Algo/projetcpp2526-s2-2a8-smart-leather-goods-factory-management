@@ -12,7 +12,7 @@ public:
     FournisseurData(const QString &id, const QString &nomEntreprise, const QString &email,
                 const QString &telephone, const QString &matriculeFiscal,
                 const QString &typeProduit, const QString &conditionPaiement,
-                const QString &statut);
+                const QString &statut, const QString &adresse = QString());
 
     // Getters
     QString getId() const { return id; }
@@ -23,6 +23,7 @@ public:
     QString getTypeProduit() const { return typeProduit; }
     QString getConditionPaiement() const { return conditionPaiement; }
     QString getStatut() const { return statut; }
+    QString getAdresse() const { return adresse; }
 
     // Setters
     void setId(const QString &value) { id = value; }
@@ -33,6 +34,7 @@ public:
     void setTypeProduit(const QString &value) { typeProduit = value; }
     void setConditionPaiement(const QString &value) { conditionPaiement = value; }
     void setStatut(const QString &value) { statut = value; }
+    void setAdresse(const QString &value) { adresse = value; }
 
     // Méthodes CRUD
     bool ajouter();
@@ -51,6 +53,7 @@ private:
     QString typeProduit;
     QString conditionPaiement;
     QString statut;
+    QString adresse;
 };
 
 #endif // FOURNISSEUR_H

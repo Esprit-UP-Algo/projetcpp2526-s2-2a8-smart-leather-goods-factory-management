@@ -24,85 +24,129 @@ AIChatWidget::~AIChatWidget()
     stopSAPI();
 }
 
-// ── Construction de l'interface ───────────────────────────────────────────────
 void AIChatWidget::setupUI()
 {
-    // Panneau principal avec fond sombre (thème Catppuccin Mocha)
     m_panel = new QWidget(this);
     m_panel->setFixedSize(380, 520);
-    m_panel->setStyleSheet(
-        "QWidget { background: #1e1e2e; border-radius: 12px; border: 1px solid #444; }"
-    );
+    m_panel->setStyleSheet(R"(
+QWidget {
+    background: #1E1008;
+    border: 1px solid rgba(196,121,90,0.3);
+    border-radius: 18px;
+}
+QLabel#titleLabel {
+    color: #F5D4C2;
+    font-size: 13px;
+    font-weight: bold;
+}
+QLabel#subLabel {
+    color: rgba(245,212,194,0.45);
+    font-size: 10px;
+}
+QTextEdit {
+    background: #2C1A0E;
+    color: #F5D4C2;
+    border: 0.5px solid rgba(196,121,90,0.25);
+    border-radius: 12px;
+    padding: 10px;
+    font-size: 12px;
+    selection-background-color: #C4795A;
+}
+QLineEdit {
+    background: rgba(196,121,90,0.08);
+    border: 1px solid rgba(196,121,90,0.25);
+    border-radius: 12px;
+    color: #F5D4C2;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+QLineEdit:focus { border-color: #C4795A; }
+QPushButton#sendBtn {
+    background: #C4795A;
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 13px;
+    padding: 8px 14px;
+}
+QPushButton#sendBtn:hover { background: #A0634A; }
+QPushButton#micBtn {
+    background: rgba(196,121,90,0.12);
+    border: 1px solid rgba(196,121,90,0.25);
+    border-radius: 10px;
+    color: #C4795A;
+    font-size: 15px;
+    padding: 8px;
+}
+QPushButton#closeBtn {
+    background: rgba(196,121,90,0.15);
+    border: 0.5px solid rgba(196,121,90,0.3);
+    border-radius: 12px;
+    color: #C4795A;
+}
+QPushButton#closeBtn:hover { background: rgba(196,121,90,0.35); }
+QScrollBar:vertical {
+    background: transparent;
+    width: 3px;
+}
+QScrollBar::handle:vertical {
+    background: #C4795A;
+    border-radius: 1px;
+}
+)");
 
     QVBoxLayout *layout = new QVBoxLayout(m_panel);
     layout->setContentsMargins(10, 10, 10, 10);
     layout->setSpacing(8);
 
-    // ── En-tête : titre + bouton fermer ─────────────────────────────────────
+    // ── En-tête ──────────────────────────────────────────────────────────────
     QHBoxLayout *header = new QHBoxLayout();
-    QLabel *title = new QLabel("🤖 Assistant IA");
-    title->setStyleSheet("color: #cdd6f4; font-weight: bold; font-size: 14px; border: none;");
+
+    QLabel *logoLabel = new QLabel();
+    QPixmap logoPixmap(":/logo.png");
+    logoLabel->setPixmap(logoPixmap.scaled(28, 28, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    logoLabel->setStyleSheet("border:none; background:transparent;");
+
+    QLabel *title = new QLabel("Assistant CUIREA");
+    title->setObjectName("titleLabel");
+    title->setStyleSheet("color:#F5D4C2; font-weight:bold; font-size:13px; border:none;");
 
     m_closeBtn = new QPushButton("✕");
     m_closeBtn->setFixedSize(24, 24);
-    m_closeBtn->setStyleSheet(
-        "QPushButton { background: #f38ba8; color: white; border-radius: 12px; border: none; font-weight: bold; }"
-        "QPushButton:hover { background: #e06c75; }"
-    );
+    m_closeBtn->setObjectName("closeBtn");
     connect(m_closeBtn, &QPushButton::clicked, this, &AIChatWidget::toggleChat);
-
+    header->addWidget(logoLabel);
     header->addWidget(title);
     header->addStretch();
     header->addWidget(m_closeBtn);
     layout->addLayout(header);
 
-    // ── Zone d'affichage de la conversation ─────────────────────────────────
+    // ── Zone de conversation ─────────────────────────────────────────────────
     m_chatDisplay = new QTextEdit();
-    m_chatDisplay->setReadOnly(true); // L'utilisateur ne peut pas modifier l'historique
-    m_chatDisplay->setStyleSheet(
-        "QTextEdit { background: #181825; color: #cdd6f4; border-radius: 8px; "
-        "border: 1px solid #313244; font-size: 13px; padding: 6px; }"
-    );
+    m_chatDisplay->setReadOnly(true);
     layout->addWidget(m_chatDisplay);
 
-    // ── Label de statut (affiché pendant l'attente de la réponse) ───────────
+    // ── Statut ───────────────────────────────────────────────────────────────
     m_statusLabel = new QLabel("");
-    m_statusLabel->setStyleSheet("color: #a6adc8; font-size: 11px; border: none;");
+    m_statusLabel->setObjectName("subLabel");
     layout->addWidget(m_statusLabel);
 
-    // ── Ligne de saisie + bouton envoi ───────────────────────────────────────
+    // ── Saisie ───────────────────────────────────────────────────────────────
     QHBoxLayout *inputRow = new QHBoxLayout();
 
     m_inputField = new QLineEdit();
     m_inputField->setPlaceholderText("Posez votre question...");
-    m_inputField->setStyleSheet(
-        "QLineEdit { background: #313244; color: #cdd6f4; border-radius: 8px; "
-        "border: 1px solid #45475a; padding: 8px; font-size: 13px; }"
-        "QLineEdit:focus { border: 1px solid #89b4fa; }"
-    );
-    // Envoyer le message en appuyant sur Entrée
     connect(m_inputField, &QLineEdit::returnPressed, this, &AIChatWidget::sendMessage);
 
     m_sendBtn = new QPushButton("➤");
+    m_sendBtn->setObjectName("sendBtn");
     m_sendBtn->setFixedSize(38, 38);
-    m_sendBtn->setStyleSheet(
-        "QPushButton { background: #89b4fa; color: #1e1e2e; border-radius: 8px; "
-        "border: none; font-size: 16px; font-weight: bold; }"
-        "QPushButton:hover { background: #74c7ec; }"
-        "QPushButton:disabled { background: #45475a; }"
-    );
     connect(m_sendBtn, &QPushButton::clicked, this, &AIChatWidget::sendMessage);
 
-    // Bouton micro
     m_voiceBtn = new QPushButton("🎤");
+    m_voiceBtn->setObjectName("micBtn");
     m_voiceBtn->setFixedSize(38, 38);
     m_voiceBtn->setToolTip("Parler à l'assistant");
-    m_voiceBtn->setStyleSheet(
-        "QPushButton { background: #a6e3a1; color: #1e1e2e; border-radius: 8px; "
-        "border: none; font-size: 16px; }"
-        "QPushButton:hover { background: #94e2d5; }"
-        "QPushButton:checked { background: #f38ba8; }"
-    );
     m_voiceBtn->setCheckable(true);
     connect(m_voiceBtn, &QPushButton::clicked, this, &AIChatWidget::toggleVoice);
 
@@ -111,7 +155,6 @@ void AIChatWidget::setupUI()
     inputRow->addWidget(m_sendBtn);
     layout->addLayout(inputRow);
 
-    // Message de bienvenue affiché au démarrage
     appendMessage("assistant", "Bonjour ! Je suis votre assistant IA. Comment puis-je vous aider ?");
 }
 
@@ -127,9 +170,9 @@ void AIChatWidget::toggleChat()
 {
     m_visible = !m_visible;
     if (m_visible) {
-        // Positionner le panneau en bas à droite de la fenêtre parente
+        // Positionner juste après la sidebar (180px), ancré en bas à gauche
         if (parentWidget()) {
-            int x = parentWidget()->width() - 400;
+            int x = 190;
             int y = parentWidget()->height() - 540;
             move(x, y);
             resize(380, 520);
@@ -146,15 +189,14 @@ void AIChatWidget::toggleChat()
 // ─────────────────────────────────────────────────────────────────────────────
 void AIChatWidget::appendMessage(const QString &role, const QString &text)
 {
-    // Couleur et alignement différents selon l'émetteur
-    QString color = (role == "user") ? "#a6e3a1" : "#89b4fa"; // Vert utilisateur, bleu IA
+    QString color = (role == "user") ? "#E8A87C" : "#C4795A";
     QString align = (role == "user") ? "right"   : "left";
     QString name  = (role == "user") ? "Vous"    : "IA";
 
     m_chatDisplay->append(
-        QString("<div style='text-align:%1; margin:4px;'>"
-                "<span style='color:%2; font-weight:bold;'>%3:</span> "
-                "<span style='color:#cdd6f4;'>%4</span></div>")
+        QString("<div style='text-align:%1;margin:4px;'>"
+                "<span style='color:%2;font-weight:bold;'>%3:</span> "
+                "<span style='color:#F5D4C2;'>%4</span></div>")
         .arg(align, color, name, text.toHtmlEscaped())
     );
 

@@ -11,7 +11,7 @@ FournisseurData::FournisseurData()
 FournisseurData::FournisseurData(const QString &id, const QString &nomEntreprise, const QString &email,
                          const QString &telephone, const QString &matriculeFiscal,
                          const QString &typeProduit, const QString &conditionPaiement,
-                         const QString &statut)
+                         const QString &statut, const QString &adresse)
     : id(id)
     , nomEntreprise(nomEntreprise)
     , email(email)
@@ -20,6 +20,7 @@ FournisseurData::FournisseurData(const QString &id, const QString &nomEntreprise
     , typeProduit(typeProduit)
     , conditionPaiement(conditionPaiement)
     , statut(statut)
+    , adresse(adresse)
 {
 }
 
@@ -27,9 +28,9 @@ bool FournisseurData::ajouter()
 {
     QSqlQuery query(Connection::instance()->getDatabase());
     query.prepare("INSERT INTO FOURNISSEURS (NOM_ENTREPRISE, EMAIL, TELEPHONE, "
-                  "MATRICULE_FISCAL, TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT) "
+                  "MATRICULE_FISCAL, TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT, ADRESSE) "
                   "VALUES (:nomEntreprise, :email, :telephone, :matriculeFiscal, "
-                  ":typeProduit, :conditionPaiement, :statut)");
+                  ":typeProduit, :conditionPaiement, :statut, :adresse)");
 
     query.bindValue(":nomEntreprise", nomEntreprise);
     query.bindValue(":email", email);
@@ -38,6 +39,7 @@ bool FournisseurData::ajouter()
     query.bindValue(":typeProduit", typeProduit);
     query.bindValue(":conditionPaiement", conditionPaiement);
     query.bindValue(":statut", statut);
+    query.bindValue(":adresse", adresse);
 
     if (!query.exec()) {
         qDebug() << "❌ Erreur ajout fournisseur:" << query.lastError().text();
@@ -55,7 +57,7 @@ bool FournisseurData::modifier()
                   "NOM_ENTREPRISE = :nomEntreprise, EMAIL = :email, "
                   "TELEPHONE = :telephone, MATRICULE_FISCAL = :matriculeFiscal, "
                   "TYPE_PRODUIT = :typeProduit, CONDITION_PAIEMENT = :conditionPaiement, "
-                  "STATUT = :statut "
+                  "STATUT = :statut, ADRESSE = :adresse "
                   "WHERE ID_FOURNISSEUR = :id");
     
     query.bindValue(":id", id);
@@ -66,6 +68,7 @@ bool FournisseurData::modifier()
     query.bindValue(":typeProduit", typeProduit);
     query.bindValue(":conditionPaiement", conditionPaiement);
     query.bindValue(":statut", statut);
+    query.bindValue(":adresse", adresse);
     
     if (!query.exec()) {
         qDebug() << "❌ Erreur modification fournisseur:" << query.lastError().text();
@@ -95,15 +98,15 @@ QSqlQueryModel* FournisseurData::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     model->setQuery("SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
-                    "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT "
-                    "FROM FOURNISSEURS ORDER BY NOM_ENTREPRISE", 
+                    "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT, ADRESSE "
+                    "FROM FOURNISSEURS ORDER BY NOM_ENTREPRISE",
                     Connection::instance()->getDatabase());
-    
+
     if (model->lastError().isValid()) {
         delete model;
         return nullptr;
     }
-    
+
     model->setHeaderData(0, Qt::Horizontal, "ID");
     model->setHeaderData(1, Qt::Horizontal, "Nom Entreprise");
     model->setHeaderData(2, Qt::Horizontal, "Email");
@@ -112,6 +115,7 @@ QSqlQueryModel* FournisseurData::afficher()
     model->setHeaderData(5, Qt::Horizontal, "Type Produit");
     model->setHeaderData(6, Qt::Horizontal, "Condition Paiement");
     model->setHeaderData(7, Qt::Horizontal, "Statut");
+    model->setHeaderData(8, Qt::Horizontal, "Adresse");
     
     return model;
 }

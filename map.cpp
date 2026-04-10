@@ -1,4 +1,4 @@
-﻿#include "map.h"
+#include "map.h"
 #include <QNetworkRequest>
 #include <QUrl>
 #include <QUrlQuery>

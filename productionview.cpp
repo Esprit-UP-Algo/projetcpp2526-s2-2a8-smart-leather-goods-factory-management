@@ -1,5 +1,6 @@
 #include "productionview.h"
 #include "connection.h"
+#include "notification.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -235,7 +236,11 @@ void ProductionDialog::onSaveClicked()
 
     if (!valid) return;
 
-    QMessageBox::information(this,"Succès", m_mode==AddMode ? "Commande créée avec succès !" : "Commande mise à jour avec succès !");
+    NotificationWidget::show(
+        m_mode == AddMode ? "Commande créée" : "Commande mise à jour",
+        txtReference->text() + " — " + (m_mode == AddMode ? "enregistrée avec succès." : "modifiée avec succès."),
+        NotificationWidget::Success
+    );
     accept();
 }
 
@@ -243,7 +248,11 @@ void ProductionDialog::onDeleteConfirmed()
 {
     if (QMessageBox::question(this,"Confirmation","Êtes-vous sûr de vouloir supprimer cette commande ?",
             QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes) {
-        QMessageBox::information(this,"Supprimé","Commande supprimée avec succès.");
+        NotificationWidget::show(
+            "Commande supprimée",
+            txtReference->text() + " — supprimée définitivement.",
+            NotificationWidget::Warning
+        );
         accept();
     }
 }
@@ -1115,20 +1124,12 @@ void ProductionView::onPlanificationClicked()
         
         // Mettre à jour le modèle en mémoire (pas de persistance DB ici)
         m_model->updateCommande(sourceIndex.row(), cmd);
-        
-        QMessageBox msgBox(&dlg);
-        msgBox.setWindowTitle("Succès");
-        msgBox.setText("✅ Planification mise à jour avec succès!");
-        msgBox.setIcon(QMessageBox::Information);
-        msgBox.setStyleSheet(
-            "QMessageBox { background-color: white; }"
-            "QLabel { color: #212121; font-size: 14px; padding: 10px; }"
-            "QPushButton { "
-            "background-color: #4CAF50; color: white; border: none; "
-            "border-radius: 6px; padding: 8px 20px; font-weight: bold; "
-            "}"
+
+        NotificationWidget::show(
+            "Planification mise à jour",
+            cmd.reference + " — dates et atelier enregistrés.",
+            NotificationWidget::Success
         );
-        msgBox.exec();
         dlg.accept();
     });
     
@@ -1210,42 +1211,45 @@ void ProductionView::verifierAlertes()
 
 void ProductionView::afficherNotification(const ProductionCommande &commande)
 {
-    qDebug() << "ProductionView::afficherNotification() - Affichage notification pour" << commande.reference;
-    
-    QString message = commande.genererMessageNotification();
-    
-    QMessageBox msgBox(this);
-    
-    // Style et icône différents selon le niveau d'alerte (rouge = retard, orange = risque)
+    qDebug() << "ProductionView::afficherNotification() -" << commande.reference;
+
+    // ── Utiliser le pipeline IA si disponible ────────────────────────────────
+    if (m_pipeline) {
+        QMap<QString, QString> ctx;
+        ctx["commande"]      = commande.reference;
+        ctx["produit"]       = commande.type;
+        ctx["montant"]       = QString::number(commande.montant, 'f', 2) + " DT";
+        ctx["priorite"]      = commande.priorite;
+        ctx["avancement"]    = commande.getAvancementText();
+        ctx["etat"]          = commande.etatProduction;
+
+        if (commande.alerteRetard == ProductionCommande::Retard) {
+            ctx["statut"]       = "retard livraison";
+            ctx["jours_retard"] = QString::number(commande.getJoursRetard());
+        } else {
+            ctx["statut"]       = "risque de retard";
+            ctx["jours_restants"] = QString::number(
+                QDate::currentDate().daysTo(commande.dateLivraisonPrevue));
+        }
+        m_pipeline->triggerFromApp(ctx);
+        return;
+    }
+
+    // ── Fallback : toast direct sans IA ─────────────────────────────────────
     if (commande.alerteRetard == ProductionCommande::Retard) {
-        msgBox.setWindowTitle("⚠ ALERTE RETARD");
-        msgBox.setIcon(QMessageBox::Critical);
-        msgBox.setStyleSheet(
-            "QMessageBox { background-color: white; }"
-            "QLabel { color: #D32F2F; font-size: 14px; padding: 15px; font-weight: bold; }"
-            "QPushButton { "
-            "background-color: #D32F2F; color: white; border: none; "
-            "border-radius: 6px; padding: 10px 25px; font-weight: bold; "
-            "}"
-            "QPushButton:hover { background-color: #F44336; }"
+        NotificationWidget::show(
+            "Retard livraison",
+            commande.reference + " — " + QString::number(commande.getJoursRetard()) + " jour(s) de retard.",
+            NotificationWidget::Critical,
+            "Voir", [this, commande]{ Q_UNUSED(commande) loadData(); }
         );
-    } else if (commande.alerteRetard == ProductionCommande::Risque) {
-        msgBox.setWindowTitle("⚡ ALERTE RISQUE");
-        msgBox.setIcon(QMessageBox::Warning);
-        msgBox.setStyleSheet(
-            "QMessageBox { background-color: white; }"
-            "QLabel { color: #F57C00; font-size: 14px; padding: 15px; font-weight: bold; }"
-            "QPushButton { "
-            "background-color: #FF9800; color: white; border: none; "
-            "border-radius: 6px; padding: 10px 25px; font-weight: bold; "
-            "}"
-            "QPushButton:hover { background-color: #FB8C00; }"
+    } else {
+        NotificationWidget::show(
+            "Risque de retard",
+            commande.reference + " — avancement " + commande.getAvancementText() + ", livraison proche.",
+            NotificationWidget::Warning
         );
     }
-    
-    msgBox.setText(message);
-    msgBox.setStandardButtons(QMessageBox::Ok);
-    msgBox.exec();
 }
 
 void ProductionView::recalculerToutesLesAlertes()

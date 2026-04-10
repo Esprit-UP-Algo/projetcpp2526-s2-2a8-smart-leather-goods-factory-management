@@ -1,4 +1,4 @@
-﻿#include "statscharts.h"
+#include "statscharts.h"
 #include <QtCharts>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -75,7 +75,7 @@ QWidget* StatsCharts::createStatsWindow(const QMap<QString,int>& stats,
 
     QChart *barChart = new QChart();
     barChart->addSeries(barSeries);
-    barChart->setTitle("D├®tails de la r├®gion");
+    barChart->setTitle("Détails de la région");
 
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
     axisX->append(QStringList() << "Hover");
@@ -114,7 +114,7 @@ QWidget* StatsCharts::createStatsWindow(const QMap<QString,int>& stats,
             {
                 int value = slice->value();
 
-                // Ô£à Update BAR visually
+                // ✅ Update BAR visually
                 set->remove(0, set->count());
                 *set << value;
 

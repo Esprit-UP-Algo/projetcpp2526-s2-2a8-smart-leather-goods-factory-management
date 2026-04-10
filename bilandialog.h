@@ -47,6 +47,9 @@ private:
     QLabel *m_lblCommandes   = nullptr;
     QLabel *m_lblDate        = nullptr;
 
+    QNetworkAccessManager *m_networkManager = nullptr;
+    double  m_totalCA = 0.0;
+
     // Stockés comme QWidget* — castés en QChartView* dans le .cpp
     QWidget *m_pieView        = nullptr;
     QWidget *m_barView        = nullptr;
