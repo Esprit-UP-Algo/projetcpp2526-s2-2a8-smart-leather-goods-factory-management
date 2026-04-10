@@ -1,6 +1,6 @@
 ﻿#include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "notificationwidget.h"
+#include "notification.h"
 #include "bilandialog.h"
 #include "statscharts.h"
 #include <QStatusBar>
@@ -2549,8 +2549,7 @@ void MainWindow::checkRetards()
                             .arg(jours)
                             .arg(statut);
 
-        auto *notif = new NotificationWidget(titre, msg, ntype);
-        notif->show();
+        NotificationWidget::show(titre, msg, ntype);
     }
 }
 
