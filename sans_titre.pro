@@ -37,7 +37,10 @@ SOURCES += \
     article.cpp \
     articledialog.cpp \
     logindialog.cpp \
-    notificationwidget.cpp
+    fichepaie.cpp \
+    statsrh.cpp \
+    usersession.cpp \
+    notification.cpp
 
 HEADERS += \
     aichatwidget.h \
@@ -66,7 +69,10 @@ HEADERS += \
     article.h \
     articledialog.h \
     logindialog.h \
-    notificationwidget.h
+    fichepaie.h \
+    statsrh.h \
+    usersession.h \
+    notification.h
 
 FORMS += \
     mainwindow.ui

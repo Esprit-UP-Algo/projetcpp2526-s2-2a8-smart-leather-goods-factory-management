@@ -58,8 +58,6 @@ private:
     QWidget *m_regionView     = nullptr;
 
     QComboBox    *m_comboPeriod = nullptr;
-    double        m_totalCA    = 0.0;
-    QNetworkAccessManager *m_networkManager = nullptr;
 
     QGroupBox *makeKpiBox(const QString &title, QLabel *&valLabel, bool highlight = false, bool withCurrency = false);
     QWidget   *makePieChart();
