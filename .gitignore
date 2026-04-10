@@ -1,0 +1,21 @@
+# Clé API et secrets
+.env
+
+# Build Qt
+build/
+*.o
+*.obj
+Makefile
+Makefile.Debug
+Makefile.Release
+*.pro.user
+*.pro.user.*
+
+# Binaires
+*.exe
+*.dll
+debug/
+release/
+
+# Qt Creator
+*.autosave
