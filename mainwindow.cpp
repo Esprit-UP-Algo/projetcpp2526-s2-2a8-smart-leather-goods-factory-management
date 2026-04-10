@@ -189,8 +189,6 @@ MainWindow::MainWindow(QWidget *parent)
     ui->employeeProfilePanel->setVisible(false);
 
     // ── Clients ─────────────────────────────────────────────────────────────
-    connect(ui->sendEmailButton, &QPushButton::clicked,
-            this, &MainWindow::onSendEmailButtonClicked);
 
     // ── Raw materials ───────────────────────────────────────────────────────
     ui->matiereTable->verticalHeader()->setVisible(false);
@@ -265,12 +263,24 @@ MainWindow::MainWindow(QWidget *parent)
     ui->btnEmployees->setStyleSheet(NAV_ACTIVE_STYLE);
     
     // Forcer le plein écran au démarrage
+    // ── AI floating button ───────────────────────────────────────────────────
+    m_aiWidget = new AIChatWidget(this);
+    m_aiWidget->setContext("Gestion des Employés");
+
+    m_floatingBtn = new FloatingAIButton(this);
+    connect(m_floatingBtn, &FloatingAIButton::clicked, this, [this]() {
+        m_aiWidget->toggleChat();
+    });
+
+    // Forcer le plein écran au démarrage
     showMaximized();
 
-    // ── AI floating button ───────────────────────────────────────────────────
-    m_aiWidget = new AIChatWidget(ui->mainContent);
-    m_aiWidget->setContext("Gestion des Employés");
-    connect(ui->btnAIChat, &QPushButton::clicked, this, [this](){ m_aiWidget->toggleChat(); });
+    // Positionner le bouton flottant après que la fenêtre soit visible
+    QTimer::singleShot(100, this, [this]() {
+        m_floatingBtn->move(190, height() - 84);
+        m_floatingBtn->show();
+        m_floatingBtn->raise();
+    });
 }
 
 MainWindow::~MainWindow() 
@@ -366,8 +376,6 @@ void MainWindow::on_btnProduction_clicked()
     m_notifiedIds.clear();
     QTimer::singleShot(3000, this, &MainWindow::checkRetards);
 }
-
-void MainWindow::on_btnAIChat_clicked() { /* géré via connect dans le constructeur */ }
 
 // ── Employee CRUD ─────────────────────────────────────────────────────────────
 void MainWindow::on_btnAdd_clicked()

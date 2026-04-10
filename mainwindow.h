@@ -94,7 +94,6 @@ private slots:
     void on_btnRawMaterials_clicked();
     void on_btnSuppliers_clicked();
     void on_btnProduction_clicked();
-    void on_btnAIChat_clicked();
 
     // Employee table
     void onEmployeeSelected();
