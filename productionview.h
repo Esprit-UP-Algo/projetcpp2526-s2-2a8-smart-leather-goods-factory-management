@@ -294,9 +294,9 @@ private:
 
     /**
      * @brief Ensemble des clés d'alertes déjà notifiées.
-     * Clé = idCommande * 10 + type_alerte — évite les notifications en double.
+     * Clé = "idCommande_typeAlerte" — évite les notifications en double et l'overflow.
      */
-    QSet<int> m_alertesNotifiees;
+    QSet<QString> m_alertesNotifiees;
 
     /** @brief Pipeline IA pour les toasts intelligents (optionnel). */
     NotificationPipeline *m_pipeline = nullptr;

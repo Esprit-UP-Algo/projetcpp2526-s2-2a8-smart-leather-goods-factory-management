@@ -15,6 +15,7 @@
 #include <QPainter>
 #include <QMap>
 #include <QDebug>
+#include <QRegularExpression>
 #include <algorithm>
 
 #include <QtCharts/QChart>
@@ -411,6 +412,11 @@ void BilanDialog::loadData()
 void BilanDialog::onPeriodChanged()
 {
     QString filtre = m_comboPeriod->currentText();
+    // Valider le format YYYY-MM pour éviter toute injection
+    static QRegularExpression reMois("^\\d{4}-\\d{2}$");
+    if (filtre != "Tous" && !reMois.match(filtre).hasMatch())
+        filtre = "Tous";
+
     QString where  = (filtre == "Tous") ? "" :
                      QString(" WHERE TO_CHAR(date_creation,'YYYY-MM') = '%1'").arg(filtre);
     QSqlQuery q;
