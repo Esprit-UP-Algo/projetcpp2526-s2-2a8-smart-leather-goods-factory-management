@@ -16,7 +16,7 @@ bool Mail::sendEmail(const QString &recipient, const QString &subject, const QSt
 {
     QNetworkRequest request(QUrl("https://api.brevo.com/v3/smtp/email"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("api-key", "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"); // remplacer par votre clé
+    request.setRawHeader("api-key", ""); // remplacer par votre clé
 
     QJsonObject senderObj;
     senderObj["email"] = "aporiaaaaa1@gmail.com"; // email vérifié dans Brevo
