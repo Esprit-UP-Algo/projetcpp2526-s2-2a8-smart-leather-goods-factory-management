@@ -440,12 +440,256 @@ QString MatiereDetection::translateDefectClass(const QString &englishName)
     return translations.value(englishName, englishName);
 }
 
+bool MatiereDetection::isCuirMaterial(const QJsonObject &results)
+{
+    QJsonArray allPredictions = results["all_predictions"].toArray();
+    QJsonObject prediction = results["prediction"].toObject();
+    QString className = prediction["class_name"].toString().toLower();
+    double confidence = prediction["confidence_percent"].toDouble();
+    
+    qDebug() << "=== ANALYSE CUIR ===";
+    qDebug() << "Classe principale:" << className;
+    qDebug() << "Confiance:" << confidence << "%";
+    
+    // Si c'est "non defective" avec une confiance raisonnable, c'est du cuir
+    if (className == "non defective" && confidence > 30.0) {
+        qDebug() << "✓ Cuir non défectueux détecté";
+        return true; // C'EST DU CUIR
+    }
+    
+    // Liste des défauts connus du cuir
+    QStringList defectClasses = {"folding marks", "grain off", "growth marks", 
+                                "loose grains", "pinhole"};
+    
+    // Si c'est un défaut de cuir avec une confiance élevée
+    if (defectClasses.contains(className) && confidence > 50.0) {
+        
+        // CAS SPÉCIAL: "Folding marks" à très haute confiance (>95%) avec toutes autres à 0%
+        // Peut être un document/tableau
+        if (className == "folding marks" && confidence >= 95.0) {
+            int nonZeroPredictions = 0;
+            for (int i = 0; i < allPredictions.size(); ++i) {
+                QJsonObject predObj = allPredictions[i].toObject();
+                double conf = predObj["confidence_percent"].toDouble();
+                if (conf > 0.5) nonZeroPredictions++;
+            }
+            
+            if (nonZeroPredictions == 1) {
+                qDebug() << "⚠ Pattern suspect: Folding marks isolé à" << confidence << "% - probablement document";
+                return false; // NON CUIR
+            }
+        }
+        
+        qDebug() << "✓ Défaut de cuir détecté:" << className;
+        return true; // C'EST DU CUIR
+    }
+    
+    // Analyser la distribution générale
+    int nonZeroPredictions = 0;
+    double totalConfidence = 0.0;
+    double maxOtherConfidence = 0.0;
+    
+    for (int i = 0; i < allPredictions.size(); ++i) {
+        QJsonObject predObj = allPredictions[i].toObject();
+        QString predClass = predObj["class_name"].toString().toLower();
+        double conf = predObj["confidence_percent"].toDouble();
+        totalConfidence += conf;
+        
+        if (conf > 0.1) {
+            nonZeroPredictions++;
+        }
+        
+        if (predClass != className && conf > maxOtherConfidence) {
+            maxOtherConfidence = conf;
+        }
+    }
+    
+    qDebug() << "Prédictions non-nulles:" << nonZeroPredictions;
+    qDebug() << "Confiance totale:" << totalConfidence;
+    qDebug() << "Max autre confiance:" << maxOtherConfidence;
+    
+    // Cas très suspects (probablement pas du cuir)
+    if (confidence < 5.0 && totalConfidence < 15.0) {
+        qDebug() << "✗ Toutes les confiances sont très faibles";
+        return false; // NON CUIR
+    }
+    
+    if (confidence < 10.0 && nonZeroPredictions > 4 && maxOtherConfidence > confidence * 0.8) {
+        qDebug() << "✗ Confiances dispersées et incertaines";
+        return false; // NON CUIR
+    }
+    
+    // Par défaut, si on arrive ici avec une confiance raisonnable, c'est du cuir
+    if (confidence >= 15.0) {
+        qDebug() << "✓ Considéré comme cuir (confiance suffisante)";
+        return true; // C'EST DU CUIR
+    }
+    
+    qDebug() << "✗ Confiance trop faible:" << confidence << "%";
+    return false; // NON CUIR
+}
+
+void MatiereDetection::showNonCuirResult(const QString &materialType)
+{
+    // Créer le dialogue pour "NON CUIR"
+    QDialog *resultDialog = new QDialog(mainWindow);
+    resultDialog->setWindowTitle("Résultats de Détection");
+    resultDialog->setModal(true);
+    resultDialog->setFixedSize(520, 450);
+    resultDialog->setStyleSheet(
+        "QDialog { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #FAFAFA, stop:1 #F0EBE6); }"
+    );
+    
+    QVBoxLayout *mainLayout = new QVBoxLayout(resultDialog);
+    mainLayout->setSpacing(0);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    
+    // === HEADER avec gradient BLEU (pour NON CUIR) ===
+    QFrame *headerFrame = new QFrame(resultDialog);
+    headerFrame->setFixedHeight(180);
+    headerFrame->setStyleSheet(
+        "QFrame { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #2196F3, stop:1 #42A5F5); "
+        "border-top-left-radius: 0px; border-top-right-radius: 0px; }"
+    );
+    
+    QVBoxLayout *headerLayout = new QVBoxLayout(headerFrame);
+    headerLayout->setAlignment(Qt::AlignCenter);
+    headerLayout->setSpacing(8);
+    
+    // Icône circulaire
+    QLabel *iconCircle = new QLabel("ℹ", headerFrame);
+    iconCircle->setFixedSize(70, 70);
+    iconCircle->setAlignment(Qt::AlignCenter);
+    iconCircle->setStyleSheet(
+        "QLabel { background: rgba(255,255,255,0.25); color: white; font-size: 36px; "
+        "font-weight: bold; border-radius: 35px; }"
+    );
+    headerLayout->addWidget(iconCircle, 0, Qt::AlignCenter);
+    
+    // Texte de statut
+    QLabel *statusLabel = new QLabel("MATÉRIAU NON CUIR", headerFrame);
+    statusLabel->setAlignment(Qt::AlignCenter);
+    statusLabel->setStyleSheet(
+        "QLabel { color: white; font-size: 20px; font-weight: bold; letter-spacing: 2px; }"
+    );
+    headerLayout->addWidget(statusLabel);
+    
+    // Type de matériau détecté
+    QLabel *materialLabel = new QLabel("Matériau non identifié", headerFrame);
+    materialLabel->setAlignment(Qt::AlignCenter);
+    materialLabel->setStyleSheet(
+        "QLabel { color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 500; }"
+    );
+    headerLayout->addWidget(materialLabel);
+    
+    mainLayout->addWidget(headerFrame);
+    
+    // === CONTENU ===
+    QWidget *contentWidget = new QWidget(resultDialog);
+    QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
+    contentLayout->setSpacing(20);
+    contentLayout->setContentsMargins(25, 25, 25, 20);
+    
+    // Message d'information
+    QFrame *infoCard = new QFrame(contentWidget);
+    infoCard->setStyleSheet(
+        "QFrame { background: white; border-radius: 12px; border: 2px solid #E3F2FD; }"
+    );
+    QVBoxLayout *infoLayout = new QVBoxLayout(infoCard);
+    infoLayout->setContentsMargins(20, 15, 20, 15);
+    
+    QLabel *infoTitle = new QLabel("🔍 Analyse du Matériau", infoCard);
+    infoTitle->setStyleSheet("QLabel { color: #1976D2; font-size: 14px; font-weight: bold; }");
+    infoLayout->addWidget(infoTitle);
+    
+    QLabel *infoText = new QLabel(
+        "L'image analysée ne correspond pas à du cuir.\n\n"
+        "• Vérifiez que l'image contient bien du cuir\n"
+        "• Assurez-vous que l'éclairage est suffisant\n"
+        "• Évitez les reflets ou ombres importantes\n"
+        "• Utilisez une image de bonne qualité", infoCard);
+    infoText->setStyleSheet("QLabel { color: #424242; font-size: 12px; line-height: 1.4; }");
+    infoText->setWordWrap(true);
+    infoLayout->addWidget(infoText);
+    
+    contentLayout->addWidget(infoCard);
+    
+    // Recommandations
+    QFrame *recommendCard = new QFrame(contentWidget);
+    recommendCard->setStyleSheet(
+        "QFrame { background: #FFF3E0; border-radius: 12px; border: 2px solid #FFB74D; }"
+    );
+    QVBoxLayout *recommendLayout = new QVBoxLayout(recommendCard);
+    recommendLayout->setContentsMargins(20, 15, 20, 15);
+    
+    QLabel *recommendTitle = new QLabel("💡 Recommandations", recommendCard);
+    recommendTitle->setStyleSheet("QLabel { color: #F57C00; font-size: 14px; font-weight: bold; }");
+    recommendLayout->addWidget(recommendTitle);
+    
+    QLabel *recommendText = new QLabel(
+        "Pour une détection optimale :\n"
+        "• Utilisez des échantillons de cuir uniquement\n"
+        "• Photographiez sur fond neutre\n"
+        "• Maintenez une distance appropriée", recommendCard);
+    recommendText->setStyleSheet("QLabel { color: #E65100; font-size: 12px; }");
+    recommendText->setWordWrap(true);
+    recommendLayout->addWidget(recommendText);
+    
+    contentLayout->addWidget(recommendCard);
+    contentLayout->addStretch();
+    
+    // Boutons
+    QHBoxLayout *btnLayout = new QHBoxLayout();
+    
+    QPushButton *retryBtn = new QPushButton("🔄 Réessayer", contentWidget);
+    retryBtn->setFixedSize(140, 44);
+    retryBtn->setCursor(Qt::PointingHandCursor);
+    retryBtn->setStyleSheet(
+        "QPushButton { background: #2196F3; color: white; border: none; border-radius: 22px; "
+        "font-size: 14px; font-weight: bold; }"
+        "QPushButton:hover { background: #42A5F5; }"
+        "QPushButton:pressed { background: #1976D2; }"
+    );
+    connect(retryBtn, &QPushButton::clicked, [this, resultDialog]() {
+        resultDialog->accept();
+        startDetection(); // Relancer la détection
+    });
+    
+    QPushButton *closeBtn = new QPushButton("Fermer", contentWidget);
+    closeBtn->setFixedSize(140, 44);
+    closeBtn->setCursor(Qt::PointingHandCursor);
+    closeBtn->setStyleSheet(
+        "QPushButton { background: #BDBDBD; color: white; border: none; border-radius: 22px; "
+        "font-size: 14px; font-weight: bold; }"
+        "QPushButton:hover { background: #9E9E9E; }"
+        "QPushButton:pressed { background: #757575; }"
+    );
+    connect(closeBtn, &QPushButton::clicked, resultDialog, &QDialog::accept);
+    
+    btnLayout->addStretch();
+    btnLayout->addWidget(retryBtn);
+    btnLayout->addWidget(closeBtn);
+    btnLayout->addStretch();
+    contentLayout->addLayout(btnLayout);
+    
+    mainLayout->addWidget(contentWidget);
+    
+    resultDialog->exec();
+    resultDialog->deleteLater();
+}
+
 void MatiereDetection::showDetectionResults(const QJsonObject &results)
 {
     // Vérifier que les champs nécessaires existent
     if (!results.contains("prediction") || !results.contains("all_predictions")) {
         QMessageBox::critical(mainWindow, "Erreur", 
             "Format de réponse invalide: champs manquants");
+        return;
+    }
+    
+    // NOUVELLE LOGIQUE: Vérifier d'abord si c'est du cuir
+    if (!isCuirMaterial(results)) {
+        showNonCuirResult("Matériau non identifié comme cuir");
         return;
     }
     
