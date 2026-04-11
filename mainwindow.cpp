@@ -3497,22 +3497,94 @@ td{padding:9px 12px;font-size:12px;border-bottom:1px solid #E8D5C0;}
             QMessageBox::information(&dlg, "Succès", "Facture exportée :\n" + fn);
         }
     });
+    //fonction mail client
     connect(email, &QPushButton::clicked, [&] {
+
         if (mailClient.isEmpty()) {
-            QMessageBox::warning(&dlg, "Email manquant", "❌ Aucun email client associé à cette commande.");
+            QMessageBox::warning(&dlg, "Email manquant",
+                                 "❌ Aucun email client associé à cette commande.");
             return;
         }
+
         Mail mailer;
-        QString subject = "Confirmation de votre commande";
-        QString body = "<p>Merci pour votre commande !</p>";
+
+        // ── SUBJECT ─────────────────────────────────────────────
+        QString subject = "Facture CUIREA - Commande #" + ref;
+
+        // ── BODY HTML ───────────────────────────────────────────
+        QString body =
+            "<html>"
+            "<body style='font-family:Arial; background:#f9f9f9; padding:20px;'>"
+
+            "<h2 style='color:#6B2737;'>FACTURE CUIREA</h2>"
+
+            "<p><b>Référence :</b> " + ref + "</p>"
+            "<p><b>Employé :</b> " + employe + "</p>"
+
+            "<hr>"
+
+            "<h3>Client</h3>"
+            "<p>" + (mailClient.isEmpty() ? "Client interne" : mailClient) + "</p>"
+
+            "<h3>Détails de la commande</h3>"
+
+            "<table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse; width:100%;'>"
+            "<tr style='background:#6B2737;color:white;'>"
+            "<th>Description</th>"
+            "<th>Prix HT</th>"
+            "<th>Quantité</th>"
+            "<th>Total</th>"
+            "</tr>"
+
+            "<tr>"
+            "<td>" + type + " — Réf " + ref + "</td>"
+            "<td>" + QString::number(ht,'f',2) + " DT</td>"
+            "<td>1</td>"
+            "<td>" + QString::number(ht,'f',2) + " DT</td>"
+            "</tr>"
+            "</table>"
+
+            "<h3>Totaux</h3>"
+            "<p>✔ Sous-total HT : " + QString::number(ht,'f',2) + " DT</p>"
+            "<p>✔ TVA (19%) : " + QString::number(tva,'f',2) + " DT</p>"
+            "<p>✔ Remise (5%) : -" + QString::number(remise,'f',2) + " DT</p>"
+
+            "<h2 style='color:#2c3e50;'>Total TTC : " + QString::number(ttc,'f',2) + " DT</h2>"
+
+            "<hr>"
+
+            "<p><b>Date création :</b> " + dc + "</p>"
+            "<p><b>Date livraison :</b> " + dl + "</p>"
+            "<p><b>Statut :</b> " + statut + "</p>"
+            "<p><b>Priorité :</b> " + priorite + "</p>"
+
+            "<hr>"
+
+            "<footer style='font-size:12px;color:gray;text-align:center;'>"
+            "<b>CUIREA</b><br>"
+            "Smart Leather Goods Factory<br>"
+            "Zone Industrielle, Tunis, Tunisie<br>"
+            "contact@cuirea.tn | +216 71 000 000"
+            "</footer>"
+
+            "</body>"
+            "</html>";
+
+        // ── SEND EMAIL ──────────────────────────────────────────
         bool ok = mailer.sendEmail(mailClient, subject, body);
+
         if (ok)
-            QMessageBox::information(&dlg, "Email envoyé", "✅ Email envoyé à " + mailClient);
+            QMessageBox::information(&dlg, "Email envoyé",
+                                     "✅ Email envoyé à " + mailClient);
         else
-            QMessageBox::critical(&dlg, "Erreur", "❌ Échec de l'envoi à " + mailClient);
-    });
+            QMessageBox::critical(&dlg, "Erreur",
+                                  "❌ Échec de l'envoi à " + mailClient);
+
+    }); // 👈 FIN DU connect PROPREMENT
+
+    dlg.exec(); // si ton dialog doit rester bloquant
     connect(close, &QPushButton::clicked, &dlg, &QDialog::accept);
-    dlg.exec();
+
 }
 
 void MainWindow::onExcelProduction()
