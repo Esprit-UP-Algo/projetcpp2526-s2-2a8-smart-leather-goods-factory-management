@@ -91,6 +91,12 @@ bool Employe::modifier()
     if (!result) {
         qDebug() << "Erreur SQL:" << query.lastError().text();
     } else {
+        qDebug() << "Rows affected:" << query.numRowsAffected();
+        if (query.numRowsAffected() == 0) {
+            qDebug() << "ATTENTION: Aucune ligne modifiée! ID=" << id;
+            return false;
+        }
+        Connection::instance()->getDatabase().commit();
         qDebug() << "Modification réussie!";
     }
     

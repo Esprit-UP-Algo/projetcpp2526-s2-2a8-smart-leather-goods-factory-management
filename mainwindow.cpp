@@ -790,7 +790,7 @@ void MainWindow::populateEmployeeTable()
     QSet<QString> depts;
     
     for (int i = 0; i < n; ++i) {
-        for (int col = 0; col < 15; ++col) {
+        for (int col = 0; col < 14; ++col) {
             QString value = model->data(model->index(i, col)).toString();
             ui->employeeTable->setItem(i, col, new QTableWidgetItem(value));
         }
@@ -3007,6 +3007,8 @@ void MainWindow::onModifierProduction()
     QFormLayout form;
     
     QLineEdit refE(cellText(ui->productionTable, row, 1), &d);
+    refE.setReadOnly(true);
+    refE.setStyleSheet("background-color: #F0EBE5; color: #888; border: 2px solid #BCAAA4; border-radius:6px; padding:8px;");
     
     // Remplacer LineEdit par ComboBox pour l'employé
     QComboBox employeC(&d);
@@ -3451,39 +3453,171 @@ void MainWindow::onFactureProduction()
     btns->addStretch(); btns->addWidget(pdf); btns->addWidget(email); btns->addWidget(close);
     root->addLayout(btns);
 
-    // HTML pour export PDF
+    // HTML pour export PDF — fidèle au design Qt affiché
     QString htmlPdf = QString(R"(
-<html><head><style>
-body{font-family:Arial;color:#3E1020;margin:0;padding:30px;background:#FBF5F0;}
-table{width:100%%;border-collapse:collapse;}
-th{background:#6B2737;color:white;padding:9px 12px;font-size:12px;text-align:left;}
-td{padding:9px 12px;font-size:12px;border-bottom:1px solid #E8D5C0;}
-.ttc{background:#6B2737;color:white;font-weight:bold;}
-.footer{color:#888;font-size:10px;text-align:center;margin-top:20px;}
+<html><head><meta charset='UTF-8'><style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; background: #FBF5F0; color: #3E1020; padding: 36px; }
+
+  /* EN-TÊTE */
+  .header { display:table; width:100%%; margin-bottom:18px; }
+  .header-left  { display:table-cell; vertical-align:top; }
+  .header-right { display:table-cell; vertical-align:top; text-align:right; }
+  .logo  { font-size:30px; font-weight:bold; color:#C4923A; letter-spacing:3px; }
+  .sub   { font-size:11px; color:#888; margin-top:4px; }
+  .facture-title { font-size:34px; font-weight:bold; color:#6B2737; letter-spacing:4px; }
+  .facture-num   { font-size:13px; color:#555; margin-top:6px; }
+  .facture-date  { font-size:12px; color:#888; margin-top:3px; }
+
+  hr.sep { border:none; border-top:1px solid #E0E0E0; margin:16px 0; }
+
+  /* INFOS BOXES */
+  .info-row { display:table; width:100%%; margin-bottom:20px; }
+  .info-box { display:table-cell; width:48%%; background:#FBF5F0;
+              border-left:3px solid #C4923A; border-radius:8px;
+              padding:12px 14px; font-size:12px; color:#333; vertical-align:top; }
+  .info-box + .info-box { padding-left:20px; }
+  .info-spacer { display:table-cell; width:4%%; }
+  .info-title { font-size:10px; font-weight:bold; color:#6B2737;
+                text-transform:uppercase; letter-spacing:1px; margin-bottom:6px; }
+  .info-sep { border:none; border-top:1px solid #C4923A; margin:5px 0 8px 0; }
+
+  /* SECTION TITRE */
+  .section-title { font-size:11px; font-weight:bold; color:#6B2737;
+                   text-transform:uppercase; letter-spacing:1px; margin-bottom:8px; }
+
+  /* TABLEAU ARTICLES */
+  table.items { width:100%%; border-collapse:collapse; border:1px solid #E8D5C0;
+                border-radius:6px; margin-bottom:20px; }
+  table.items th { background:#6B2737; color:white; font-size:12px; font-weight:bold;
+                   padding:10px 12px; text-align:left; }
+  table.items td { padding:10px 12px; font-size:12px; border-bottom:1px solid #E8D5C0; color:#333; }
+  table.items tr:last-child td { border-bottom:none; }
+
+  /* TOTAUX */
+  .totals-wrap { text-align:right; margin-bottom:20px; }
+  table.totals { display:inline-table; width:300px; background:#FBF5F0;
+                 border-radius:8px; padding:14px 16px; }
+  table.totals td { font-size:12px; color:#555; padding:4px 0; }
+  table.totals td.val { text-align:right; }
+  hr.tot-sep { border:none; border-top:1px solid #C4923A; margin:8px 0; }
+  .ttc-row { background:#6B2737; border-radius:6px; }
+  .ttc-row td { color:white; font-weight:bold; font-size:14px; padding:10px 12px; }
+
+  /* NOTE */
+  .note-box { background:#FBF5F0; border-left:4px solid #C4923A;
+              border-radius:4px; padding:10px 14px; margin-bottom:20px; }
+  .note-title { font-weight:bold; font-size:11px; color:#C4923A; margin-bottom:4px; }
+  .note-val   { font-size:12px; color:#555; }
+
+  /* PIED DE PAGE */
+  .footer-row { display:table; width:100%%; margin-top:10px; }
+  .footer-col { display:table-cell; font-size:11px; color:#777; vertical-align:top; }
+  .footer-col-title { font-size:10px; font-weight:bold; color:#6B2737;
+                      text-transform:uppercase; margin-bottom:4px; }
 </style></head><body>
-<table><tr>
-<td><b style='font-size:22px;color:#C4923A;'>CUIREA</b><br/><small style='color:#888;'>Smart Leather Goods Factory</small></td>
-<td style='text-align:right;'><b style='font-size:22px;color:#6B2737;'>FACTURE</b><br/>N° %1 &mdash; %2</td>
-</tr></table><hr style='border-color:#C4923A;'/>
-<table><tr>
-<td><b>CUIREA Management</b><br/>Zone Industrielle, Tunis<br/>contact@cuirea.tn</td>
-<td><b>Facturé à :</b><br/>%3</td>
-</tr></table><hr style='border-color:#C4923A;'/>
-<table><tr><th>Description</th><th>Prix HT</th><th>Qté</th><th>Total</th></tr>
-<tr><td>%5 — Réf. %1</td><td>%6 DT</td><td>1</td><td>%6 DT</td></tr>
-</table><br/>
-<table style='width:280px;float:right;'>
-<tr><td>Sous-total HT</td><td style='text-align:right;'>%6 DT</td></tr>
-<tr><td>TVA (19%%)</td><td style='text-align:right;'>%7 DT</td></tr>
-<tr><td>Remise (5%%)</td><td style='text-align:right;'>-%8 DT</td></tr>
-<tr class='ttc'><td><b>Total TTC</b></td><td style='text-align:right;'><b>%9 DT</b></td></tr>
+
+<!-- EN-TÊTE -->
+<div class='header'>
+  <div class='header-left'>
+    <div class='logo'>CUIREA</div>
+    <div class='sub'>Smart Leather Goods Factory</div>
+  </div>
+  <div class='header-right'>
+    <div class='facture-title'>FACTURE</div>
+    <div class='facture-num'>N&deg; %1</div>
+    <div class='facture-date'>Date : %2</div>
+  </div>
+</div>
+<hr class='sep'/>
+
+<!-- INFOS -->
+<div class='info-row'>
+  <div class='info-box'>
+    <div class='info-title'>&nbsp;</div>
+    <hr class='info-sep'/>
+    <b>CUIREA Management</b><br/>
+    Zone Industrielle, Tunis, Tunisie<br/>
+    T&eacute;l : +216 71 000 000<br/>
+    contact@cuirea.tn
+  </div>
+  <div class='info-spacer'></div>
+  <div class='info-box'>
+    <div class='info-title'>Factur&eacute; &agrave;</div>
+    <hr class='info-sep'/>
+    %3<br/>
+    Livraison pr&eacute;vue : %4
+  </div>
+</div>
+
+<!-- TABLEAU -->
+<div class='section-title'>D&eacute;tail de la commande</div>
+<table class='items'>
+  <tr>
+    <th>Description</th>
+    <th>Prix Unitaire</th>
+    <th>Quantit&eacute;</th>
+    <th>Total</th>
+  </tr>
+  <tr>
+    <td>%5 &mdash; R&eacute;f. %1</td>
+    <td>%6 DT</td>
+    <td>1</td>
+    <td>%6 DT</td>
+  </tr>
 </table>
-<div class='footer'>CUIREA &mdash; contact@cuirea.tn &mdash; Paiement 30 jours</div>
+
+<!-- TOTAUX -->
+<div class='totals-wrap'>
+  <table class='totals'>
+    <tr><td>Sous-total HT</td><td class='val'>%6 DT</td></tr>
+    <tr><td>TVA (19%%)</td>   <td class='val'>%7 DT</td></tr>
+    <tr><td>Remise (5%%)</td> <td class='val'>-%8 DT</td></tr>
+    <tr><td colspan='2'><hr class='tot-sep'/></td></tr>
+    <tr class='ttc-row'>
+      <td><b>Total TTC</b></td>
+      <td class='val'><b>%9 DT</b></td>
+    </tr>
+  </table>
+</div>
+
+<!-- NOTE -->
+<div class='note-box'>
+  <div class='note-title'>Note</div>
+  <div class='note-val'>Priorit&eacute; : %10 &nbsp;|&nbsp; Statut : %11 &nbsp;|&nbsp; Cr&eacute;&eacute;e le : %12</div>
+</div>
+
+<hr class='sep'/>
+
+<!-- PIED DE PAGE -->
+<div class='footer-row'>
+  <div class='footer-col'>
+    <div class='footer-col-title'>Contact</div>
+    contact@cuirea.tn<br/>+216 71 000 000
+  </div>
+  <div class='footer-col' style='text-align:center;'>
+    <div class='footer-col-title'>Paiement</div>
+    Virement bancaire<br/>IBAN : TN59 XXXX XXXX
+  </div>
+  <div class='footer-col' style='text-align:right;'>
+    <div class='footer-col-title'>Conditions</div>
+    Paiement sous 30 jours<br/>P&eacute;nalit&eacute;s : 1,5%%/mois
+  </div>
+</div>
+
 </body></html>)")
-    .arg(ref, QDate::currentDate().toString("dd/MM/yyyy"),
-         employe, mailClient.isEmpty() ? "" : mailClient, type,
-         QString::number(ht,'f',2), QString::number(tva,'f',2),
-         QString::number(remise,'f',2), QString::number(ttc,'f',2));
+    .arg(ref,                                          // %1
+         QDate::currentDate().toString("dd MMMM yyyy"), // %2
+         mailClient.isEmpty() ? "Client interne" : mailClient, // %3
+         dl,                                           // %4
+         type,                                         // %5
+         QString::number(ht,'f',2),                    // %6
+         QString::number(tva,'f',2),                   // %7
+         QString::number(remise,'f',2),                // %8
+         QString::number(ttc,'f',2),                   // %9
+         priorite,                                     // %10
+         statut,                                       // %11
+         dc);                                          // %12
 
     connect(pdf, &QPushButton::clicked, [&] {
         QString fn = QFileDialog::getSaveFileName(&dlg, "Enregistrer",
@@ -3582,9 +3716,8 @@ td{padding:9px 12px;font-size:12px;border-bottom:1px solid #E8D5C0;}
 
     }); // 👈 FIN DU connect PROPREMENT
 
-    dlg.exec(); // si ton dialog doit rester bloquant
     connect(close, &QPushButton::clicked, &dlg, &QDialog::accept);
-
+    dlg.exec();
 }
 
 void MainWindow::onExcelProduction()
