@@ -17,7 +17,11 @@ CREATE TABLE Employes (
     departement       VARCHAR2(100),
     date_embauche     DATE,
     photo_url         VARCHAR2(255),
-    statut            VARCHAR2(50) DEFAULT 'ACTIF'
+    statut            VARCHAR2(50) DEFAULT 'ACTIF',
+    mot_de_passe      VARCHAR2(255),
+    role_systeme      VARCHAR2(50) DEFAULT 'EMPLOYE',
+    actif             NUMBER(1) DEFAULT 1,
+    derniere_connexion DATE
 );
 
 /* =========================

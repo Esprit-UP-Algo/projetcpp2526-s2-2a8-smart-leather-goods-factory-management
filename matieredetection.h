@@ -29,7 +29,9 @@ private:
     void startDetectionAnalysis(const QString &imagePath);
     void detectDefectsInImage(const QString &imagePath);
     void showDetectionResults(const QJsonObject &response);
+    void showNonCuirResult(const QString &materialType);
     QString translateDefectClass(const QString &englishName);
+    bool isCuirMaterial(const QJsonObject &response);
 
     MainWindow *mainWindow;
     QTableWidget *matiereTable;
