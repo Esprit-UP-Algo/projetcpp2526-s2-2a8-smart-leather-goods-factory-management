@@ -160,7 +160,6 @@ private slots:
     void on_btnStatsFournisseur_clicked();
     void on_btnTriFournisseur_clicked();
     void on_btnSmsFournisseur_clicked();
-    void on_btnQrFournisseur_clicked();
     void on_searchBoxFournisseur_textChanged(const QString &text);
     void on_btnmap_clicked();
 

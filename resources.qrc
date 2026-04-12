@@ -1,6 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>logo.png</file>
-        <file>commande_fournisseur.html</file>
+        <file>conditions_article.html</file>
     </qresource>
 </RCC>

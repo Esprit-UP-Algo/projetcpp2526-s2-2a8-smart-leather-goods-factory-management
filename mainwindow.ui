@@ -276,7 +276,7 @@ QPushButton#btnAddMatiere:pressed, QPushButton#btnEditMatiere:pressed, QPushButt
 }
 
 /* Primary Action Buttons - Suppliers Module */
-QPushButton#btnAddFournisseur, QPushButton#btnEditFournisseur, QPushButton#btnDeleteFournisseur, QPushButton#btnExportFournisseur, QPushButton#btnStatsFournisseur, QPushButton#btnTriFournisseur, QPushButton#btnSmsFournisseur, QPushButton#btnQrFournisseur {
+QPushButton#btnAddFournisseur, QPushButton#btnEditFournisseur, QPushButton#btnDeleteFournisseur, QPushButton#btnExportFournisseur, QPushButton#btnStatsFournisseur, QPushButton#btnTriFournisseur, QPushButton#btnSmsFournisseur {
     background-color: #8D6E63;
     color: white;
     border: none;
@@ -288,12 +288,12 @@ QPushButton#btnAddFournisseur, QPushButton#btnEditFournisseur, QPushButton#btnDe
     text-align: center;
 }
 
-QPushButton#btnAddFournisseur:hover, QPushButton#btnEditFournisseur:hover, QPushButton#btnDeleteFournisseur:hover, QPushButton#btnExportFournisseur:hover, QPushButton#btnStatsFournisseur:hover, QPushButton#btnTriFournisseur:hover, QPushButton#btnSmsFournisseur:hover, QPushButton#btnQrFournisseur:hover {
+QPushButton#btnAddFournisseur:hover, QPushButton#btnEditFournisseur:hover, QPushButton#btnDeleteFournisseur:hover, QPushButton#btnExportFournisseur:hover, QPushButton#btnStatsFournisseur:hover, QPushButton#btnTriFournisseur:hover, QPushButton#btnSmsFournisseur:hover {
     background-color: #A0826D;
     border: none;
 }
 
-QPushButton#btnAddFournisseur:pressed, QPushButton#btnEditFournisseur:pressed, QPushButton#btnDeleteFournisseur:pressed, QPushButton#btnExportFournisseur:pressed, QPushButton#btnStatsFournisseur:pressed, QPushButton#btnTriFournisseur:pressed, QPushButton#btnSmsFournisseur:pressed, QPushButton#btnQrFournisseur:pressed {
+QPushButton#btnAddFournisseur:pressed, QPushButton#btnEditFournisseur:pressed, QPushButton#btnDeleteFournisseur:pressed, QPushButton#btnExportFournisseur:pressed, QPushButton#btnStatsFournisseur:pressed, QPushButton#btnTriFournisseur:pressed, QPushButton#btnSmsFournisseur:pressed {
     background-color: #6E473B;
     border: none;
     padding: 11px 20px 9px 20px;
@@ -2520,19 +2520,6 @@ QPushButton:hover {
                    </property>
                    <property name="text">
                     <string>✉ Envoyer SMS</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnQrFournisseur">
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>⬛ Scan QR</string>
                    </property>
                   </widget>
                  </item>
