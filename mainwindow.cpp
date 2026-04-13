@@ -3342,9 +3342,68 @@ void MainWindow::onFactureProduction()
     table->setFixedHeight(table->horizontalHeader()->height() + table->rowHeight(0) + 4);
     lay->addWidget(table);
 
-    // ?? TOTAUX ????????????????????????????????????????????????????????????????
+    // Build condUrl — use production data directly + DB lookup for extra details
+    QString condUrl;
+    {
+        QString categoriePdf, couleurPdf, dimensionsPdf, prixPdf, statutArtPdf;
+        QSqlQuery q2(Connection::instance()->getDatabase());
+        q2.prepare("SELECT CATEGORIE, COULEUR_R, COULEUR_G, COULEUR_B, "
+                   "LARGEUR, HAUTEUR, PROFONDEUR, PRIX_UNITAIRE, STATUT "
+                   "FROM ARTICLES WHERE UPPER(NOM) LIKE UPPER(:type) "
+                   "OR UPPER(TYPE) LIKE UPPER(:type2) "
+                   "OR UPPER(REFERENCE) LIKE UPPER(:ref) "
+                   "OR ROWNUM = 1");
+        q2.bindValue(":type",  "%" + type + "%");
+        q2.bindValue(":type2", "%" + type + "%");
+        q2.bindValue(":ref",   "%" + ref  + "%");
+        if (q2.exec() && q2.next()) {
+            categoriePdf  = q2.value(0).toString();
+            int r = q2.value(1).toInt(), g = q2.value(2).toInt(), b = q2.value(3).toInt();
+            if (r > 0 || g > 0 || b > 0)
+                couleurPdf = QString("rgb(%1,%2,%3)").arg(r).arg(g).arg(b);
+            double l = q2.value(4).toDouble(), h = q2.value(5).toDouble(), p = q2.value(6).toDouble();
+            if (l > 0 || h > 0 || p > 0)
+                dimensionsPdf = QString("%1x%2x%3 cm").arg(l).arg(h).arg(p);
+            prixPdf      = q2.value(7).toString() + " DT";
+            statutArtPdf = q2.value(8).toString();
+        }
+        if (prixPdf.isEmpty()) prixPdf = QString::number(ht, 'f', 2) + " DT";
+        if (statutArtPdf.isEmpty()) statutArtPdf = statut;
+
+        condUrl = QString("https://willowy-halva-d44d1d.netlify.app"
+                          "?ref=%1&produit=%2&commande=%3&categorie=%4&type=%5&couleur=%6&dimensions=%7&prix=%8&statut=%9")
+                  .arg(QString::fromUtf8(QUrl::toPercentEncoding(ref)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(type)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(id)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(categoriePdf)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(type)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(couleurPdf)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(dimensionsPdf)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(prixPdf)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(statutArtPdf)));
+    }
+
+    // ?? TOTAUX + QR CODE (côte à côte) ??????????????????????????????????????????
     QHBoxLayout *totRow = new QHBoxLayout();
+
+    // QR Code à gauche
+    QLabel *qrLabel = new QLabel("...");
+    qrLabel->setFixedSize(110, 110);
+    qrLabel->setAlignment(Qt::AlignCenter);
+    qrLabel->setStyleSheet("border:2px solid #C4923A;border-radius:6px;background:white;font-size:10px;color:#888;");
+
+    QLabel *qrLink = new QLabel(QString("<a href='%1' style='color:#C4923A;font-size:10px;'>Ouvrir la fiche</a>").arg(condUrl));
+    qrLink->setOpenExternalLinks(true);
+    qrLink->setAlignment(Qt::AlignCenter);
+
+    QVBoxLayout *qrCol = new QVBoxLayout();
+    qrCol->addWidget(qrLabel, 0, Qt::AlignCenter);
+    qrCol->addWidget(qrLink, 0, Qt::AlignCenter);
+
+    totRow->addLayout(qrCol);
     totRow->addStretch();
+
+    // Totaux à droite
     QWidget *totBox = new QWidget();
     totBox->setStyleSheet("background:#FBF5F0; border-radius:8px;");
     totBox->setFixedWidth(300);
@@ -3381,127 +3440,8 @@ void MainWindow::onFactureProduction()
     totRow->addWidget(totBox);
     lay->addLayout(totRow);
 
-    // ?? NOTE ?????????????????????????????????????????????????????????????????
-    QWidget *noteBox = new QWidget();
-    noteBox->setStyleSheet("background:#FBF5F0; border-left:4px solid #C4923A; border-radius:4px;");
-    QVBoxLayout *noteLay = new QVBoxLayout(noteBox);
-    noteLay->setContentsMargins(14,10,14,10);
-    QLabel *noteT = new QLabel("Note");
-    noteT->setStyleSheet("font-weight:bold; font-size:11px; color:#C4923A;");
-    QLabel *noteV = new QLabel("Priorit� : " + priorite + "  |  Statut : " + statut + "  |  Cr��e le : " + dc);
-    noteV->setStyleSheet("font-size:12px; color:#555;");
-    noteLay->addWidget(noteT); noteLay->addWidget(noteV);
-    lay->addWidget(noteBox);
-
-    // Build condUrl — use production data directly + DB lookup for extra details
-    QString condUrl;
+    // Générer le QR code
     {
-        QString categoriePdf, couleurPdf, dimensionsPdf, prixPdf, statutArtPdf;
-        QSqlQuery q2(Connection::instance()->getDatabase());
-        // Try to find matching article — search by type/nom/reference
-        q2.prepare("SELECT CATEGORIE, COULEUR_R, COULEUR_G, COULEUR_B, "
-                   "LARGEUR, HAUTEUR, PROFONDEUR, PRIX_UNITAIRE, STATUT "
-                   "FROM ARTICLES WHERE UPPER(NOM) LIKE UPPER(:type) "
-                   "OR UPPER(TYPE) LIKE UPPER(:type2) "
-                   "OR UPPER(REFERENCE) LIKE UPPER(:ref) "
-                   "OR ROWNUM = 1");
-        q2.bindValue(":type",  "%" + type + "%");
-        q2.bindValue(":type2", "%" + type + "%");
-        q2.bindValue(":ref",   "%" + ref  + "%");
-        if (q2.exec() && q2.next()) {
-            categoriePdf  = q2.value(0).toString();
-            int r = q2.value(1).toInt(), g = q2.value(2).toInt(), b = q2.value(3).toInt();
-            if (r > 0 || g > 0 || b > 0)
-                couleurPdf = QString("rgb(%1,%2,%3)").arg(r).arg(g).arg(b);
-            double l = q2.value(4).toDouble(), h = q2.value(5).toDouble(), p = q2.value(6).toDouble();
-            if (l > 0 || h > 0 || p > 0)
-                dimensionsPdf = QString("%1x%2x%3 cm").arg(l).arg(h).arg(p);
-            prixPdf      = q2.value(7).toString() + " DT";
-            statutArtPdf = q2.value(8).toString();
-        }
-        // Fallback: use production data if article not found
-        if (prixPdf.isEmpty()) prixPdf = QString::number(ht, 'f', 2) + " DT";
-        if (statutArtPdf.isEmpty()) statutArtPdf = statut;
-
-        condUrl = QString("https://willowy-halva-d44d1d.netlify.app"
-                          "?ref=%1&produit=%2&commande=%3&categorie=%4&type=%5&couleur=%6&dimensions=%7&prix=%8&statut=%9")
-                  .arg(QString::fromUtf8(QUrl::toPercentEncoding(ref)),
-                       QString::fromUtf8(QUrl::toPercentEncoding(type)),
-                       QString::fromUtf8(QUrl::toPercentEncoding(id)),
-                       QString::fromUtf8(QUrl::toPercentEncoding(categoriePdf)),
-                       QString::fromUtf8(QUrl::toPercentEncoding(type)),
-                       QString::fromUtf8(QUrl::toPercentEncoding(couleurPdf)),
-                       QString::fromUtf8(QUrl::toPercentEncoding(dimensionsPdf)),
-                       QString::fromUtf8(QUrl::toPercentEncoding(prixPdf)),
-                       QString::fromUtf8(QUrl::toPercentEncoding(statutArtPdf)));
-    }
-    // QR CODE CONDITIONS
-    {
-        QHBoxLayout *qrRow = new QHBoxLayout();
-        qrRow->setSpacing(20);
-
-        // Fetch article details from DB
-        QString categorie, couleur, dimensions, prix, statutArt;
-        {
-            QSqlQuery q(Connection::instance()->getDatabase());
-            q.prepare("SELECT CATEGORIE, COULEUR_R, COULEUR_G, COULEUR_B, "
-                      "LARGEUR, HAUTEUR, PROFONDEUR, PRIX_UNITAIRE, STATUT "
-                      "FROM ARTICLES WHERE UPPER(NOM) LIKE UPPER(:type) "
-                      "OR UPPER(TYPE) LIKE UPPER(:type2) "
-                      "OR UPPER(REFERENCE) LIKE UPPER(:ref)");
-            q.bindValue(":type",  "%" + type + "%");
-            q.bindValue(":type2", "%" + type + "%");
-            q.bindValue(":ref",   "%" + ref  + "%");
-            if (q.exec() && q.next()) {
-                categorie  = q.value(0).toString();
-                int r = q.value(1).toInt(), g = q.value(2).toInt(), b = q.value(3).toInt();
-                couleur    = QString("rgb(%1,%2,%3)").arg(r).arg(g).arg(b);
-                double l = q.value(4).toDouble(), h = q.value(5).toDouble(), p = q.value(6).toDouble();
-                dimensions = QString("%1x%2x%3 cm").arg(l).arg(h).arg(p);
-                prix       = q.value(7).toString() + " DT";
-                statutArt  = q.value(8).toString();
-            }
-        }
-
-        // Build Netlify URL with article params
-
-        // QR label
-        QLabel *qrLabel = new QLabel("...");
-        qrLabel->setFixedSize(110, 110);
-        qrLabel->setAlignment(Qt::AlignCenter);
-        qrLabel->setStyleSheet("border:2px solid #C4923A;border-radius:6px;background:white;font-size:10px;color:#888;");
-
-        QVBoxLayout *qrTextCol = new QVBoxLayout();
-        QLabel *qrTitle = new QLabel("Scannez pour la fiche article");
-        qrTitle->setStyleSheet("font-size:12px;font-weight:bold;color:#6B2737;");
-        QLabel *qrDesc = new QLabel(
-            "La fiche contient :\n"
-            "� Caract�ristiques de l'article\n"
-            "� Temp�rature & humidit�\n"
-            "� Protection lumi�re\n"
-            "� A�ration\n"
-            "� Entretien r�gulier\n"
-            "� Sources de chaleur");
-        qrDesc->setStyleSheet("font-size:11px;color:#555;");
-        qrDesc->setWordWrap(true);
-        qrTextCol->addWidget(qrTitle);
-        qrTextCol->addWidget(qrDesc);
-        qrTextCol->addStretch();
-        qrRow->addWidget(qrLabel);
-        qrRow->addLayout(qrTextCol);
-
-        // Clickable link below QR
-        QLabel *qrLink = new QLabel(QString("<a href='%1' style='color:#C4923A;font-size:11px;'>Ouvrir la fiche article</a>").arg(condUrl));
-        qrLink->setOpenExternalLinks(true);
-        qrLink->setAlignment(Qt::AlignLeft);
-
-        QVBoxLayout *qrContainer = new QVBoxLayout();
-        qrContainer->setSpacing(6);
-        qrContainer->addLayout(qrRow);
-        qrContainer->addWidget(qrLink);
-        lay->addLayout(qrContainer);
-
-        // Generate QR directly
         QNetworkAccessManager *mgr = new QNetworkAccessManager(page);
         QString qrApiUrl = QString("https://api.qrserver.com/v1/create-qr-code/?size=110x110&ecc=M&data=%1")
                            .arg(QString::fromUtf8(QUrl::toPercentEncoding(condUrl)));
@@ -3513,6 +3453,18 @@ void MainWindow::onFactureProduction()
             qrReply->deleteLater();
         });
     }
+
+    // ?? NOTE ?????????????????????????????????????????????????????????????????
+    QWidget *noteBox = new QWidget();
+    noteBox->setStyleSheet("background:#FBF5F0; border-left:4px solid #C4923A; border-radius:4px;");
+    QVBoxLayout *noteLay = new QVBoxLayout(noteBox);
+    noteLay->setContentsMargins(14,10,14,10);
+    QLabel *noteT = new QLabel("Note");
+    noteT->setStyleSheet("font-weight:bold; font-size:11px; color:#C4923A;");
+    QLabel *noteV = new QLabel("Priorit� : " + priorite + "  |  Statut : " + statut + "  |  Cr��e le : " + dc);
+    noteV->setStyleSheet("font-size:12px; color:#555;");
+    noteLay->addWidget(noteT); noteLay->addWidget(noteV);
+    lay->addWidget(noteBox);
 
     // ?? PIED DE PAGE ?????????????????????????????????????????????????????????
     lay->addWidget(makeSep());
@@ -3672,39 +3624,29 @@ void MainWindow::onFactureProduction()
   </tr>
 </table>
 
-<!-- TOTAUX -->
-<div class='totals-wrap'>
-  <table class='totals'>
-    <tr><td>Sous-total HT</td><td class='val'>%6 DT</td></tr>
-    <tr><td>TVA (19%%)</td>   <td class='val'>%7 DT</td></tr>
-    <tr><td>Remise (5%%)</td> <td class='val'>-%8 DT</td></tr>
-    <tr><td colspan='2'><hr class='tot-sep'/></td></tr>
-    <tr class='ttc-row'>
-      <td><b>Total TTC</b></td>
-      <td class='val'><b>%9 DT</b></td>
-    </tr>
-  </table>
+<!-- TOTAUX + QR -->
+<div style='display:table;width:100%%;margin-bottom:20px;'>
+  <div style='display:table-cell;vertical-align:middle;width:130px;'>
+    <img src='data:image/png;base64,%13' width='100' height='100' style='border:2px solid #C4923A;border-radius:6px;'/>
+  </div>
+  <div style='display:table-cell;vertical-align:top;text-align:right;'>
+    <table class='totals'>
+      <tr><td>Sous-total HT</td><td class='val'>%6 DT</td></tr>
+      <tr><td>TVA (19%%)</td>   <td class='val'>%7 DT</td></tr>
+      <tr><td>Remise (5%%)</td> <td class='val'>-%8 DT</td></tr>
+      <tr><td colspan='2'><hr class='tot-sep'/></td></tr>
+      <tr class='ttc-row'>
+        <td><b>Total TTC</b></td>
+        <td class='val'><b>%9 DT</b></td>
+      </tr>
+    </table>
+  </div>
 </div>
 
 <!-- NOTE -->
 <div class='note-box'>
   <div class='note-title'>Note</div>
   <div class='note-val'>Priorit&eacute; : %10 &nbsp;|&nbsp; Statut : %11 &nbsp;|&nbsp; Cr&eacute;&eacute;e le : %12</div>
-</div>
-
-<!-- QR CODE -->
-<div style='margin:16px 0;padding:14px;background:#FBF5F0;border-left:4px solid #C4923A;border-radius:6px;display:table;width:100%%;'>
-  <div style='display:table-cell;vertical-align:middle;width:120px;'>
-    <img src='data:image/png;base64,%13' width='100' height='100'/>
-  </div>
-  <div style='display:table-cell;vertical-align:middle;padding-left:16px;'>
-    <div style='font-weight:bold;color:#6B2737;font-size:13px;margin-bottom:6px;'>Scannez pour la fiche article</div>
-    <div style='font-size:11px;color:#555;line-height:1.6;'>
-      Caract&eacute;ristiques &bull; Temp&eacute;rature &amp; humidit&eacute;<br/>
-      Protection lumi&egrave;re &bull; A&eacute;ration<br/>
-      Entretien r&eacute;gulier &bull; Sources de chaleur
-    </div>
-  </div>
 </div>
 
 <!-- PIED DE PAGE -->
@@ -4459,14 +4401,16 @@ void MainWindow::on_btnViewArticle_clicked()
 void MainWindow::on_btnView3DArticle_clicked()
 {
     int row = ui->articleTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","S�lectionnez un article pour la vue 3D."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Sélectionnez un article pour la vue 3D."); return; }
 
-    QString nom     = ui->articleTable->item(row, 2)->text();
-    QString type    = ui->articleTable->item(row, 4)->text();
-    QString couleur = ui->articleTable->item(row, 5)->text();
+    if (row >= articles.size()) return;
+    const Article &art = articles[row];
+
+    QString nom  = art.getNom();
+    QString type = art.getType();
 
     QDialog dlg(this);
-    dlg.setWindowTitle("?? Vue 3D - " + nom);
+    dlg.setWindowTitle("🎮 Vue 3D IA - " + nom);
     dlg.setMinimumSize(900, 600);
     dlg.showMaximized();
     dlg.setStyleSheet("QDialog{background:#1A1A2E;}");
@@ -4474,26 +4418,23 @@ void MainWindow::on_btnView3DArticle_clicked()
     QVBoxLayout *lay = new QVBoxLayout(&dlg);
     lay->setContentsMargins(8,8,8,8);
 
-    auto *title = new QLabel(QString("??  VISUALISATION 3D  |  %1  �  %2").arg(nom, type));
+    auto *title = new QLabel(QString("🎮  VISUALISATION 3D IA  |  %1  •  %2").arg(nom, type));
     title->setAlignment(Qt::AlignCenter);
     title->setStyleSheet("font-size:14px;font-weight:bold;color:#FFCC80;padding:8px;"
                          "background:#0F3460;border-radius:10px;border:1px solid #8D6E63;");
     lay->addWidget(title);
 
     auto *viewer = new ArticleViewer3D(&dlg);
-    viewer->loadModelForType(type);
-
-    // Appliquer la couleur RGB depuis la BD
-    int row2 = ui->articleTable->currentRow();
-    if (row2 >= 0 && row2 < articles.size()) {
-        const Article &art = articles[row2];
-        viewer->setColor(art.getCouleurR(), art.getCouleurG(), art.getCouleurB());
-        viewer->setDimensions(art.getLargeur(), art.getHauteur(), art.getProfondeur());
-    }
+    viewer->setArticleInfo(art.getNom(), art.getType(), art.getCategorie(),
+                           art.getCouleurR(), art.getCouleurG(), art.getCouleurB(),
+                           art.getLargeur(), art.getHauteur(), art.getProfondeur(),
+                           art.getPrixUnitaire(), art.getStatut());
+    // Lancer la génération IA automatiquement
+    viewer->generateAuto();
 
     lay->addWidget(viewer);
 
-    auto *btnClose = new QPushButton("?  Fermer");
+    auto *btnClose = new QPushButton("✖  Fermer");
     btnClose->setStyleSheet("QPushButton{background:#8D6E63;color:white;border:none;"
                             "border-radius:8px;padding:10px 20px;font-weight:bold;}"
                             "QPushButton:hover{background:#A0826D;}");
@@ -5043,26 +4984,22 @@ void MainWindow::on_btnAnalyseRentabilite_clicked()
 void MainWindow::on_btnAideDecision_clicked()
 {
     QDialog dlg(this);
-    dlg.setWindowTitle("?? CUIREA AI Pricing Engine - Syst�me Intelligent de Pr�diction");
+    dlg.setWindowTitle("CUIREA - Aide a la Decision Tarifaire");
     dlg.setMinimumSize(1100, 700);
     dlg.showMaximized();
     dlg.setStyleSheet(
         "QDialog{background:#1A1A2E;color:white;}"
         "QTabWidget::pane{border:2px solid #8D6E63;border-radius:8px;background:#16213E;}"
-        "QTabBar::tab{background:#0F3460;color:#BCAAA4;padding:10px 18px;border-radius:6px 6px 0 0;font-weight:bold;}"
+        "QTabBar::tab{background:#0F3460;color:#BCAAA4;padding:10px 22px;border-radius:6px 6px 0 0;font-weight:bold;font-size:12px;}"
         "QTabBar::tab:selected{background:#8D6E63;color:white;}"
-        "QGroupBox{border:2px solid #8D6E63;border-radius:10px;margin-top:10px;"
-        "padding-top:10px;font-weight:bold;color:#FFCC80;font-size:11px;}"
+        "QGroupBox{border:2px solid #8D6E63;border-radius:10px;margin-top:10px;padding-top:10px;font-weight:bold;color:#FFCC80;font-size:11px;}"
         "QLabel{color:#E0E0E0;}"
-        "QComboBox,QDoubleSpinBox,QSlider{background:#16213E;border:2px solid #8D6E63;"
-        "border-radius:6px;padding:6px;color:white;font-size:12px;}"
+        "QComboBox,QDoubleSpinBox{background:#16213E;border:2px solid #8D6E63;border-radius:6px;padding:6px;color:white;font-size:12px;}"
         "QComboBox::drop-down{border:none;}"
         "QComboBox QAbstractItemView{background:#16213E;color:white;selection-background-color:#8D6E63;}"
-        "QTableWidget{background:#16213E;color:white;gridline-color:#333;border:none;}"
+        "QTableWidget{background:#16213E;color:white;gridline-color:#333;border:none;alternate-background-color:#1E2A4A;}"
         "QHeaderView::section{background:#8D6E63;color:white;padding:6px;font-weight:bold;border:none;}"
-        "QTableWidget{alternate-background-color:#1E2A4A;}"
-        "QPushButton{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #8D6E63,stop:1 #A0826D);"
-        "color:white;border:none;border-radius:8px;padding:10px 20px;font-weight:bold;font-size:12px;}"
+        "QPushButton{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #8D6E63,stop:1 #A0826D);color:white;border:none;border-radius:8px;padding:10px 20px;font-weight:bold;font-size:12px;}"
         "QPushButton:hover{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #A0826D,stop:1 #BCAAA4);}"
         "QSlider::groove:horizontal{background:#0F3460;height:6px;border-radius:3px;}"
         "QSlider::handle:horizontal{background:#FFCC80;width:16px;height:16px;border-radius:8px;margin:-5px 0;}"
@@ -5071,634 +5008,216 @@ void MainWindow::on_btnAideDecision_clicked()
 
     QVBoxLayout *mainLay = new QVBoxLayout(&dlg);
     mainLay->setContentsMargins(12,12,12,10); mainLay->setSpacing(8);
-
-    // ?? Titre ??????????????????????????????????????????????????????????????
-    auto *titleLbl = new QLabel("??  CUIREA AI PRICING ENGINE  |  Syst�me Intelligent Multi-Algorithmes");
-    titleLbl->setAlignment(Qt::AlignCenter);
-    titleLbl->setStyleSheet("font-size:15px;font-weight:bold;color:#FFCC80;padding:10px;"
-                            "background:#0F3460;border-radius:10px;border:1px solid #8D6E63;");
-    mainLay->addWidget(titleLbl);
-
-    auto *srcLbl = new QLabel("?? BD R�f�rence : Usine LEATHER PRO (50 articles)  |  "
-                              "Algorithmes : R�gression Lin�aire + k-NN + Moyenne Pond�r�e  |  "
-                              "Fonctions : Pr�diction � Simulation � Segmentation � Alertes � Export PDF");
-    srcLbl->setAlignment(Qt::AlignCenter);
-    srcLbl->setStyleSheet("font-size:10px;color:#BCAAA4;padding:3px;");
-    mainLay->addWidget(srcLbl);
-
-    // ?? Onglets ????????????????????????????????????????????????????????????
     auto *tabs = new QTabWidget();
     mainLay->addWidget(tabs);
 
-    QHBoxLayout *bodyLay = new QHBoxLayout();
-    bodyLay->setSpacing(10);
-
-    // ??????????????????????????????????????????????????????????????????????
-    // PANNEAU GAUCHE : Formulaire + R�sultats
-    // ??????????????????????????????????????????????????????????????????????
-    QVBoxLayout *leftLay = new QVBoxLayout();
-    leftLay->setSpacing(8);
-
-    // Formulaire
-    QGroupBox *formBox = new QGroupBox("  ??  Caract�ristiques de l'Article");
-    QFormLayout *formLay = new QFormLayout(formBox);
-    formLay->setSpacing(8);
-
+    // ONGLET 1 : PREDICTION & SIMULATION
+    auto *tab1 = new QWidget();
+    auto *t1Lay = new QHBoxLayout(tab1); t1Lay->setSpacing(10); t1Lay->setContentsMargins(8,8,8,8);
+    QVBoxLayout *leftLay = new QVBoxLayout(); leftLay->setSpacing(8);
+    QGroupBox *formBox = new QGroupBox("  Caracteristiques");
+    QFormLayout *formLay = new QFormLayout(formBox); formLay->setSpacing(8);
     auto *cbCat = new QComboBox();
     cbCat->addItems({"Sacs","Portefeuilles","Ceintures","Accessoires","Chaussures"});
     auto *cbType = new QComboBox();
-    cbType->addItems({"Sac � main","Sac bandouli�re","Tote bag","Sac � dos",
+    cbType->addItems({"Sac a main","Sac bandouliere","Tote bag","Sac a dos",
                       "Portefeuille long","Portefeuille compact","Porte-cartes",
                       "Ceinture classique","Ceinture fashion","Ceinture luxe",
-                      "Porte-monnaie","Pochette","Bandouli�re","Porte-cl�s"});
+                      "Porte-monnaie","Pochette","Bandouliere","Porte-cles"});
     auto *cbCouleur = new QComboBox();
-    cbCouleur->addItems({"Noir","Marron","Camel","Cognac","Beige","Blanc",
-                         "Rouge","Bleu Marine","Gris","Vert","Autre"});
-    auto *spinCout = new QDoubleSpinBox();
-    spinCout->setRange(1,99999); spinCout->setDecimals(2);
-    spinCout->setSuffix(" DT"); spinCout->setValue(30.0);
-
-    formLay->addRow("Cat�gorie :", cbCat);
+    cbCouleur->addItems({"Noir","Marron","Camel","Cognac","Beige","Blanc","Rouge","Bleu Marine","Gris","Vert"});
+    auto *sliderCout = new QSlider(Qt::Horizontal);
+    sliderCout->setRange(5, 300); sliderCout->setValue(30);
+    auto *lblCoutVal = new QLabel("30 DT");
+    lblCoutVal->setStyleSheet("color:#FFCC80;font-weight:bold;font-size:14px;");
+    lblCoutVal->setAlignment(Qt::AlignCenter);
+    formLay->addRow("Categorie :", cbCat);
     formLay->addRow("Type :", cbType);
     formLay->addRow("Couleur :", cbCouleur);
-    formLay->addRow("Co�t Fabrication :", spinCout);
+    formLay->addRow("Cout :", sliderCout);
+    formLay->addRow("", lblCoutVal);
     leftLay->addWidget(formBox);
-
-    // Bouton pr�dire
-    auto *btnPredire = new QPushButton("??  LANCER LA PREDICTION");
-    btnPredire->setMinimumHeight(45);
-    leftLay->addWidget(btnPredire);
-
-    // R�sultat principal
-    auto *lblPrix = new QLabel("�");
+    auto *lblPrix = new QLabel("—");
     lblPrix->setAlignment(Qt::AlignCenter);
-    lblPrix->setStyleSheet("font-size:32px;font-weight:bold;color:#FFCC80;"
-                           "background:#0F3460;border-radius:10px;padding:15px;"
-                           "border:2px solid #8D6E63;");
-    lblPrix->setMinimumHeight(80);
+    lblPrix->setStyleSheet("font-size:28px;font-weight:bold;color:#FFCC80;background:#0F3460;border-radius:10px;padding:12px;border:2px solid #8D6E63;");
     leftLay->addWidget(lblPrix);
-
-    // Intervalle de confiance
-    auto *lblInterval = new QLabel("Intervalle de confiance : �");
-    lblInterval->setAlignment(Qt::AlignCenter);
-    lblInterval->setStyleSheet("font-size:11px;color:#BCAAA4;padding:4px;");
-    leftLay->addWidget(lblInterval);
-
-    // D�tail des algorithmes
-    QGroupBox *algoBox = new QGroupBox("  ??  D�tail des Algorithmes");
-    QVBoxLayout *algoLay = new QVBoxLayout(algoBox);
-    auto *lblAlgo = new QLabel("Lancez une pr�diction pour voir le d�tail.");
-    lblAlgo->setStyleSheet("color:#BCAAA4;font-size:11px;padding:5px;");
-    lblAlgo->setWordWrap(true);
-    algoLay->addWidget(lblAlgo);
-    leftLay->addWidget(algoBox);
-
-    // Recommandation
-    auto *lblReco = new QLabel("�");
-    lblReco->setAlignment(Qt::AlignCenter);
-    lblReco->setWordWrap(true);
-    lblReco->setStyleSheet("font-size:12px;font-weight:bold;color:#A5D6A7;"
-                           "background:#1B5E20;border-radius:8px;padding:10px;"
-                           "border:1px solid #4CAF50;");
-    lblReco->setMinimumHeight(50);
+    auto *lblDetails = new QLabel("Deplacez le curseur pour simuler");
+    lblDetails->setAlignment(Qt::AlignCenter); lblDetails->setWordWrap(true);
+    lblDetails->setStyleSheet("font-size:11px;color:#BCAAA4;padding:4px;");
+    leftLay->addWidget(lblDetails);
+    auto *lblReco = new QLabel("—");
+    lblReco->setAlignment(Qt::AlignCenter); lblReco->setWordWrap(true);
+    lblReco->setStyleSheet("font-size:11px;font-weight:bold;color:#A5D6A7;background:#1B5E20;border-radius:8px;padding:8px;border:1px solid #4CAF50;");
     leftLay->addWidget(lblReco);
 
     leftLay->addStretch();
-    bodyLay->addLayout(leftLay, 4);
-
-    // ??????????????????????????????????????????????????????????????????????
-    // PANNEAU DROIT : Tableau de positionnement + graphique
-    // ??????????????????????????????????????????????????????????????????????
-    QVBoxLayout *rightLay = new QVBoxLayout();
-    rightLay->setSpacing(8);
-
-    QGroupBox *tableBox = new QGroupBox("  ??  Positionnement des Articles Existants");
-    QVBoxLayout *tableLay = new QVBoxLayout(tableBox);
-
-    auto *tbl = new QTableWidget();
-    tbl->setColumnCount(7);
-    tbl->setHorizontalHeaderLabels({"Nom","Cat�gorie","Co�t","Prix Actuel",
-                                    "Prix Pr�dit","Ecart","Conseil"});
-    tbl->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    tbl->setAlternatingRowColors(true);
-    tbl->verticalHeader()->setVisible(false);
-    tbl->setSelectionBehavior(QAbstractItemView::SelectRows);
-    tbl->setStyleSheet("QTableWidget{alternate-background-color:#1E2A4A;}");
-
-    // Remplir le tableau
-    tbl->setRowCount(articles.size());
-    for (int i = 0; i < articles.size(); ++i) {
-        const Article &a = articles[i];
-        auto res = Article::predirePrixAvance(a.getCategorie(), a.getType(),
-                                              a.getCouleur(), a.getCoutFabrication());
-        double ecartP = a.getPrixUnitaire() > 0
-            ? ((res.prixPredit - a.getPrixUnitaire()) / a.getPrixUnitaire()) * 100.0
-            : 0.0;
-
-        QString conseil;
-        QColor couleurConseil;
-        if (ecartP > 15)       { conseil = "?? Augmenter"; couleurConseil = QColor("#A5D6A7"); }
-        else if (ecartP < -15) { conseil = "?? R�duire";   couleurConseil = QColor("#EF9A9A"); }
-        else                   { conseil = "? Optimal";   couleurConseil = QColor("#80DEEA"); }
-
-        tbl->setItem(i,0,new QTableWidgetItem(a.getNom()));
-        tbl->setItem(i,1,new QTableWidgetItem(a.getCategorie()));
-        tbl->setItem(i,2,new QTableWidgetItem(QString::number(a.getCoutFabrication(),'f',2)+" DT"));
-        tbl->setItem(i,3,new QTableWidgetItem(QString::number(a.getPrixUnitaire(),'f',2)+" DT"));
-        tbl->setItem(i,4,new QTableWidgetItem(QString::number(res.prixPredit,'f',2)+" DT"));
-        tbl->setItem(i,5,new QTableWidgetItem(QString::number(ecartP,'f',1)+"%"));
-        auto *ci = new QTableWidgetItem(conseil);
-        ci->setForeground(QBrush(couleurConseil));
-        QFont f=ci->font(); f.setBold(true); ci->setFont(f);
-        tbl->setItem(i,6,ci);
-    }
-    tableLay->addWidget(tbl);
-    rightLay->addWidget(tableBox);
-
-    // Graphique barres : prix actuel vs pr�dit
-    QGroupBox *chartBox = new QGroupBox("  ??  Comparaison Prix Actuel vs Prix Pr�dit");
-    QVBoxLayout *chartLay = new QVBoxLayout(chartBox);
-
-    auto *setActuel = new QBarSet("Prix Actuel");
-    auto *setPredit = new QBarSet("Prix Pr�dit");
-    setActuel->setColor(QColor("#8D6E63"));
-    setPredit->setColor(QColor("#FFCC80"));
+    t1Lay->addLayout(leftLay, 3);
+    QVBoxLayout *rightLay = new QVBoxLayout(); rightLay->setSpacing(6);
+    auto *simSeries = new QLineSeries(); simSeries->setName("Prix Predit");
+    simSeries->setPen(QPen(QColor("#FFCC80"), 2));
+    auto *seuilSeries = new QLineSeries(); seuilSeries->setName("Seuil x2");
+    seuilSeries->setPen(QPen(QColor("#4CAF50"), 1, Qt::DashLine));
+    auto *markerSeries = new QScatterSeries(); markerSeries->setName("Position");
+    markerSeries->setMarkerSize(12); markerSeries->setColor(QColor("#EF5350"));
+    auto *simChart = new QChart();
+    simChart->addSeries(simSeries); simChart->addSeries(seuilSeries); simChart->addSeries(markerSeries);
+    simChart->setTitle("Prix predit selon le cout");
+    simChart->setTitleBrush(QBrush(QColor("#FFCC80")));
+    simChart->setBackgroundBrush(QBrush(QColor("#16213E")));
+    simChart->legend()->setLabelColor(Qt::white);
+    simChart->setAnimationOptions(QChart::NoAnimation);
+    simChart->createDefaultAxes();
+    if (!simChart->axes(Qt::Horizontal).isEmpty()) simChart->axes(Qt::Horizontal).first()->setLabelsColor(Qt::white);
+    if (!simChart->axes(Qt::Vertical).isEmpty()) simChart->axes(Qt::Vertical).first()->setLabelsColor(Qt::white);
+    auto *simChartView = new QChartView(simChart);
+    simChartView->setRenderHint(QPainter::Antialiasing);
+    rightLay->addWidget(simChartView);
+    auto *setActuel = new QBarSet("Actuel"); setActuel->setColor(QColor("#8D6E63"));
+    auto *setPredit = new QBarSet("Predit"); setPredit->setColor(QColor("#FFCC80"));
     QStringList noms;
     int maxArt = qMin((int)articles.size(), 6);
     for (int i = 0; i < maxArt; ++i) {
         const Article &a = articles[i];
-        auto res = Article::predirePrixAvance(a.getCategorie(), a.getType(),
-                                              a.getCouleur(), a.getCoutFabrication());
-        *setActuel << a.getPrixUnitaire();
-        *setPredit << res.prixPredit;
-        noms << (a.getNom().length() > 10 ? a.getNom().left(10)+"�" : a.getNom());
+        auto res = Article::predirePrixAvance(a.getCategorie(), a.getType(), a.getCouleur(), a.getCoutFabrication());
+        *setActuel << a.getPrixUnitaire(); *setPredit << res.prixPredit;
+        noms << (a.getNom().length()>8 ? a.getNom().left(8)+".." : a.getNom());
     }
-    auto *barSeries = new QBarSeries();
-    barSeries->append(setActuel);
-    barSeries->append(setPredit);
-    auto *chart = new QChart();
-    chart->addSeries(barSeries);
-    chart->setTitle("Prix Actuel vs Prix Pr�dit (DT)");
-    chart->setTitleBrush(QBrush(QColor("#FFCC80")));
-    chart->setBackgroundBrush(QBrush(QColor("#16213E")));
-    chart->legend()->setLabelColor(Qt::white);
-    auto *axX = new QBarCategoryAxis(); axX->append(noms);
-    axX->setLabelsColor(Qt::white);
-    chart->addAxis(axX, Qt::AlignBottom); barSeries->attachAxis(axX);
-    auto *axY = new QValueAxis(); axY->setLabelFormat("%.0f");
-    axY->setLabelsColor(Qt::white);
-    chart->addAxis(axY, Qt::AlignLeft); barSeries->attachAxis(axY);
-    chart->setAnimationOptions(QChart::SeriesAnimations);
-    auto *chartView = new QChartView(chart);
-    chartView->setRenderHint(QPainter::Antialiasing);
-    chartView->setMinimumHeight(200);
-    chartLay->addWidget(chartView);
-    rightLay->addWidget(chartBox);
+    auto *barSeries = new QBarSeries(); barSeries->append(setActuel); barSeries->append(setPredit);
+    auto *barChart = new QChart(); barChart->addSeries(barSeries);
+    barChart->setTitle("Actuel vs Predit");
+    barChart->setTitleBrush(QBrush(QColor("#FFCC80")));
+    barChart->setBackgroundBrush(QBrush(QColor("#16213E")));
+    barChart->legend()->setLabelColor(Qt::white);
+    barChart->setAnimationOptions(QChart::SeriesAnimations);
+    auto *axX = new QBarCategoryAxis(); axX->append(noms); axX->setLabelsColor(Qt::white);
+    barChart->addAxis(axX, Qt::AlignBottom); barSeries->attachAxis(axX);
+    auto *axY = new QValueAxis(); axY->setLabelFormat("%.0f"); axY->setLabelsColor(Qt::white);
+    barChart->addAxis(axY, Qt::AlignLeft); barSeries->attachAxis(axY);
+    auto *barChartView = new QChartView(barChart);
+    barChartView->setRenderHint(QPainter::Antialiasing);
+    rightLay->addWidget(barChartView);
+    t1Lay->addLayout(rightLay, 5);
+    tabs->addTab(tab1, "Prediction & Simulation");
 
-    bodyLay->addLayout(rightLay, 6);
-
-    // Onglet 1 : contenu dans le tab
-    auto *tab1 = new QWidget();
-    tab1->setLayout(bodyLay);
-    tabs->addTab(tab1, "??  Pr�diction IA");
-
-    // ??????????????????????????????????????????????????????????????????????
-    // ONGLET 2 : SIMULATION WHAT-IF
-    // ??????????????????????????????????????????????????????????????????????
+    // ONGLET 2 : ANALYSE & ALERTES
     auto *tab2 = new QWidget();
     auto *tab2OuterLay = new QVBoxLayout(tab2);
-    auto *scroll2 = new QScrollArea();
-    scroll2->setWidgetResizable(true);
-    scroll2->setStyleSheet("QScrollArea{border:none;background:transparent;}");
+    auto *scroll2a = new QScrollArea(); scroll2a->setWidgetResizable(true);
+    scroll2a->setStyleSheet("QScrollArea{border:none;background:transparent;}");
     auto *tab2Inner = new QWidget();
     auto *t2Lay = new QVBoxLayout(tab2Inner);
     t2Lay->setSpacing(10); t2Lay->setContentsMargins(8,8,8,8);
-
-    auto *t2Title = new QLabel("??  SIMULATION WHAT-IF : Impact du Co�t sur le Prix de Vente");
-    t2Title->setAlignment(Qt::AlignCenter);
-    t2Title->setStyleSheet("font-size:13px;font-weight:bold;color:#FFCC80;padding:8px;"
-                           "background:#0F3460;border-radius:8px;");
-    t2Lay->addWidget(t2Title);
-
-    QHBoxLayout *simTopLay = new QHBoxLayout();
-
-    // Formulaire simulation
-    QGroupBox *simFormBox = new QGroupBox("  ??  Param�tres");
-    QFormLayout *simForm = new QFormLayout(simFormBox); simForm->setSpacing(8);
-    auto *simCbCat    = new QComboBox(); simCbCat->addItems({"Sacs","Portefeuilles","Ceintures","Accessoires"});
-    auto *simCbType   = new QComboBox(); simCbType->addItems({"Sac � main","Sac bandouli�re","Portefeuille long","Ceinture classique","Porte-monnaie","Pochette"});
-    auto *simCbCouleur= new QComboBox(); simCbCouleur->addItems({"Noir","Marron","Camel","Beige","Rouge"});
-    auto *sliderCout  = new QSlider(Qt::Horizontal);
-    sliderCout->setRange(5, 200); sliderCout->setValue(30);
-    auto *lblSliderVal = new QLabel("Co�t : 30 DT");
-    lblSliderVal->setStyleSheet("color:#FFCC80;font-weight:bold;font-size:13px;");
-    simForm->addRow("Cat�gorie :", simCbCat);
-    simForm->addRow("Type :", simCbType);
-    simForm->addRow("Couleur :", simCbCouleur);
-    simForm->addRow("Co�t (DT) :", sliderCout);
-    simForm->addRow("", lblSliderVal);
-    simTopLay->addWidget(simFormBox, 2);
-
-    // R�sultats temps r�el
-    QGroupBox *simResBox = new QGroupBox("  ??  R�sultats Temps R�el");
-    QVBoxLayout *simResLay = new QVBoxLayout(simResBox);
-    auto *lblSimPrix  = new QLabel("Prix Pr�dit : �");
-    lblSimPrix->setStyleSheet("font-size:20px;font-weight:bold;color:#FFCC80;padding:6px;");
-    auto *lblSimMarge = new QLabel("Marge : �");
-    lblSimMarge->setStyleSheet("font-size:14px;color:#A5D6A7;padding:4px;");
-    auto *lblSimSeg   = new QLabel("Segment : �");
-    lblSimSeg->setStyleSheet("font-size:13px;color:#80DEEA;padding:4px;");
-    auto *lblSimReco  = new QLabel("�");
-    lblSimReco->setWordWrap(true);
-    lblSimReco->setStyleSheet("font-size:11px;color:#FFE082;padding:6px;"
-                              "background:#1A1A2E;border-radius:6px;border:1px solid #8D6E63;");
-    simResLay->addWidget(lblSimPrix); simResLay->addWidget(lblSimMarge);
-    simResLay->addWidget(lblSimSeg);  simResLay->addWidget(lblSimReco);
-    simResLay->addStretch();
-    simTopLay->addWidget(simResBox, 2);
-    t2Lay->addLayout(simTopLay);
-
-    // Courbe dynamique
-    QGroupBox *simChartBox = new QGroupBox("  ??  Courbe Prix Pr�dit vs Co�t (temps r�el)");
-    QVBoxLayout *simChartLay = new QVBoxLayout(simChartBox);
-    auto *simSeries      = new QLineSeries(); simSeries->setName("Prix Pr�dit");
-    simSeries->setColor(QColor("#FFCC80")); simSeries->setPen(QPen(QColor("#FFCC80"),2));
-    auto *simSeuilSeries = new QLineSeries(); simSeuilSeries->setName("Seuil Rentabilit� �2");
-    simSeuilSeries->setColor(QColor("#4CAF50")); simSeuilSeries->setPen(QPen(QColor("#4CAF50"),1,Qt::DashLine));
-    for (int c=5; c<=200; c+=5) {
-        auto r = Article::predirePrixAvance("Sacs","Sac � main","Noir",c);
-        simSeries->append(c, r.prixPredit);
-        simSeuilSeries->append(c, c*2.0);
-    }
-    auto *simChart = new QChart();
-    simChart->addSeries(simSeries); simChart->addSeries(simSeuilSeries);
-    simChart->setBackgroundBrush(QBrush(QColor("#16213E")));
-    simChart->legend()->setLabelColor(Qt::white);
-    simChart->setAnimationOptions(QChart::AllAnimations);
-    simChart->createDefaultAxes();
-    simChart->axes(Qt::Horizontal).first()->setLabelsColor(Qt::white);
-    simChart->axes(Qt::Vertical).first()->setLabelsColor(Qt::white);
-    auto *simChartView = new QChartView(simChart);
-    simChartView->setRenderHint(QPainter::Antialiasing);
-    simChartView->setMinimumHeight(280);
-    simChartLay->addWidget(simChartView);
-    t2Lay->addWidget(simChartBox);
-    scroll2->setWidget(tab2Inner);
-    tab2OuterLay->addWidget(scroll2);
-    tabs->addTab(tab2, "??  Simulation What-If");
-
-    // ??????????????????????????????????????????????????????????????????????
-    // ONGLET 3 : ALERTES INTELLIGENTES
-    // ??????????????????????????????????????????????????????????????????????
-    auto *tab3 = new QWidget();
-    auto *tab3OuterLay = new QVBoxLayout(tab3);
-    auto *scroll3 = new QScrollArea();
-    scroll3->setWidgetResizable(true);
-    scroll3->setStyleSheet("QScrollArea{border:none;background:transparent;}");
-    auto *tab3Inner = new QWidget();
-    auto *t3Lay = new QVBoxLayout(tab3Inner);
-    t3Lay->setSpacing(8); t3Lay->setContentsMargins(8,8,8,8);
-
-    auto *t3Title = new QLabel("??  ALERTES INTELLIGENTES : D�tection des Articles Mal Evalu�s");
-    t3Title->setAlignment(Qt::AlignCenter);
-    t3Title->setStyleSheet("font-size:13px;font-weight:bold;color:#FFCC80;padding:8px;"
-                           "background:#0F3460;border-radius:8px;");
-    t3Lay->addWidget(t3Title);
-
-    // KPI alertes
-    int sousEval=0, surEval=0, optimal=0;
+    int sousEval=0, surEval=0, optCount=0;
     for (const Article &a : articles) {
         auto res = Article::predirePrixAvance(a.getCategorie(),a.getType(),a.getCouleur(),a.getCoutFabrication());
-        double ecartP = a.getPrixUnitaire()>0 ? ((res.prixPredit-a.getPrixUnitaire())/a.getPrixUnitaire())*100 : 0;
-        if (ecartP>15) ++sousEval; else if (ecartP<-15) ++surEval; else ++optimal;
+        double ec = a.getPrixUnitaire()>0 ? ((res.prixPredit-a.getPrixUnitaire())/a.getPrixUnitaire())*100 : 0;
+        if (ec>15) ++sousEval; else if (ec<-15) ++surEval; else ++optCount;
     }
-    auto makeAlertKPI = [](const QString &v, const QString &l, const QString &c) {
-        auto *w = new QWidget(); w->setStyleSheet(QString("background:%1;border-radius:10px;").arg(c));
-        auto *lay = new QVBoxLayout(w);
+    auto makeKPI = [](const QString &v, const QString &l, const QString &bg) {
+        auto *w = new QWidget(); w->setStyleSheet(QString("background:%1;border-radius:10px;").arg(bg));
+        auto *kl = new QVBoxLayout(w);
         auto *vl = new QLabel(v); vl->setAlignment(Qt::AlignCenter);
-        vl->setStyleSheet("font-size:26px;font-weight:bold;color:white;");
+        vl->setStyleSheet("font-size:28px;font-weight:bold;color:white;");
         auto *ll = new QLabel(l); ll->setAlignment(Qt::AlignCenter);
-        ll->setStyleSheet("font-size:10px;color:rgba(255,255,255,0.8);");
-        lay->addWidget(vl); lay->addWidget(ll); w->setMinimumHeight(75); return w;
+        ll->setStyleSheet("font-size:10px;color:rgba(255,255,255,0.85);");
+        kl->addWidget(vl); kl->addWidget(ll); w->setMinimumHeight(70); return w;
     };
-    QHBoxLayout *alertKpiLay = new QHBoxLayout();
-    alertKpiLay->addWidget(makeAlertKPI(QString::number(sousEval),"?? Sous-�valu�s\n(Prix trop bas)","#1B5E20"));
-    alertKpiLay->addWidget(makeAlertKPI(QString::number(surEval),"?? Sur-�valu�s\n(Prix trop haut)","#B71C1C"));
-    alertKpiLay->addWidget(makeAlertKPI(QString::number(optimal),"? Prix Optimaux","#006064"));
-    alertKpiLay->addWidget(makeAlertKPI(QString::number(articles.size()),"Total Articles","#4A148C"));
-    t3Lay->addLayout(alertKpiLay);
-
-    // Tableau alertes
-    QGroupBox *alertTblBox = new QGroupBox("  ??  D�tail des Alertes par Article");
-    QVBoxLayout *alertTblLay = new QVBoxLayout(alertTblBox);
+    QHBoxLayout *kpiRow = new QHBoxLayout();
+    kpiRow->addWidget(makeKPI(QString::number(sousEval),"Sous-evalues","#1B5E20"));
+    kpiRow->addWidget(makeKPI(QString::number(surEval),"Sur-evalues","#B71C1C"));
+    kpiRow->addWidget(makeKPI(QString::number(optCount),"Optimaux","#006064"));
+    kpiRow->addWidget(makeKPI(QString::number(articles.size()),"Total","#4A148C"));
+    t2Lay->addLayout(kpiRow);
     auto *alertTbl = new QTableWidget();
-    alertTbl->setColumnCount(7);
-    alertTbl->setHorizontalHeaderLabels({"Alerte","Nom","Cat�gorie","Prix Actuel","Prix March�","Ecart %","Action Recommand�e"});
+    alertTbl->setColumnCount(6);
+    alertTbl->setHorizontalHeaderLabels({"Nom","Categorie","Prix Actuel","Prix Marche","Ecart","Action"});
     alertTbl->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     alertTbl->setAlternatingRowColors(true); alertTbl->verticalHeader()->setVisible(false);
     alertTbl->setRowCount(articles.size());
     for (int i=0; i<articles.size(); ++i) {
         const Article &a = articles[i];
         auto res = Article::predirePrixAvance(a.getCategorie(),a.getType(),a.getCouleur(),a.getCoutFabrication());
-        double ecartP = a.getPrixUnitaire()>0 ? ((res.prixPredit-a.getPrixUnitaire())/a.getPrixUnitaire())*100 : 0;
-        QString alerte, action; QColor col;
-        if (ecartP>25)       { alerte="?? CRITIQUE"; action=QString("+%1 DT recommand�").arg(QString::number(res.prixPredit-a.getPrixUnitaire(),'f',0)); col=QColor("#EF9A9A"); }
-        else if (ecartP>15)  { alerte="?? ATTENTION"; action=QString("Envisager +%1 DT").arg(QString::number(res.prixPredit-a.getPrixUnitaire(),'f',0)); col=QColor("#FFE082"); }
-        else if (ecartP<-25) { alerte="?? CRITIQUE"; action=QString("-%1 DT recommand�").arg(QString::number(a.getPrixUnitaire()-res.prixPredit,'f',0)); col=QColor("#EF9A9A"); }
-        else if (ecartP<-15) { alerte="?? ATTENTION"; action=QString("Envisager -%1 DT").arg(QString::number(a.getPrixUnitaire()-res.prixPredit,'f',0)); col=QColor("#FFE082"); }
-        else                 { alerte="?? OPTIMAL"; action="Maintenir le prix actuel"; col=QColor("#A5D6A7"); }
-        auto *ai = new QTableWidgetItem(alerte); ai->setForeground(QBrush(col));
+        double ec = a.getPrixUnitaire()>0 ? ((res.prixPredit-a.getPrixUnitaire())/a.getPrixUnitaire())*100 : 0;
+        QString action; QColor col;
+        if (ec>15) { action=QString("+%1 DT").arg(QString::number(res.prixPredit-a.getPrixUnitaire(),'f',0)); col=QColor("#A5D6A7"); }
+        else if (ec<-15) { action=QString("-%1 DT").arg(QString::number(a.getPrixUnitaire()-res.prixPredit,'f',0)); col=QColor("#EF9A9A"); }
+        else { action="Maintenir"; col=QColor("#80DEEA"); }
+        alertTbl->setItem(i,0,new QTableWidgetItem(a.getNom()));
+        alertTbl->setItem(i,1,new QTableWidgetItem(a.getCategorie()));
+        alertTbl->setItem(i,2,new QTableWidgetItem(QString::number(a.getPrixUnitaire(),'f',2)+" DT"));
+        alertTbl->setItem(i,3,new QTableWidgetItem(QString::number(res.prixPredit,'f',2)+" DT"));
+        alertTbl->setItem(i,4,new QTableWidgetItem(QString::number(ec,'f',1)+"%"));
+        auto *ai = new QTableWidgetItem(action); ai->setForeground(QBrush(col));
         QFont f=ai->font(); f.setBold(true); ai->setFont(f);
-        alertTbl->setItem(i,0,ai);
-        alertTbl->setItem(i,1,new QTableWidgetItem(a.getNom()));
-        alertTbl->setItem(i,2,new QTableWidgetItem(a.getCategorie()));
-        alertTbl->setItem(i,3,new QTableWidgetItem(QString::number(a.getPrixUnitaire(),'f',2)+" DT"));
-        alertTbl->setItem(i,4,new QTableWidgetItem(QString::number(res.prixPredit,'f',2)+" DT"));
-        alertTbl->setItem(i,5,new QTableWidgetItem(QString::number(ecartP,'f',1)+"%"));
-        alertTbl->setItem(i,6,new QTableWidgetItem(action));
+        alertTbl->setItem(i,5,ai);
     }
-    alertTblLay->addWidget(alertTbl);
-    t3Lay->addWidget(alertTblBox);
-    scroll3->setWidget(tab3Inner);
-    tab3OuterLay->addWidget(scroll3);
-    tabs->addTab(tab3, "??  Alertes Intelligentes");
-
-    // ??????????????????????????????????????????????????????????????????????
-    // ONGLET 4 : OUTILS AVANCES
-    // ??????????????????????????????????????????????????????????????????????
-    auto *tab4 = new QWidget();
-    auto *tab4OuterLay = new QVBoxLayout(tab4);
-    auto *scroll4 = new QScrollArea();
-    scroll4->setWidgetResizable(true);
-    scroll4->setStyleSheet("QScrollArea{border:none;background:transparent;}");
-    auto *tab4Inner = new QWidget();
-    auto *t4Lay = new QVBoxLayout(tab4Inner);
-    t4Lay->setSpacing(8); t4Lay->setContentsMargins(8,8,8,8);
-
-    auto *t4Title = new QLabel("??  OUTILS AVANCES : Optimisation � Sensibilit� � Matrice � Historique");
-    t4Title->setAlignment(Qt::AlignCenter);
-    t4Title->setStyleSheet("font-size:13px;font-weight:bold;color:#FFCC80;padding:8px;"
-                           "background:#0F3460;border-radius:8px;");
-    t4Lay->addWidget(t4Title);
-
-    QHBoxLayout *advTopLay = new QHBoxLayout(); advTopLay->setSpacing(8);
-
-    // ?? Bloc 1 : Optimisation du co�t ?????????????????????????????????????
-    QGroupBox *optBox = new QGroupBox("  ??  Optimisation du Co�t");
-    QVBoxLayout *optLay = new QVBoxLayout(optBox);
-    QFormLayout *optForm = new QFormLayout();
-    auto *optCbCat    = new QComboBox(); optCbCat->addItems({"Sacs","Portefeuilles","Ceintures","Accessoires"});
-    auto *optCbType   = new QComboBox(); optCbType->addItems({"Sac � main","Sac bandouli�re","Portefeuille long","Ceinture classique","Porte-monnaie"});
-    auto *optCbCouleur= new QComboBox(); optCbCouleur->addItems({"Noir","Marron","Camel","Beige","Rouge"});
-    auto *optSpinMarge= new QDoubleSpinBox(); optSpinMarge->setRange(10,300); optSpinMarge->setValue(50); optSpinMarge->setSuffix(" %");
-    optForm->addRow("Cat�gorie :", optCbCat);
-    optForm->addRow("Type :", optCbType);
-    optForm->addRow("Couleur :", optCbCouleur);
-    optForm->addRow("Marge Objectif :", optSpinMarge);
-    optLay->addLayout(optForm);
-    auto *btnOpt = new QPushButton("??  Calculer Co�t Max");
-    auto *lblOptResult = new QLabel("�");
-    lblOptResult->setAlignment(Qt::AlignCenter);
-    lblOptResult->setWordWrap(true);
-    lblOptResult->setStyleSheet("font-size:13px;font-weight:bold;color:#FFCC80;"
-                                "background:#0F3460;border-radius:8px;padding:10px;"
-                                "border:1px solid #8D6E63;");
-    lblOptResult->setMinimumHeight(80);
-    optLay->addWidget(btnOpt); optLay->addWidget(lblOptResult); optLay->addStretch();
-    advTopLay->addWidget(optBox, 1);
-
-    // ?? Bloc 2 : Analyse de sensibilit� ???????????????????????????????????
-    QGroupBox *sensBox = new QGroupBox("  ??  Analyse de Sensibilit�");
-    QVBoxLayout *sensLay = new QVBoxLayout(sensBox);
-    QFormLayout *sensForm = new QFormLayout();
-    auto *sensCbCat    = new QComboBox(); sensCbCat->addItems({"Sacs","Portefeuilles","Ceintures","Accessoires"});
-    auto *sensCbType   = new QComboBox(); sensCbType->addItems({"Sac � main","Sac bandouli�re","Portefeuille long","Ceinture classique","Porte-monnaie"});
-    auto *sensCbCouleur= new QComboBox(); sensCbCouleur->addItems({"Noir","Marron","Camel","Beige","Rouge"});
-    auto *sensSpinCout = new QDoubleSpinBox(); sensSpinCout->setRange(1,500); sensSpinCout->setValue(30); sensSpinCout->setSuffix(" DT");
-    sensForm->addRow("Cat�gorie :", sensCbCat);
-    sensForm->addRow("Type :", sensCbType);
-    sensForm->addRow("Couleur :", sensCbCouleur);
-    sensForm->addRow("Co�t Base :", sensSpinCout);
-    sensLay->addLayout(sensForm);
-    auto *btnSens = new QPushButton("??  Analyser Sensibilit�");
-
-    // Graphique barres horizontales pour la sensibilit�
-    auto *sensBarSet = new QBarSet("Impact sur le Prix (%)");
-    sensBarSet->setColor(QColor("#FFCC80"));
-    *sensBarSet << 0 << 0 << 0 << 0;
-    auto *sensSeries = new QBarSeries(); sensSeries->append(sensBarSet);
-    auto *sensChart = new QChart(); sensChart->addSeries(sensSeries);
-    sensChart->setBackgroundBrush(QBrush(QColor("#16213E")));
-    sensChart->legend()->setVisible(false);
-    sensChart->setAnimationOptions(QChart::SeriesAnimations);
-    QStringList sensLabels = {"Cat�gorie","Type","Couleur","k-NN"};
-    auto *sensAxX = new QBarCategoryAxis(); sensAxX->append(sensLabels); sensAxX->setLabelsColor(Qt::white);
-    sensChart->addAxis(sensAxX, Qt::AlignBottom); sensSeries->attachAxis(sensAxX);
-    auto *sensAxY = new QValueAxis(); sensAxY->setLabelFormat("%.1f"); sensAxY->setLabelsColor(Qt::white);
-    sensChart->addAxis(sensAxY, Qt::AlignLeft); sensSeries->attachAxis(sensAxY);
-    auto *sensChartView = new QChartView(sensChart);
-    sensChartView->setRenderHint(QPainter::Antialiasing);
-    sensChartView->setMinimumHeight(180);
-    sensLay->addWidget(btnSens); sensLay->addWidget(sensChartView);
-    advTopLay->addWidget(sensBox, 2);
-    t4Lay->addLayout(advTopLay);
-
-    // ?? Bloc 3 : Matrice de d�cision ??????????????????????????????????????
-    QGroupBox *matBox = new QGroupBox("  ???  Matrice de D�cision : Ratio Prix/Co�t par Cat�gorie � Couleur");
+    t2Lay->addWidget(alertTbl);
+    QGroupBox *matBox = new QGroupBox("  Matrice Ratio Prix/Cout");
     QVBoxLayout *matLay = new QVBoxLayout(matBox);
-    auto *matTbl = new QTableWidget();
-    matTbl->setAlternatingRowColors(true); matTbl->verticalHeader()->setVisible(true);
-    // Remplir la matrice
+    auto *matTbl = new QTableWidget(); matTbl->setAlternatingRowColors(true);
     auto matrice = Article::matriceDecision();
     QStringList cats = matrice.keys();
-    QSet<QString> couleursSet;
-    for (auto &cat : cats) for (auto &col : matrice[cat].keys()) couleursSet.insert(col);
-    QStringList couleurs = couleursSet.values();
-    matTbl->setRowCount(cats.size()); matTbl->setColumnCount(couleurs.size());
-    matTbl->setHorizontalHeaderLabels(couleurs);
-    matTbl->setVerticalHeaderLabels(cats);
+    QSet<QString> colSet;
+    for (auto &cat : cats) for (auto &cc : matrice[cat].keys()) colSet.insert(cc);
+    QStringList couleursM = colSet.values();
+    matTbl->setRowCount(cats.size()); matTbl->setColumnCount(couleursM.size());
+    matTbl->setHorizontalHeaderLabels(couleursM); matTbl->setVerticalHeaderLabels(cats);
     matTbl->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     for (int r=0; r<cats.size(); ++r) {
-        for (int c=0; c<couleurs.size(); ++c) {
-            double ratio = matrice[cats[r]].value(couleurs[c], 0.0);
-            auto *item = new QTableWidgetItem(ratio>0 ? QString("�%1").arg(QString::number(ratio,'f',2)) : "�");
+        for (int c=0; c<couleursM.size(); ++c) {
+            double ratio = matrice[cats[r]].value(couleursM[c], 0.0);
+            auto *item = new QTableWidgetItem(ratio>0 ? QString("x%1").arg(QString::number(ratio,'f',2)) : "-");
             item->setTextAlignment(Qt::AlignCenter);
-            if (ratio>=3.0)      item->setBackground(QBrush(QColor("#1B5E20")));
+            if (ratio>=3.0) item->setBackground(QBrush(QColor("#1B5E20")));
             else if (ratio>=2.5) item->setBackground(QBrush(QColor("#2E7D32")));
             else if (ratio>=2.0) item->setBackground(QBrush(QColor("#F57F17")));
-            else if (ratio>0)    item->setBackground(QBrush(QColor("#B71C1C")));
+            else if (ratio>0) item->setBackground(QBrush(QColor("#B71C1C")));
             item->setForeground(QBrush(Qt::white));
-            matTbl->setItem(r, c, item);
+            matTbl->setItem(r,c,item);
         }
     }
     matLay->addWidget(matTbl);
-    t4Lay->addWidget(matBox);
+    t2Lay->addWidget(matBox);
+    scroll2a->setWidget(tab2Inner);
+    tab2OuterLay->addWidget(scroll2a);
+    tabs->addTab(tab2, "Analyse & Alertes");
 
-    // ?? Bloc 4 : Historique des pr�dictions ???????????????????????????????
-    QGroupBox *histBox = new QGroupBox("  ??  Historique des Pr�dictions");
-    QVBoxLayout *histLay = new QVBoxLayout(histBox);
-    auto *histTbl = new QTableWidget();
-    histTbl->setColumnCount(7);
-    histTbl->setHorizontalHeaderLabels({"Date","Cat�gorie","Type","Couleur","Co�t","Prix Pr�dit","Segment"});
-    histTbl->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-    histTbl->setAlternatingRowColors(true); histTbl->verticalHeader()->setVisible(false);
-    // Charger l'historique depuis la BD
-    {
-        QSqlQuery hq(Connection::instance()->getDatabase());
-        hq.prepare("SELECT TO_CHAR(DATE_PREDICTION,'DD/MM/YYYY HH24:MI'), CATEGORIE, TYPE_ARTICLE, "
-                   "COULEUR, COUT_FABRICATION, PRIX_PREDIT, SEGMENT "
-                   "FROM HISTORIQUE_PREDICTIONS ORDER BY DATE_PREDICTION DESC FETCH FIRST 20 ROWS ONLY");
-        if (hq.exec()) {
-            int row=0;
-            while (hq.next()) {
-                histTbl->insertRow(row);
-                for (int c=0; c<7; ++c)
-                    histTbl->setItem(row, c, new QTableWidgetItem(hq.value(c).toString()));
-                ++row;
-            }
-        }
-        if (histTbl->rowCount()==0) {
-            histTbl->insertRow(0);
-            histTbl->setItem(0,0,new QTableWidgetItem("Aucune pr�diction sauvegard�e"));
-        }
-    }
-    histLay->addWidget(histTbl);
-    t4Lay->addWidget(histBox);
-    scroll4->setWidget(tab4Inner);
-    tab4OuterLay->addWidget(scroll4);
-    tabs->addTab(tab4, "??  Optimisation & Strat�gie");
-
-    // Bouton fermer
-    auto *btnClose = new QPushButton("?  Fermer");
+    auto *btnClose = new QPushButton("Fermer");
     btnClose->setMaximumWidth(150);
     connect(btnClose, &QPushButton::clicked, &dlg, &QDialog::accept);
-    QHBoxLayout *bl = new QHBoxLayout();
-    bl->addStretch(); bl->addWidget(btnClose);
-    mainLay->addLayout(bl);
+    QHBoxLayout *closeLay = new QHBoxLayout(); closeLay->addStretch(); closeLay->addWidget(btnClose);
+    mainLay->addLayout(closeLay);
 
-    // ?? Connexion bouton Pr�dire ??????????????????????????????????????????
-    connect(btnPredire, &QPushButton::clicked, [&]() {
-        double cout = spinCout->value();
-        auto res = Article::predirePrixAvance(cbCat->currentText(),
-                                              cbType->currentText(),
-                                              cbCouleur->currentText(), cout);
-
-        lblPrix->setText(QString("??  %1 DT").arg(QString::number(res.prixPredit,'f',2)));
-        lblInterval->setText(QString("Intervalle de confiance : [ %1 DT  �  %2 DT ]   |   "
-                                     "Confiance : %3   |   R�f. utilis�es : %4")
-                             .arg(QString::number(res.prixMin,'f',2))
-                             .arg(QString::number(res.prixMax,'f',2))
-                             .arg(res.niveauConfiance)
-                             .arg(res.nbArticlesRef));
-
-        lblAlgo->setText(
-            QString("?? R�gression Cat�gorie  ?  %1 DT\n"
-                    "?? R�gression Type       ?  %2 DT\n"
-                    "?? R�gression Couleur    ?  %3 DT\n"
-                    "?? k-NN (3 voisins)      ?  %4 DT\n"
-                    "?????????????????????????????????\n"
-                    "? Prix Final (pond�r�)  ?  %5 DT\n"
-                    "?? Marge estim�e         ?  %6 %")
-            .arg(QString::number(res.prixCategorie,'f',2))
-            .arg(QString::number(res.prixType,'f',2))
-            .arg(QString::number(res.prixCouleur,'f',2))
-            .arg(QString::number(res.prixKNN,'f',2))
-            .arg(QString::number(res.prixPredit,'f',2))
-            .arg(QString::number(res.margeEstimee,'f',1))
-        );
-        lblAlgo->setStyleSheet("color:#E0E0E0;font-size:11px;padding:5px;"
-                               "font-family:'Courier New',monospace;");
-
-        lblReco->setText(res.recommandation);
-
-        // Couleur du r�sultat selon la marge
-        QString couleurPrix = res.margeEstimee >= 80 ? "#FFCC80"
-                            : res.margeEstimee >= 50 ? "#A5D6A7"
-                            : res.margeEstimee >= 30 ? "#FFE082"
-                            : "#EF9A9A";
-        lblPrix->setStyleSheet(QString("font-size:32px;font-weight:bold;color:%1;"
-                                       "background:#0F3460;border-radius:10px;padding:15px;"
-                                       "border:2px solid #8D6E63;").arg(couleurPrix));
-    });
-
-    // ?? Connexion slider simulation (onglet 2) ????????????????????????????
-    auto updateSim = [&]() {
+    auto updateAll = [&]() {
         double cout = sliderCout->value();
-        lblSliderVal->setText(QString("Co�t : %1 DT").arg(cout));
-        auto res = Article::predirePrixAvance(simCbCat->currentText(), simCbType->currentText(),
-                                              simCbCouleur->currentText(), cout);
-        lblSimPrix->setText(QString("Prix Pr�dit : %1 DT").arg(QString::number(res.prixPredit,'f',2)));
-        lblSimMarge->setText(QString("Marge : %1 DT  (%2%)")
-                             .arg(QString::number(res.prixPredit-cout,'f',2))
-                             .arg(QString::number(res.margeEstimee,'f',1)));
-        QString seg;
-        if (res.margeEstimee>=150) seg="?? LUXE";
-        else if (res.margeEstimee>=80) seg="? PREMIUM";
-        else if (res.margeEstimee>=40) seg="? STANDARD";
-        else seg="? ENTREE DE GAMME";
-        lblSimSeg->setText(QString("Segment : %1").arg(seg));
-        lblSimReco->setText(res.recommandation);
-        // Mettre � jour la courbe
-        simSeries->clear(); simSeuilSeries->clear();
-        for (int c=5; c<=200; c+=5) {
-            auto r = Article::predirePrixAvance(simCbCat->currentText(), simCbType->currentText(),
-                                                simCbCouleur->currentText(), c);
-            simSeries->append(c, r.prixPredit);
-            simSeuilSeries->append(c, c*2.0);
-        }
-    };
-    connect(sliderCout,    &QSlider::valueChanged,                              [&](int){ updateSim(); });
-    connect(simCbCat,      QOverload<int>::of(&QComboBox::currentIndexChanged), [&](int){ updateSim(); });
-    connect(simCbType,     QOverload<int>::of(&QComboBox::currentIndexChanged), [&](int){ updateSim(); });
-    connect(simCbCouleur,  QOverload<int>::of(&QComboBox::currentIndexChanged), [&](int){ updateSim(); });
-    // ?? Connexion bouton Optimisation (onglet 4) ??????????????????????????
-    connect(btnOpt, &QPushButton::clicked, [&]() {
-        double margeObj = optSpinMarge->value();
-        double coutMax = Article::optimiserCout(optCbCat->currentText(), optCbType->currentText(),
-                                                 optCbCouleur->currentText(), margeObj);
-        auto res = Article::predirePrixAvance(optCbCat->currentText(), optCbType->currentText(),
-                                              optCbCouleur->currentText(), coutMax);
-        lblOptResult->setText(
-            QString("? Co�t Maximum : %1 DT\n"
-                    "?? Prix de Vente : %2 DT\n"
-                    "?? Marge Obtenue : %3%")
-            .arg(QString::number(coutMax,'f',2))
-            .arg(QString::number(res.prixPredit,'f',2))
+        lblCoutVal->setText(QString("%1 DT").arg(cout));
+        auto res = Article::predirePrixAvance(cbCat->currentText(),cbType->currentText(),cbCouleur->currentText(),cout);
+        lblPrix->setText(QString("%1 DT").arg(QString::number(res.prixPredit,'f',2)));
+        lblDetails->setText(QString("Marge : %1 DT (%2%)  |  Confiance : %3  |  %4 ref.")
+            .arg(QString::number(res.prixPredit-cout,'f',2))
             .arg(QString::number(res.margeEstimee,'f',1))
-        );
-    });
-    // ?? Connexion bouton Sensibilit� (onglet 4)
-    connect(btnSens, &QPushButton::clicked, [&]() {
-        double cout = sensSpinCout->value();
-        auto base = Article::predirePrixAvance(sensCbCat->currentText(), sensCbType->currentText(),
-                                               sensCbCouleur->currentText(), cout);
-        // Impact de chaque variable : variation de �1 cat�gorie/type/couleur
-        double impactCat  = qAbs(base.prixCategorie - base.prixPredit) / base.prixPredit * 100;
-        double impactType = qAbs(base.prixType      - base.prixPredit) / base.prixPredit * 100;
-        double impactCol  = qAbs(base.prixCouleur   - base.prixPredit) / base.prixPredit * 100;
-        double impactKNN  = qAbs(base.prixKNN       - base.prixPredit) / base.prixPredit * 100;
-        sensBarSet->replace(0, impactCat);
-        sensBarSet->replace(1, impactType);
-        sensBarSet->replace(2, impactCol);
-        sensBarSet->replace(3, impactKNN);
-        double maxImpact = std::max({impactCat, impactType, impactCol, impactKNN});
-        sensAxY->setRange(0, maxImpact * 1.2 + 1);
-    });
-    //Sauvegarde automatique lors d'une pr�diction (onglet 1)
-    // On reconnecte btnPredire pour aussi sauvegarder
-    connect(btnPredire, &QPushButton::clicked, [&]() {
-        auto res = Article::predirePrixAvance(cbCat->currentText(), cbType->currentText(),
-                                              cbCouleur->currentText(), spinCout->value());
-        Article::sauvegarderPrediction(res, cbCat->currentText(), cbType->currentText(),
-                                        cbCouleur->currentText(), spinCout->value());
-    });
+            .arg(res.niveauConfiance).arg(res.nbArticlesRef));
+        lblReco->setText(res.recommandation);
+        QString cp = res.margeEstimee>=80 ? "#FFCC80" : res.margeEstimee>=50 ? "#A5D6A7" : res.margeEstimee>=30 ? "#FFE082" : "#EF9A9A";
+        lblPrix->setStyleSheet(QString("font-size:28px;font-weight:bold;color:%1;background:#0F3460;border-radius:10px;padding:12px;border:2px solid #8D6E63;").arg(cp));
+        simSeries->clear(); seuilSeries->clear();
+        for (int c=5; c<=300; c+=5) {
+            auto r2 = Article::predirePrixAvance(cbCat->currentText(),cbType->currentText(),cbCouleur->currentText(),c);
+            simSeries->append(c, r2.prixPredit); seuilSeries->append(c, c*2.0);
+        }
+        markerSeries->clear(); markerSeries->append(cout, res.prixPredit);
+    };
+    connect(sliderCout, &QSlider::valueChanged, [&](int){ updateAll(); });
+    connect(cbCat, QOverload<int>::of(&QComboBox::currentIndexChanged), [&](int){ updateAll(); });
+    connect(cbType, QOverload<int>::of(&QComboBox::currentIndexChanged), [&](int){ updateAll(); });
+    connect(cbCouleur, QOverload<int>::of(&QComboBox::currentIndexChanged), [&](int){ updateAll(); });
+    updateAll();
     dlg.exec();
 }
 // Voice Recognition (SAPI)
 #ifdef Q_OS_WIN
 void MainWindow::initSAPI()
 {
-    // Utiliser le recognizer partag� Windows (d�j� configur� avec le micro syst�me)
     if (FAILED(CoCreateInstance(CLSID_SpSharedRecognizer, nullptr, CLSCTX_LOCAL_SERVER,
                                 IID_ISpRecognizer, (void**)&spRecognizer))) {
         QMessageBox::critical(this, "Vocal", "Impossible d'initialiser SAPI.\nV�rifiez que la reconnaissance vocale Windows est activ�e.");
