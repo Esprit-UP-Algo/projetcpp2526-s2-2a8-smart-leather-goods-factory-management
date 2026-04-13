@@ -33,10 +33,12 @@ SOURCES += \
     fournisseur.cpp \
     fournisseurdialog.cpp \
     smsfournisseurdialog.cpp \
+    qrfournisseurdialog.cpp \
     production.cpp \
     productionview.cpp \
     article.cpp \
     articledialog.cpp \
+    tripo3dgenerator.cpp \
     logindialog.cpp \
     notification.cpp
 
@@ -64,10 +66,12 @@ HEADERS += \
     fournisseur.h \
     fournisseurdialog.h \
     smsfournisseurdialog.h \
+    qrfournisseurdialog.h \
     production.h \
     productionview.h \
     article.h \
     articledialog.h \
+    tripo3dgenerator.h \
     logindialog.h \
     notification.h
 
