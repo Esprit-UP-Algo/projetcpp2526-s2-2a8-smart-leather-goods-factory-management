@@ -1,4 +1,4 @@
-#ifndef ARTICLEDIALOG_H
+﻿#ifndef ARTICLEDIALOG_H
 #define ARTICLEDIALOG_H
 
 #include <QDialog>
@@ -8,6 +8,10 @@
 #include <QSpinBox>
 #include <QLabel>
 #include <QSlider>
+#include <QPushButton>
+#include <QProgressBar>
+
+class Tripo3DGenerator;
 
 class ArticleDialog : public QDialog
 {
@@ -19,14 +23,12 @@ public:
     explicit ArticleDialog(QWidget *parent = nullptr, Mode mode = AddMode);
     ~ArticleDialog();
 
-    // Setter complet avec tous les attributs
     void setArticleData(const QString &ref, const QString &nom, const QString &cat,
                         const QString &type, const QString &modele3d,
                         int cr, int cg, int cb,
                         double largeur, double hauteur, double profondeur,
                         double prix, double cout, const QString &statut);
 
-    // Getters
     QString getReference() const;
     QString getNom() const;
     QString getCategorie() const;
@@ -41,12 +43,14 @@ public:
     double getPrixUnitaire() const;
     double getCoutFabrication() const;
     QString getStatut() const;
+    QString getPhotoPath() const;
 
 private slots:
     void onSave();
     void onCancel();
     void onTypeChanged(const QString &type);
     void updateColorPreview();
+    void onGenerate3D();
 
 private:
     Mode dialogMode;
@@ -63,6 +67,14 @@ private:
     QDoubleSpinBox *spinBoxPrix;
     QDoubleSpinBox *spinBoxCout;
     QComboBox *comboBoxStatut;
+
+    // Tripo3D
+    QPushButton *btnGenerate3D;
+    QProgressBar *progress3D;
+    QLabel *lblPreview3D;
+    QLabel *lblStatus3D;
+    Tripo3DGenerator *m_tripoGen;
+    QString m_photoPath;
 
     void setupUI();
     void applyStyles();

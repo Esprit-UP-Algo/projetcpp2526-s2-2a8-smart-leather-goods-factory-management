@@ -1,12 +1,12 @@
-#include "articleviewer3d.h"
+﻿#include "articleviewer3d.h"
 #include "envloader.h"
 #include <algorithm>
 #include <QDebug>
 #include <QScrollArea>
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Render3DWidget — rendu multi-pièces software
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+// Render3DWidget ÔÇö rendu multi-pi├¿ces software
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 
 Render3DWidget::Render3DWidget(QWidget *parent)
     : QWidget(parent), m_baseColor(141,110,99),
@@ -18,12 +18,12 @@ Render3DWidget::Render3DWidget(QWidget *parent)
     buildSacAMain();
 }
 
-// ── Couleur / échelle ────────────────────────────────────────────────────────
+// ÔöÇÔöÇ Couleur / ├®chelle ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 void Render3DWidget::setColor(int r, int g, int b)
 {
     QColor old = m_baseColor;
     m_baseColor = QColor(r, g, b);
-    // Recalculer les couleurs des pièces proportionnellement
+    // Recalculer les couleurs des pi├¿ces proportionnellement
     for (int i = 0; i < m_partColors.size(); ++i) {
         QColor &c = m_partColors[i];
         float rr = old.red()   > 0 ? (float)c.red()   / old.red()   : 1.0f;
@@ -37,15 +37,15 @@ void Render3DWidget::setColor(int r, int g, int b)
 void Render3DWidget::setScale(float sx, float sy, float sz)
 { m_scaleX=sx; m_scaleY=sy; m_scaleZ=sz; update(); }
 
-// ── setShape : dispatch vers le bon modèle composite ─────────────────────────
+// ÔöÇÔöÇ setShape : dispatch vers le bon mod├¿le composite ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
 void Render3DWidget::setShape(const QString &type)
 {
     m_vertices.clear(); m_faces.clear(); m_partColors.clear();
     m_shapeName = type;
     QString t = type.toLower();
 
-    if      (t.contains("sac à main") || t.contains("sac a main")) buildSacAMain();
-    else if (t.contains("bandoulière") || t.contains("bandouliere")) buildSacBandouliere();
+    if      (t.contains("sac ├á main") || t.contains("sac a main")) buildSacAMain();
+    else if (t.contains("bandouli├¿re") || t.contains("bandouliere")) buildSacBandouliere();
     else if (t.contains("tote"))        buildToteBag();
     else if (t.contains("dos"))         buildSacADos();
     else if (t.contains("portefeuille long"))    buildPortefeuilleLong();
@@ -54,15 +54,15 @@ void Render3DWidget::setShape(const QString &type)
     else if (t.contains("ceinture"))    buildCeinture();
     else if (t.contains("porte-monnaie") || t.contains("monnaie")) buildPorteMonnaie();
     else if (t.contains("pochette") || t.contains("clutch")) buildPochette();
-    else if (t.contains("clés") || t.contains("cles")) buildPorteCles();
+    else if (t.contains("cl├®s") || t.contains("cles")) buildPorteCles();
     else buildDefault();
 
     update();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 // Primitives : chaque appel ajoute des vertices/faces et retourne le colorIdx
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 
 int Render3DWidget::addCuboid(float cx, float cy, float cz, float w, float h, float d, const QColor &col)
 {
@@ -168,25 +168,25 @@ int Render3DWidget::addTorus(float cx, float cy, float cz, float R, float r, int
     return ci;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Modèles composites — chaque produit est assemblé à partir de primitives
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+// Mod├¿les composites ÔÇö chaque produit est assembl├® ├á partir de primitives
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 
 void Render3DWidget::buildSacAMain()
 {
     QColor base = m_baseColor;
     QColor dark = base.darker(140);
-    QColor metal(200, 180, 120); // doré
+    QColor metal(200, 180, 120); // dor├®
 
     // Corps principal du sac
     addCuboid(0, 0, 0, 2.0f, 1.4f, 0.8f, base);
-    // Rabat supérieur
+    // Rabat sup├®rieur
     addCuboid(0, 0.8f, -0.15f, 2.0f, 0.25f, 0.5f, dark);
     // Anse gauche (demi-cylindre)
     addHalfCylinder(-0.5f, 1.2f, 0, 0.5f, 0.12f, 10, dark);
     // Anse droite
     addHalfCylinder(0.5f, 1.2f, 0, 0.5f, 0.12f, 10, dark);
-    // Fermoir central (petit cylindre doré)
+    // Fermoir central (petit cylindre dor├®)
     addCylinder(0, 0.85f, -0.42f, 0.08f, 0.06f, 8, metal);
     // Pieds du sac (4 petits cylindres)
     addCylinder(-0.7f, -0.75f, -0.25f, 0.06f, 0.06f, 6, metal);
@@ -207,7 +207,7 @@ void Render3DWidget::buildSacBandouliere()
     addCuboid(0, 0, 0, 1.6f, 1.1f, 0.5f, base);
     // Rabat
     addCuboid(0, 0.65f, -0.1f, 1.6f, 0.2f, 0.35f, dark);
-    // Bandoulière (longue bande diagonale)
+    // Bandouli├¿re (longue bande diagonale)
     addCuboid(-1.0f, 0.8f, 0, 0.12f, 0.06f, 0.5f, dark);
     addCuboid(-1.3f, 1.2f, 0, 0.7f, 0.06f, 0.12f, dark);
     addCuboid(-1.6f, 1.6f, 0, 0.12f, 0.06f, 0.5f, dark);
@@ -222,16 +222,16 @@ void Render3DWidget::buildToteBag()
     QColor base = m_baseColor;
     QColor dark = base.darker(130);
 
-    // Corps large et ouvert (trapèze simulé par 2 cuboïdes)
+    // Corps large et ouvert (trap├¿ze simul├® par 2 cubo├»des)
     addCuboid(0, 0, 0, 2.4f, 1.8f, 0.9f, base);
-    // Bords renforcés
+    // Bords renforc├®s
     addCuboid(0, 0.9f, 0, 2.5f, 0.08f, 0.95f, dark);
     addCuboid(0, -0.9f, 0, 2.5f, 0.08f, 0.95f, dark);
     // Anse gauche
     addHalfCylinder(-0.6f, 1.3f, 0, 0.55f, 0.1f, 10, dark);
     // Anse droite
     addHalfCylinder(0.6f, 1.3f, 0, 0.55f, 0.1f, 10, dark);
-    // Poche intérieure visible
+    // Poche int├®rieure visible
     addCuboid(0, 0.2f, -0.47f, 1.4f, 0.9f, 0.03f, dark);
 }
 
@@ -243,7 +243,7 @@ void Render3DWidget::buildSacADos()
 
     // Corps principal (plus haut que large)
     addCuboid(0, 0, 0, 1.4f, 2.0f, 0.7f, base);
-    // Rabat supérieur arrondi
+    // Rabat sup├®rieur arrondi
     addCuboid(0, 1.1f, -0.1f, 1.4f, 0.2f, 0.5f, dark);
     // Poche avant
     addCuboid(0, -0.2f, -0.38f, 1.0f, 0.9f, 0.12f, dark);
@@ -251,9 +251,9 @@ void Render3DWidget::buildSacADos()
     addCuboid(-0.55f, 0.3f, 0.38f, 0.15f, 1.6f, 0.06f, dark);
     // Bretelle droite
     addCuboid(0.55f, 0.3f, 0.38f, 0.15f, 1.6f, 0.06f, dark);
-    // Poignée supérieure
+    // Poign├®e sup├®rieure
     addHalfCylinder(0, 1.35f, 0, 0.25f, 0.15f, 8, dark);
-    // Fermeture éclair (ligne)
+    // Fermeture ├®clair (ligne)
     addCuboid(0, 1.0f, -0.36f, 0.8f, 0.03f, 0.03f, metal);
 }
 
@@ -267,13 +267,13 @@ void Render3DWidget::buildPortefeuilleLong()
     addCuboid(0, 0, 0, 1.8f, 0.8f, 0.12f, base);
     // Rabat
     addCuboid(0, 0.45f, 0, 1.8f, 0.1f, 0.12f, dark);
-    // Compartiments intérieurs (lignes)
+    // Compartiments int├®rieurs (lignes)
     addCuboid(-0.4f, 0, 0.065f, 0.02f, 0.6f, 0.02f, dark);
     addCuboid(0.2f, 0, 0.065f, 0.02f, 0.6f, 0.02f, dark);
     addCuboid(0.6f, 0, 0.065f, 0.02f, 0.6f, 0.02f, dark);
     // Bouton pression
     addCylinder(0, 0.42f, -0.07f, 0.04f, 0.03f, 8, metal);
-    // Couture décorative
+    // Couture d├®corative
     addCuboid(0, 0, -0.065f, 1.6f, 0.02f, 0.01f, dark);
 }
 
@@ -337,7 +337,7 @@ void Render3DWidget::buildPorteMonnaie()
     addCuboid(0, 0.38f, 0, 0.3f, 0.06f, 0.22f, metal);
     // Couture
     addCuboid(0, 0, -0.105f, 0.75f, 0.5f, 0.01f, dark);
-    // Soufflet latéral
+    // Soufflet lat├®ral
     addCuboid(-0.46f, 0, 0, 0.02f, 0.5f, 0.18f, dark);
     addCuboid(0.46f, 0, 0, 0.02f, 0.5f, 0.18f, dark);
 }
@@ -349,9 +349,9 @@ void Render3DWidget::buildPochette()
     QColor metal(210, 190, 130);
 
     addCuboid(0, 0, 0, 1.8f, 0.9f, 0.15f, base);
-    // Rabat triangulaire (simulé)
+    // Rabat triangulaire (simul├®)
     addCuboid(0, 0.55f, -0.03f, 1.8f, 0.2f, 0.1f, dark);
-    // Fermoir élégant
+    // Fermoir ├®l├®gant
     addCylinder(0, 0.5f, -0.1f, 0.05f, 0.04f, 8, metal);
     // Dragonne
     addCuboid(0.95f, -0.2f, 0, 0.06f, 0.4f, 0.04f, dark);
@@ -364,11 +364,11 @@ void Render3DWidget::buildPorteCles()
     QColor dark = base.darker(140);
     QColor metal(210, 190, 130);
 
-    // Petit étui
+    // Petit ├®tui
     addCuboid(0, 0, 0, 0.5f, 0.7f, 0.15f, base);
     // Bouton pression
     addCylinder(0, 0.4f, -0.08f, 0.04f, 0.03f, 8, metal);
-    // Anneau porte-clés
+    // Anneau porte-cl├®s
     addTorus(0, 0.6f, 0, 0.15f, 0.02f, 12, 6, metal);
     // Couture
     addCuboid(0, 0, -0.08f, 0.35f, 0.5f, 0.01f, dark);
@@ -379,9 +379,9 @@ void Render3DWidget::buildDefault()
     addCuboid(0, 0, 0, 1.5f, 1.0f, 0.5f, m_baseColor);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 // Projection, rotation, rendu
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 
 Render3DWidget::Point3D Render3DWidget::rotate(Point3D p)
 {
@@ -416,21 +416,37 @@ void Render3DWidget::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
+    p.setRenderHint(QPainter::SmoothPixmapTransform);
 
-    // Background
-    QLinearGradient bg(0,0,0,height());
-    bg.setColorAt(0, QColor(22,33,62));
-    bg.setColorAt(1, QColor(15,52,96));
+    // Fond d├®grad├® riche
+    QRadialGradient bg(width()/2, height()/2, qMax(width(),height())*0.7);
+    bg.setColorAt(0, QColor(25, 42, 86));
+    bg.setColorAt(0.6, QColor(18, 30, 65));
+    bg.setColorAt(1, QColor(10, 18, 42));
     p.fillRect(rect(), bg);
+
+    // Grille de sol subtile
+    p.setPen(QPen(QColor(255,255,255,15), 1));
+    int cy = height() * 0.7;
+    for (int i = -10; i <= 10; ++i) {
+        int x = width()/2 + i * 40;
+        p.drawLine(x, cy - 20, x, cy + 20);
+    }
+    p.drawLine(0, cy, width(), cy);
 
     if (m_vertices.isEmpty() || m_faces.isEmpty()) return;
 
-    // Tri par profondeur (painter's algorithm)
+    // Tri par profondeur
     QVector<int> order(m_faces.size());
     for (int i = 0; i < m_faces.size(); ++i) order[i] = i;
     std::sort(order.begin(), order.end(), [this](int a, int b) {
         return faceDepth(m_faces[a]) < faceDepth(m_faces[b]);
     });
+
+    // Ombre au sol
+    p.setPen(Qt::NoPen);
+    p.setBrush(QColor(0, 0, 0, 30));
+    p.drawEllipse(QPointF(width()/2 + 10, height()*0.72), 120 * m_zoom, 20 * m_zoom);
 
     for (int idx : order) {
         const Face &f = m_faces[idx];
@@ -441,7 +457,7 @@ void Render3DWidget::paintEvent(QPaintEvent *)
             poly << project(rotated[i]);
         }
 
-        // Normale pour éclairage
+        // Normale pour ├®clairage multi-sources
         float nx=0, ny=0, nz=0;
         if (f.nv >= 3) {
             float ax=rotated[1].x-rotated[0].x, ay=rotated[1].y-rotated[0].y, az=rotated[1].z-rotated[0].z;
@@ -450,29 +466,50 @@ void Render3DWidget::paintEvent(QPaintEvent *)
             float len=sqrtf(nx*nx+ny*ny+nz*nz);
             if (len>0){nx/=len;ny/=len;nz/=len;}
         }
-        float light = 0.3f + 0.7f * qMax(0.0f, nx*0.3f + ny*0.5f + nz*0.8f);
-        light = qBound(0.2f, light, 1.0f);
 
-        // Couleur de la pièce
+        // ├ëclairage : lumi├¿re principale + lumi├¿re d'appoint + ambiance
+        float mainLight = qMax(0.0f, nx*0.2f + ny*0.5f + nz*0.8f);
+        float fillLight = qMax(0.0f, -nx*0.3f + ny*0.3f + nz*0.1f) * 0.3f;
+        float rimLight  = qMax(0.0f, -nz * 0.4f) * 0.15f;
+        float light = 0.25f + 0.55f * mainLight + fillLight + rimLight;
+        light = qBound(0.18f, light, 1.05f);
+
+        // Couleur de la pi├¿ce avec ├®clairage
         QColor partCol = (f.colorIdx >= 0 && f.colorIdx < m_partColors.size())
                          ? m_partColors[f.colorIdx] : m_baseColor;
-        QColor faceColor(
-            qBound(0, (int)(partCol.red()*light), 255),
-            qBound(0, (int)(partCol.green()*light), 255),
-            qBound(0, (int)(partCol.blue()*light), 255)
-        );
 
-        p.setPen(QPen(faceColor.darker(130), 1));
+        int fr = qBound(0, (int)(partCol.red()   * light), 255);
+        int fg = qBound(0, (int)(partCol.green() * light), 255);
+        int fb = qBound(0, (int)(partCol.blue()  * light), 255);
+        QColor faceColor(fr, fg, fb);
+
+        // Contour fin et subtil
+        p.setPen(QPen(faceColor.darker(115), 0.5));
         p.setBrush(faceColor);
         p.drawPolygon(poly);
+
+        // Reflet sp├®culaire sur les faces bien orient├®es (m├®tal/fermoirs)
+        if (light > 0.85f && partCol.lightness() > 150) {
+            QColor spec(255, 255, 255, (int)((light - 0.85f) * 200));
+            p.setBrush(spec);
+            p.setPen(Qt::NoPen);
+            p.drawPolygon(poly);
+        }
     }
 
-    // Texte info
-    p.setPen(QColor(188,170,164));
+    // Label produit
+    p.setPen(QColor(188,170,164,180));
     p.setFont(QFont("Segoe UI", 9));
     p.drawText(10, height()-10,
-        QString("🖱 Glisser pour tourner  |  🔄 Molette pour zoomer  |  Zoom: %1x")
+        QString("Glisser pour tourner  |  Molette pour zoomer  |  %1x")
         .arg(QString::number(m_zoom,'f',1)));
+
+    // Nom du mod├¿le en haut
+    if (!m_shapeName.isEmpty()) {
+        p.setPen(QColor(255, 204, 128, 200));
+        p.setFont(QFont("Segoe UI", 11, QFont::Bold));
+        p.drawText(rect().adjusted(0, 8, 0, 0), Qt::AlignHCenter | Qt::AlignTop, m_shapeName);
+    }
 }
 
 void Render3DWidget::mousePressEvent(QMouseEvent *e) { m_lastMouse = e->pos(); }
@@ -494,9 +531,9 @@ void Render3DWidget::wheelEvent(QWheelEvent *e)
     update();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ArticleViewer3D — widget complet avec contrôles + IA Groq
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+// ArticleViewer3D ÔÇö widget complet avec contr├┤les + IA Groq
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 
 ArticleViewer3D::ArticleViewer3D(QWidget *parent) : QWidget(parent),
     m_currentR(141), m_currentG(110), m_currentB(99),
@@ -506,7 +543,7 @@ ArticleViewer3D::ArticleViewer3D(QWidget *parent) : QWidget(parent),
     m_networkAI = new QNetworkAccessManager(this);
     connect(m_networkAI, &QNetworkAccessManager::finished, this, &ArticleViewer3D::onAIReplyFinished);
     setupUI();
-    loadModelForType("Sac à main");
+    loadModelForType("Sac ├á main");
 }
 
 void ArticleViewer3D::setupUI()
@@ -517,7 +554,7 @@ void ArticleViewer3D::setupUI()
     m_render = new Render3DWidget(this);
     mainLayout->addWidget(m_render, 3);
 
-    // Panneau contrôle avec scroll
+    // Panneau contr├┤le avec scroll
     auto *scrollArea = new QScrollArea();
     scrollArea->setWidgetResizable(true);
     scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -538,13 +575,13 @@ void ArticleViewer3D::setupUI()
     auto *ctrlLay = new QVBoxLayout(ctrl);
     ctrlLay->setContentsMargins(10,10,10,10); ctrlLay->setSpacing(8);
 
-    m_lblModelName = new QLabel("📦 Modèle : —");
+    m_lblModelName = new QLabel("­ƒôª Mod├¿le : ÔÇö");
     m_lblModelName->setStyleSheet("font-size:13px;font-weight:bold;color:#FFCC80;padding:5px;");
     m_lblModelName->setAlignment(Qt::AlignCenter);
     ctrlLay->addWidget(m_lblModelName);
 
-    // ── Couleur ──
-    auto *colorBox = new QGroupBox("  🎨  Couleur");
+    // ÔöÇÔöÇ Couleur ÔöÇÔöÇ
+    auto *colorBox = new QGroupBox("  ­ƒÄ¿  Couleur");
     auto *colorLay = new QVBoxLayout(colorBox);
     m_colorPreview = new QWidget(); m_colorPreview->setFixedHeight(25);
     m_colorPreview->setStyleSheet("background:rgb(141,110,99);border-radius:6px;");
@@ -568,7 +605,7 @@ void ArticleViewer3D::setupUI()
     makeCS("G", m_sliderG, "#66BB6A", 110);
     makeCS("B", m_sliderB, "#42A5F5", 99);
 
-    auto *btnPicker = new QPushButton("🎨 Choisir");
+    auto *btnPicker = new QPushButton("­ƒÄ¿ Choisir");
     connect(btnPicker, &QPushButton::clicked, [this]() {
         QColor c = QColorDialog::getColor(QColor(m_sliderR->value(),m_sliderG->value(),m_sliderB->value()), this);
         if (c.isValid()) { m_sliderR->setValue(c.red()); m_sliderG->setValue(c.green()); m_sliderB->setValue(c.blue()); }
@@ -576,10 +613,10 @@ void ArticleViewer3D::setupUI()
     colorLay->addWidget(btnPicker);
     ctrlLay->addWidget(colorBox);
 
-    // ── Dimensions ──
-    auto *dimBox = new QGroupBox("  📐  Dimensions");
+    // ÔöÇÔöÇ Dimensions ÔöÇÔöÇ
+    auto *dimBox = new QGroupBox("  ­ƒôÉ  Dimensions");
     auto *dimLay = new QVBoxLayout(dimBox);
-    m_lblDimensions = new QLabel("1.0 × 1.0 × 1.0");
+    m_lblDimensions = new QLabel("1.0 ├ù 1.0 ├ù 1.0");
     m_lblDimensions->setAlignment(Qt::AlignCenter);
     m_lblDimensions->setStyleSheet("font-size:12px;font-weight:bold;color:#FFCC80;padding:4px;");
     dimLay->addWidget(m_lblDimensions);
@@ -592,7 +629,7 @@ void ArticleViewer3D::setupUI()
         connect(s, &QSlider::valueChanged, [this,v](int val) {
             v->setText(QString::number(val/100.0,'f',1));
             m_render->setScale(m_sliderW->value()/100.0f, m_sliderH->value()/100.0f, m_sliderD->value()/100.0f);
-            m_lblDimensions->setText(QString("%1 × %2 × %3")
+            m_lblDimensions->setText(QString("%1 ├ù %2 ├ù %3")
                 .arg(m_sliderW->value()/100.0,0,'f',1)
                 .arg(m_sliderH->value()/100.0,0,'f',1)
                 .arg(m_sliderD->value()/100.0,0,'f',1));
@@ -604,7 +641,7 @@ void ArticleViewer3D::setupUI()
     makeDS("Hauteur", m_sliderH, 1.0f);
     makeDS("Profondeur", m_sliderD, 1.0f);
 
-    auto *btnReset = new QPushButton("🔄 Reset");
+    auto *btnReset = new QPushButton("­ƒöä Reset");
     connect(btnReset, &QPushButton::clicked, [this]() {
         m_sliderW->setValue(100); m_sliderH->setValue(100); m_sliderD->setValue(100);
         m_sliderR->setValue(141); m_sliderG->setValue(110); m_sliderB->setValue(99);
@@ -612,7 +649,7 @@ void ArticleViewer3D::setupUI()
     dimLay->addWidget(btnReset);
     ctrlLay->addWidget(dimBox);
 
-    // IA widgets (cachés, utilisés en interne)
+    // IA widgets (cach├®s, utilis├®s en interne)
     m_aiDescription = new QTextEdit();
     m_aiDescription->setReadOnly(true);
     m_aiDescription->setVisible(false);
@@ -634,7 +671,7 @@ void ArticleViewer3D::loadModelForType(const QString &type)
 {
     m_currentType = type;
     m_render->setShape(type);
-    m_lblModelName->setText("📦 " + type);
+    m_lblModelName->setText("­ƒôª " + type);
 }
 
 void ArticleViewer3D::setArticleInfo(const QString &nom, const QString &type, const QString &categorie,
@@ -656,7 +693,7 @@ void ArticleViewer3D::setArticleInfo(const QString &nom, const QString &type, co
 
 void ArticleViewer3D::generateAuto()
 {
-    m_aiStatus->setText("⏳ Chargement du modèle 3D + IA...");
+    m_aiStatus->setText("ÔÅ│ Chargement du mod├¿le 3D + IA...");
     m_aiStatus->setStyleSheet("color:#FFCC80;font-size:10px;");
     QTimer::singleShot(300, this, &ArticleViewer3D::onGenerateAI3D);
 }
@@ -683,35 +720,35 @@ void ArticleViewer3D::updateColorPreview()
         .arg(m_sliderR->value()).arg(m_sliderG->value()).arg(m_sliderB->value()));
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Génération IA 3D via API Groq
-// ═══════════════════════════════════════════════════════════════════════════════
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+// G├®n├®ration IA 3D via API Groq
+// ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
 
 void ArticleViewer3D::onGenerateAI3D()
 {
     QString apiKey = EnvLoader::get("GROQ_API_KEY");
-    qDebug() << "[IA 3D] Clé API:" << (apiKey.isEmpty() ? "VIDE" : "OK len=" + QString::number(apiKey.length()));
+    qDebug() << "[IA 3D] Cl├® API:" << (apiKey.isEmpty() ? "VIDE" : "OK len=" + QString::number(apiKey.length()));
 
     if (apiKey.isEmpty()) {
-        m_aiStatus->setText("⚠ GROQ_API_KEY manquante dans .env");
+        m_aiStatus->setText("ÔÜá GROQ_API_KEY manquante dans .env");
         m_aiStatus->setStyleSheet("color:#EF5350;font-size:10px;");
         return;
     }
 
     m_btnGenerateAI->setEnabled(false);
-    m_aiStatus->setText("⏳ L'IA analyse le produit...");
+    m_aiStatus->setText("ÔÅ│ L'IA analyse le produit...");
     m_aiStatus->setStyleSheet("color:#FFCC80;font-size:10px;");
     m_aiDescription->clear();
 
     QString prompt = QString(
         "Tu es un expert en maroquinerie de luxe. "
         "Voici un article en cuir de notre catalogue :\n"
-        "- Nom : %1\n- Type : %2\n- Catégorie : %3\n"
+        "- Nom : %1\n- Type : %2\n- Cat├®gorie : %3\n"
         "- Couleur : RGB(%4,%5,%6)\n- Dimensions : %7x%8x%9 cm\n"
         "- Prix : %10 DT\n- Statut : %11\n\n"
-        "Décris ce produit en détail (matière cuir, finitions, coutures, texture, style) "
-        "et propose une couleur cuir réaliste optimale.\n\n"
-        "Réponds UNIQUEMENT en JSON :\n"
+        "D├®cris ce produit en d├®tail (mati├¿re cuir, finitions, coutures, texture, style) "
+        "et propose une couleur cuir r├®aliste optimale.\n\n"
+        "R├®ponds UNIQUEMENT en JSON :\n"
         "{\"description\":\"...\",\"couleur_r\":<0-255>,\"couleur_g\":<0-255>,"
         "\"couleur_b\":<0-255>,\"couleur_nom\":\"...\","
         "\"largeur\":<0.5-3.0>,\"hauteur\":<0.5-3.0>,\"profondeur\":<0.1-2.0>,"
@@ -737,7 +774,7 @@ void ArticleViewer3D::onGenerateAI3D()
     req.setRawHeader("Authorization", ("Bearer " + apiKey).toUtf8());
 
     m_networkAI->post(req, QJsonDocument(body).toJson());
-    qDebug() << "[IA 3D] Requête envoyée pour:" << m_currentNom << m_currentType;
+    qDebug() << "[IA 3D] Requ├¬te envoy├®e pour:" << m_currentNom << m_currentType;
 }
 
 void ArticleViewer3D::onAIReplyFinished(QNetworkReply *reply)
@@ -749,31 +786,31 @@ void ArticleViewer3D::onAIReplyFinished(QNetworkReply *reply)
     qDebug() << "[IA 3D] HTTP:" << httpCode << "Erreur:" << reply->error();
 
     if (reply->error() != QNetworkReply::NoError) {
-        m_aiStatus->setText(QString("❌ Erreur HTTP %1 : %2").arg(httpCode).arg(reply->errorString()));
+        m_aiStatus->setText(QString("ÔØî Erreur HTTP %1 : %2").arg(httpCode).arg(reply->errorString()));
         m_aiStatus->setStyleSheet("color:#EF5350;font-size:10px;");
         return;
     }
 
     QByteArray data = reply->readAll();
-    qDebug() << "[IA 3D] Réponse:" << data.left(300);
+    qDebug() << "[IA 3D] R├®ponse:" << data.left(300);
 
     QJsonDocument doc = QJsonDocument::fromJson(data);
-    if (doc.isNull()) { m_aiStatus->setText("❌ Réponse invalide"); return; }
+    if (doc.isNull()) { m_aiStatus->setText("ÔØî R├®ponse invalide"); return; }
 
     QJsonArray choices = doc.object()["choices"].toArray();
-    if (choices.isEmpty()) { m_aiStatus->setText("❌ Pas de réponse"); return; }
+    if (choices.isEmpty()) { m_aiStatus->setText("ÔØî Pas de r├®ponse"); return; }
 
     QString content = choices[0].toObject()["message"].toObject()["content"].toString();
     int js = content.indexOf('{'), je = content.lastIndexOf('}');
     if (js < 0 || je < 0) {
-        m_aiStatus->setText("❌ JSON non trouvé");
+        m_aiStatus->setText("ÔØî JSON non trouv├®");
         m_aiDescription->setText(content);
         return;
     }
 
     QJsonDocument pd = QJsonDocument::fromJson(content.mid(js, je-js+1).toUtf8());
     if (!pd.isObject()) {
-        m_aiStatus->setText("❌ JSON invalide");
+        m_aiStatus->setText("ÔØî JSON invalide");
         m_aiDescription->setText(content);
         return;
     }
@@ -794,16 +831,16 @@ void ArticleViewer3D::applyAIParameters(const QJsonObject &p)
     setDimensions(larg, haut, prof);
 
     QString txt = QString(
-        "🎨 %1\n"
-        "📐 %2 × %3 × %4\n"
-        "🧵 %5\n"
-        "✨ %6\n"
-        "📝 %7"
+        "­ƒÄ¿ %1\n"
+        "­ƒôÉ %2 ├ù %3 ├ù %4\n"
+        "­ƒºÁ %5\n"
+        "Ô£¿ %6\n"
+        "­ƒôØ %7"
     ).arg(p["couleur_nom"].toString())
      .arg(larg,0,'f',1).arg(haut,0,'f',1).arg(prof,0,'f',1)
      .arg(p["matiere"].toString(), p["style"].toString(), p["description"].toString());
 
     m_aiDescription->setText(txt);
-    m_aiStatus->setText("✅ Modèle 3D généré par IA !");
+    m_aiStatus->setText("Ô£à Mod├¿le 3D g├®n├®r├® par IA !");
     m_aiStatus->setStyleSheet("color:#66BB6A;font-size:10px;font-weight:bold;");
 }
