@@ -1,4 +1,4 @@
-#include "bilandialog.h"
+﻿#include "bilandialog.h"
 #include "connection.h"
 #include "notification.h"
 

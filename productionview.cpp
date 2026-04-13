@@ -1,4 +1,4 @@
-#include "productionview.h"
+﻿#include "productionview.h"
 #include "connection.h"
 #include "notification.h"
 #include <QVBoxLayout>

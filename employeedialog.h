@@ -1,4 +1,4 @@
-#ifndef EMPLOYEEDIALOG_H
+﻿#ifndef EMPLOYEEDIALOG_H
 #define EMPLOYEEDIALOG_H
 
 #include <QDialog>

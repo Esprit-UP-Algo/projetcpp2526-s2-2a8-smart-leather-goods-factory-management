@@ -3358,8 +3358,77 @@ void MainWindow::onFactureProduction()
     table->setFixedHeight(table->horizontalHeader()->height() + table->rowHeight(0) + 4);
     lay->addWidget(table);
 
-    // ── TOTAUX ────────────────────────────────────────────────────────────────
+    // ── TOTAUX + QR ───────────────────────────────────────────────────────────
     QHBoxLayout *totRow = new QHBoxLayout();
+
+    // QR code à gauche
+    QLabel *qrLabel = new QLabel("...");
+    qrLabel->setFixedSize(110, 110);
+    qrLabel->setAlignment(Qt::AlignCenter);
+    qrLabel->setStyleSheet("border:2px solid #C4923A; border-radius:6px; background:white; font-size:10px; color:#888;");
+
+    // Requête DB pour enrichir l'URL avec les données complètes de l'article
+    QString condUrl;
+    {
+        QString categoriePdf, couleurPdf, dimensionsPdf, prixPdf, statutArtPdf;
+        QSqlQuery q2(Connection::instance()->getDatabase());
+        q2.prepare("SELECT CATEGORIE, COULEUR_R, COULEUR_G, COULEUR_B, "
+                   "LARGEUR, HAUTEUR, PROFONDEUR, PRIX_UNITAIRE, STATUT "
+                   "FROM ARTICLES WHERE UPPER(NOM) LIKE UPPER(:type) "
+                   "OR UPPER(TYPE) LIKE UPPER(:type2) "
+                   "OR UPPER(REFERENCE) LIKE UPPER(:ref)");
+        q2.bindValue(":type",  "%" + type + "%");
+        q2.bindValue(":type2", "%" + type + "%");
+        q2.bindValue(":ref",   "%" + type + "%");
+        if (q2.exec() && q2.next()) {
+            categoriePdf = q2.value(0).toString();
+            int r2 = q2.value(1).toInt(), g2 = q2.value(2).toInt(), b2 = q2.value(3).toInt();
+            couleurPdf = QString("rgb(%1,%2,%3)").arg(r2).arg(g2).arg(b2);
+            double l2 = q2.value(4).toDouble(), h2 = q2.value(5).toDouble(), p2 = q2.value(6).toDouble();
+            if (l2 > 0 || h2 > 0 || p2 > 0)
+                dimensionsPdf = QString("%1x%2x%3 cm").arg(l2).arg(h2).arg(p2);
+            prixPdf      = q2.value(7).toString() + " DT";
+            statutArtPdf = q2.value(8).toString();
+        }
+        if (prixPdf.isEmpty())      prixPdf      = QString::number(ht, 'f', 2) + " DT";
+        if (statutArtPdf.isEmpty()) statutArtPdf = statut;
+
+        condUrl = QString("https://willowy-halva-d44d1d.netlify.app"
+                          "?ref=%1&produit=%2&commande=%3&categorie=%4&type=%5&couleur=%6&dimensions=%7&prix=%8&statut=%9")
+                  .arg(QString::fromUtf8(QUrl::toPercentEncoding(ref)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(type)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(id)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(categoriePdf)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(type)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(couleurPdf)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(dimensionsPdf)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(prixPdf)),
+                       QString::fromUtf8(QUrl::toPercentEncoding(statutArtPdf)));
+    }
+
+    QLabel *qrLink = new QLabel(QString("<a href='%1' style='color:#C4923A;font-size:10px;'>Ouvrir la fiche</a>").arg(condUrl));
+    qrLink->setOpenExternalLinks(true);
+    qrLink->setAlignment(Qt::AlignCenter);
+
+    QVBoxLayout *qrCol = new QVBoxLayout();
+    qrCol->addWidget(qrLabel, 0, Qt::AlignCenter);
+    qrCol->addWidget(qrLink,  0, Qt::AlignCenter);
+    totRow->addLayout(qrCol);
+
+    // Générer le QR via API
+    {
+        QNetworkAccessManager *mgr = new QNetworkAccessManager(page);
+        QString qrApiUrl = QString("https://api.qrserver.com/v1/create-qr-code/?size=110x110&ecc=M&data=%1")
+                           .arg(QString::fromUtf8(QUrl::toPercentEncoding(condUrl)));
+        QNetworkReply *qrReply = mgr->get(QNetworkRequest(QUrl(qrApiUrl)));
+        connect(qrReply, &QNetworkReply::finished, qrLabel, [qrLabel, qrReply]() {
+            QPixmap px;
+            if (px.loadFromData(qrReply->readAll()))
+                qrLabel->setPixmap(px.scaled(110, 110, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            qrReply->deleteLater();
+        });
+    }
+
     totRow->addStretch();
     QWidget *totBox = new QWidget();
     totBox->setStyleSheet("background:#FBF5F0; border-radius:8px;");
@@ -3567,8 +3636,12 @@ void MainWindow::onFactureProduction()
   </tr>
 </table>
 
-<!-- TOTAUX -->
-<div class='totals-wrap'>
+<!-- TOTAUX + QR -->
+<div style='display:table;width:100%%;margin-bottom:20px;'>
+  <div style='display:table-cell;vertical-align:middle;width:130px;'>
+    <img src='data:image/png;base64,%13' width='100' height='100' style='border:2px solid #C4923A;border-radius:6px;'/>
+  </div>
+  <div style='display:table-cell;vertical-align:top;text-align:right;'>
   <table class='totals'>
     <tr><td>Sous-total HT</td><td class='val'>%6 DT</td></tr>
     <tr><td>TVA (19%%)</td>   <td class='val'>%7 DT</td></tr>
@@ -3579,6 +3652,7 @@ void MainWindow::onFactureProduction()
       <td class='val'><b>%9 DT</b></td>
     </tr>
   </table>
+  </div>
 </div>
 
 <!-- NOTE -->
@@ -3617,19 +3691,31 @@ void MainWindow::onFactureProduction()
          QString::number(ttc,'f',2),                   // %9
          priorite,                                     // %10
          statut,                                       // %11
-         dc);                                          // %12
+         dc,                                           // %12
+         QString::fromUtf8(QUrl::toPercentEncoding(condUrl))); // %13
 
-    connect(pdf, &QPushButton::clicked, [&] {
+    connect(pdf, &QPushButton::clicked, [&, condUrl] {
         QString fn = QFileDialog::getSaveFileName(&dlg, "Enregistrer",
             "Facture_" + ref + ".pdf", "PDF (*.pdf)");
-        if (!fn.isEmpty()) {
+        if (fn.isEmpty()) return;
+
+        // Télécharger le QR en base64 puis générer le PDF
+        QNetworkAccessManager *pdfMgr = new QNetworkAccessManager(&dlg);
+        QString qrUrl = QString("https://api.qrserver.com/v1/create-qr-code/?size=120x120&ecc=M&data=%1")
+                        .arg(QString::fromUtf8(QUrl::toPercentEncoding(condUrl)));
+        QNetworkReply *r = pdfMgr->get(QNetworkRequest(QUrl(qrUrl)));
+        connect(r, &QNetworkReply::finished, &dlg, [r, fn, htmlPdf]() {
+            QString qrBase64 = QString::fromLatin1(r->readAll().toBase64());
+            r->deleteLater();
+            QString finalHtml = htmlPdf;
+            finalHtml.replace("%13", qrBase64);
             QPrinter p(QPrinter::HighResolution);
             p.setOutputFormat(QPrinter::PdfFormat);
             p.setOutputFileName(fn);
             p.setPageSize(QPageSize::A4);
-            QTextDocument doc; doc.setHtml(htmlPdf); doc.print(&p);
-            QMessageBox::information(&dlg, "Succès", "Facture exportée :\n" + fn);
-        }
+            QTextDocument doc; doc.setHtml(finalHtml); doc.print(&p);
+            QMessageBox::information(nullptr, "Succès", "Facture exportée :\n" + fn);
+        });
     });
     //fonction mail client
     connect(email, &QPushButton::clicked, [&] {
