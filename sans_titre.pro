@@ -33,7 +33,6 @@ SOURCES += \
     fournisseur.cpp \
     fournisseurdialog.cpp \
     smsfournisseurdialog.cpp \
-    qrfournisseurdialog.cpp \
     production.cpp \
     productionview.cpp \
     article.cpp \
@@ -65,7 +64,6 @@ HEADERS += \
     fournisseur.h \
     fournisseurdialog.h \
     smsfournisseurdialog.h \
-    qrfournisseurdialog.h \
     production.h \
     productionview.h \
     article.h \
