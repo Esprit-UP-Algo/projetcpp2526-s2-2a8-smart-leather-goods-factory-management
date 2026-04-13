@@ -1,4 +1,4 @@
-#ifndef FOURNISSEURDIALOG_H
+﻿#ifndef FOURNISSEURDIALOG_H
 #define FOURNISSEURDIALOG_H
 
 #include <QDialog>

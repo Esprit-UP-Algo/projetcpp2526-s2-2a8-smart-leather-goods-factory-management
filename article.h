@@ -1,4 +1,4 @@
-#ifndef ARTICLE_H
+﻿#ifndef ARTICLE_H
 #define ARTICLE_H
 
 #include <QString>

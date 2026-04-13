@@ -1,4 +1,4 @@
-#ifndef EMPLOYE_H
+﻿#ifndef EMPLOYE_H
 #define EMPLOYE_H
 
 #include <QString>

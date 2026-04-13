@@ -1,4 +1,4 @@
-#ifndef PRODUCTION_H
+﻿#ifndef PRODUCTION_H
 #define PRODUCTION_H
 
 #include <QString>

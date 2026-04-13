@@ -1,4 +1,4 @@
-#ifndef BILANDIALOG_H
+﻿#ifndef BILANDIALOG_H
 #define BILANDIALOG_H
 
 #include <QDialog>

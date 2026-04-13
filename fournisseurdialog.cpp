@@ -1,4 +1,4 @@
-#include "fournisseurdialog.h"
+﻿#include "fournisseurdialog.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>

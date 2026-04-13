@@ -1,4 +1,4 @@
-#include "employe.h"
+﻿#include "employe.h"
 #include "connection.h"
 #include <QSqlError>
 #include <QDebug>

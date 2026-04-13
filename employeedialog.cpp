@@ -1,4 +1,4 @@
-#include "employeedialog.h"
+﻿#include "employeedialog.h"
 #include "connection.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
