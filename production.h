@@ -137,6 +137,7 @@ public:
     int     quantite;
     QDate   dateCreation;
     double  montant;
+    QString etatPaiement;  ///< "Payée" ou "Non payée"
 
     // ── Planification (données prévues) ───────────────────────────────────────
     QDate   dateDebutPrevue;

@@ -2528,8 +2528,8 @@ void MainWindow::on_btnTriFournisseur_clicked()
 // ── Production ────────────────────────────────────────────────────────────────
 void MainWindow::setupProductionTable()
 {
-    int widths[] = {50,120,150,120,100,110,110,100,80,150};
-    for (int i = 0; i < 10; ++i) ui->productionTable->setColumnWidth(i, widths[i]);
+    int widths[] = {50,120,150,120,100,110,110,110,100,80,150};
+    for (int i = 0; i < 11; ++i) ui->productionTable->setColumnWidth(i, widths[i]);
     ui->productionTable->setColumnHidden(0, true);
     ui->productionTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     ui->productionTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
@@ -2548,10 +2548,10 @@ void MainWindow::setupProductionTable()
             {1, "REFERENCE"},
             {3, "PRODUIT"},
             {4, "MONTANT"},
-            {5, "DATE_CREATION"},
-            {6, "DATE_LIVRAISON"},
-            {7, "STATUT"},
-            {8, "PRIORITE"}
+            {6, "DATE_CREATION"},
+            {7, "DATE_LIVRAISON"},
+            {8, "STATUT"},
+            {9, "PRIORITE"}
         };
         if (!colToSql.contains(logicalIndex)) return;
 
@@ -2582,11 +2582,23 @@ void MainWindow::setupProductionTable()
             ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
             ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
             ui->productionTable->setItem(row, 4, new QTableWidgetItem(QString::number(model->data(model->index(i, 8)).toDouble(), 'f', 2) + " DT"));
-            ui->productionTable->setItem(row, 5, new QTableWidgetItem(model->data(model->index(i, 4)).toDate().toString("dd/MM/yyyy")));
+            // Col 5: État Paiement
+            {
+                QString etat = model->data(model->index(i, 10)).toString();
+                if (etat.isEmpty()) etat = "Non payée";
+                QTableWidgetItem *etatItem = new QTableWidgetItem(etat);
+                etatItem->setTextAlignment(Qt::AlignCenter);
+                if (etat.toLower() == "payée" || etat.toLower() == "payee")
+                    etatItem->setBackground(QColor("#27AE60")), etatItem->setForeground(Qt::white);
+                else
+                    etatItem->setBackground(QColor("#E74C3C")), etatItem->setForeground(Qt::white);
+                ui->productionTable->setItem(row, 5, etatItem);
+            }
+            ui->productionTable->setItem(row, 6, new QTableWidgetItem(model->data(model->index(i, 4)).toDate().toString("dd/MM/yyyy")));
             QDate dl = model->data(model->index(i, 5)).toDate();
-            ui->productionTable->setItem(row, 6, new QTableWidgetItem(dl.isValid() ? dl.toString("dd/MM/yyyy") : "-"));
-            ui->productionTable->setItem(row, 7, new QTableWidgetItem(model->data(model->index(i, 6)).toString()));
-            ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
+            ui->productionTable->setItem(row, 7, new QTableWidgetItem(dl.isValid() ? dl.toString("dd/MM/yyyy") : "-"));
+            ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 6)).toString()));
+            ui->productionTable->setItem(row, 9, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
         }
         delete model;
     });
@@ -2645,31 +2657,40 @@ void MainWindow::loadProductionData()
         int row = ui->productionTable->rowCount();
         ui->productionTable->insertRow(row);
         
-        // Nouveau mapping selon la requête SQL:
-        // 0=ID_COMMANDE, 1=REFERENCE, 2=EMPLOYE, 3=TYPE, 4=DATE_CREATION, 5=DATE_LIVRAISON, 6=STATUT, 7=PRIORITE, 8=MONTANT
-        
-        // Colonne 0: ID_COMMANDE (caché mais utilisé pour modifier)
+        // SQL: 0=ID, 1=REFERENCE, 2=EMPLOYE, 3=PRODUIT, 4=DATE_CREATION, 5=DATE_LIVRAISON, 6=STATUT, 7=PRIORITE, 8=MONTANT, 9=MAIL_CLIENT, 10=ETAT
+        // Tableau: 0=ID(caché), 1=Référence, 2=Employé, 3=Produit, 4=Montant, 5=État Paiement, 6=Date Création, 7=Date Livraison, 8=Statut, 9=Priorité, 10=Mail Client
+
         ui->productionTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));
-        // Colonne 1: Référence
         ui->productionTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));
-        // Colonne 2: Employé
         ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
-        // Colonne 3: Type
         ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
         // Colonne 4: Montant
         ui->productionTable->setItem(row, 4, new QTableWidgetItem(QString::number(model->data(model->index(i, 8)).toDouble(), 'f', 2) + " DT"));
-        // Colonne 5: Date Création
-        ui->productionTable->setItem(row, 5, new QTableWidgetItem(model->data(model->index(i, 4)).toDate().toString("dd/MM/yyyy")));
-        // Colonne 6: Date Livraison
-        QDate dateLivraison = model->data(model->index(i, 5)).toDate();
-        QString dateLivraisonStr = dateLivraison.isValid() ? dateLivraison.toString("dd/MM/yyyy") : "-";
-        ui->productionTable->setItem(row, 6, new QTableWidgetItem(dateLivraisonStr));
-        // Colonne 7: Statut
-        ui->productionTable->setItem(row, 7, new QTableWidgetItem(model->data(model->index(i, 6)).toString()));
-        // Colonne 8: Priorité
-        ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
-        // Colonne 9: Mail Client
-        ui->productionTable->setItem(row, 9, new QTableWidgetItem(model->data(model->index(i, 9)).toString()));
+        // Colonne 5: État Paiement
+        {
+            QString etat = model->data(model->index(i, 10)).toString();
+            if (etat.isEmpty()) etat = "Non payée";
+            QTableWidgetItem *etatItem = new QTableWidgetItem(etat);
+            etatItem->setTextAlignment(Qt::AlignCenter);
+            if (etat.toLower() == "payée" || etat.toLower() == "payee")
+                etatItem->setBackground(QColor("#27AE60")), etatItem->setForeground(Qt::white);
+            else
+                etatItem->setBackground(QColor("#E74C3C")), etatItem->setForeground(Qt::white);
+            ui->productionTable->setItem(row, 5, etatItem);
+        }
+        // Colonne 6: Date Création
+        ui->productionTable->setItem(row, 6, new QTableWidgetItem(model->data(model->index(i, 4)).toDate().toString("dd/MM/yyyy")));
+        // Colonne 7: Date Livraison
+        {
+            QDate dl = model->data(model->index(i, 5)).toDate();
+            ui->productionTable->setItem(row, 7, new QTableWidgetItem(dl.isValid() ? dl.toString("dd/MM/yyyy") : "-"));
+        }
+        // Colonne 8: Statut
+        ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 6)).toString()));
+        // Colonne 9: Priorité
+        ui->productionTable->setItem(row, 9, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
+        // Colonne 10: Mail Client
+        ui->productionTable->setItem(row, 10, new QTableWidgetItem(model->data(model->index(i, 9)).toString()));
     }
     
     delete model;
@@ -2928,6 +2949,20 @@ void MainWindow::updateProductionStatsCards()
 void MainWindow::onCreerProduction()
 {
     ProductionDialog dlg(this, ProductionDialog::AddMode);
+
+    // Ajouter état paiement directement dans le dialogue
+    QComboBox *cmbPaiement = new QComboBox(&dlg);
+    cmbPaiement->addItems({"Non payée", "Payée"});
+    QFormLayout *form = dlg.findChild<QFormLayout*>();
+    if (!form) {
+        // Chercher dans les layouts enfants
+        for (auto *lay : dlg.findChildren<QGridLayout*>()) {
+            lay->addWidget(new QLabel("État Paiement :", &dlg), lay->rowCount(), 0);
+            lay->addWidget(cmbPaiement, lay->rowCount()-1, 1);
+            break;
+        }
+    }
+
     if (dlg.exec() == QDialog::Accepted) {
         qDebug() << "========== AJOUT COMMANDE ==========";
         
@@ -2964,7 +2999,7 @@ void MainWindow::onCreerProduction()
         prod.setDateLivraisonPrevue(dateLivraison);
         prod.setStatut(dlg.getStatut());
         prod.setPriorite(dlg.getPriorite());
-        prod.setEtatPaiement("Non payée");
+        prod.setEtatPaiement(cmbPaiement->currentText());
         prod.setServiceVente("Service Commercial");
         
         // Debug
@@ -3066,21 +3101,21 @@ void MainWindow::onModifierProduction()
         "QDoubleSpinBox:focus { border-color:#8D6E63; }"
         "QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width:18px; }");
 
-    QDateEdit dcE(QDate::fromString(cellText(ui->productionTable, row, 5), "dd/MM/yyyy"), &d);
+    QDateEdit dcE(QDate::fromString(cellText(ui->productionTable, row, 6), "dd/MM/yyyy"), &d);
     dcE.setCalendarPopup(true);
     dcE.setDisplayFormat("dd/MM/yyyy");
 
-    QDateEdit dlE(QDate::fromString(cellText(ui->productionTable, row, 6), "dd/MM/yyyy"), &d);
+    QDateEdit dlE(QDate::fromString(cellText(ui->productionTable, row, 7), "dd/MM/yyyy"), &d);
     dlE.setCalendarPopup(true);
     dlE.setDisplayFormat("dd/MM/yyyy");
 
     QComboBox statC(&d);
     statC.addItems({"En Attente", "Planifié", "En Cours", "En Production", "Suspendu", "Terminé", "Annulé"});
-    statC.setCurrentText(cellText(ui->productionTable, row, 7));
+    statC.setCurrentText(cellText(ui->productionTable, row, 8));
 
     QComboBox prioC(&d);
     prioC.addItems({"Basse", "Normale", "Urgente"});
-    prioC.setCurrentText(cellText(ui->productionTable, row, 8));
+    prioC.setCurrentText(cellText(ui->productionTable, row, 9));
 
     form.addRow("Référence *:", &refE);
     form.addRow("Employé *:", &employeC);
@@ -3113,6 +3148,22 @@ void MainWindow::onModifierProduction()
         if (clientC.itemData(i).toString() == mailActuel) { clientC.setCurrentIndex(i); break; }
     }
     form.addRow("Client :", &clientC);
+
+    // État paiement
+    QComboBox paiementC(&d);
+    paiementC.addItems({"Non payée", "Payée"});
+    {
+        QSqlQuery qp(Connection::instance()->getDatabase());
+        qp.prepare("SELECT ETAT FROM COMMANDES WHERE ID_COMMANDE = :id");
+        qp.bindValue(":id", cellText(ui->productionTable, row, 0).toInt());
+        if (qp.exec() && qp.next()) {
+            QString ep = qp.value(0).toString();
+            int idx = paiementC.findText(ep, Qt::MatchFixedString);
+            if (idx >= 0) paiementC.setCurrentIndex(idx);
+        }
+    }
+    form.addRow("État Paiement :", &paiementC);
+
     lay.addLayout(&form);
 
     QHBoxLayout btns;
@@ -3144,6 +3195,7 @@ void MainWindow::onModifierProduction()
         prod.setStatut(statC.currentText());
         prod.setPriorite(prioC.currentText());
         prod.setMailClient(clientC.currentData().toString());
+        prod.setEtatPaiement(paiementC.currentText());
         
         ProductionDAO dao;
         if (dao.modifier(prod)) {
@@ -3161,10 +3213,10 @@ void MainWindow::onSuiviProduction()
     if (row < 0) { QMessageBox::warning(this,"","Sélectionnez une commande."); return; }
     QString ref    = cellText(ui->productionTable,row,1);
     QString employe = cellText(ui->productionTable,row,2);
-    QString statut = cellText(ui->productionTable,row,7);
-    QString dc     = cellText(ui->productionTable,row,5);
-    QString dl     = cellText(ui->productionTable,row,6);
-    QString prio   = cellText(ui->productionTable,row,8);
+    QString statut = cellText(ui->productionTable,row,8);
+    QString dc     = cellText(ui->productionTable,row,6);
+    QString dl     = cellText(ui->productionTable,row,7);
+    QString prio   = cellText(ui->productionTable,row,9);
 
     QString html = "<html><head><style>"
         "body{font-family:Arial;padding:10px;background:#FAFAFA;}"
@@ -3847,27 +3899,31 @@ void MainWindow::onRechercherProduction(const QString &text)
         // SQL: 0=ID_COMMANDE, 1=REFERENCE, 2=EMPLOYE, 3=TYPE,
         //      4=DATE_CREATION, 5=DATE_LIVRAISON, 6=STATUT, 7=PRIORITE, 8=MONTANT
 
-        // Col 0 : ID (caché)
         ui->productionTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));
-        // Col 1 : Référence
         ui->productionTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));
-        // Col 2 : Employé
         ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
-        // Col 3 : Type
         ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
-        // Col 4 : Montant
         ui->productionTable->setItem(row, 4, new QTableWidgetItem(QString::number(model->data(model->index(i, 8)).toDouble(), 'f', 2) + " DT"));
-        // Col 5 : Date Création
-        ui->productionTable->setItem(row, 5, new QTableWidgetItem(model->data(model->index(i, 4)).toDate().toString("dd/MM/yyyy")));
-        // Col 6 : Date Livraison
-        QDate dateLivraison = model->data(model->index(i, 5)).toDate();
-        ui->productionTable->setItem(row, 6, new QTableWidgetItem(dateLivraison.isValid() ? dateLivraison.toString("dd/MM/yyyy") : "-"));
-        // Col 7 : Statut
-        ui->productionTable->setItem(row, 7, new QTableWidgetItem(model->data(model->index(i, 6)).toString()));
-        // Col 8 : Priorité
-        ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
-        // Col 9 : Mail Client
-        ui->productionTable->setItem(row, 9, new QTableWidgetItem(model->data(model->index(i, 9)).toString()));
+        // Col 5 : État Paiement
+        {
+            QString etat = model->data(model->index(i, 10)).toString();
+            if (etat.isEmpty()) etat = "Non payée";
+            QTableWidgetItem *etatItem = new QTableWidgetItem(etat);
+            etatItem->setTextAlignment(Qt::AlignCenter);
+            if (etat.toLower() == "payée" || etat.toLower() == "payee")
+                etatItem->setBackground(QColor("#27AE60")), etatItem->setForeground(Qt::white);
+            else
+                etatItem->setBackground(QColor("#E74C3C")), etatItem->setForeground(Qt::white);
+            ui->productionTable->setItem(row, 5, etatItem);
+        }
+        ui->productionTable->setItem(row, 6, new QTableWidgetItem(model->data(model->index(i, 4)).toDate().toString("dd/MM/yyyy")));
+        {
+            QDate dl = model->data(model->index(i, 5)).toDate();
+            ui->productionTable->setItem(row, 7, new QTableWidgetItem(dl.isValid() ? dl.toString("dd/MM/yyyy") : "-"));
+        }
+        ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 6)).toString()));
+        ui->productionTable->setItem(row, 9, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
+        ui->productionTable->setItem(row, 10, new QTableWidgetItem(model->data(model->index(i, 9)).toString()));
     }
 
     delete model;

@@ -1,0 +1,11 @@
+..\..\productionview.cpp:176:6: error: no declaration matches 'void ProductionDialog::setProductionData(const QString&, const QString&, const QString&, const QString&, const QString&, const QString&, const QString&, const QString&, const QString&, const QString&)'
+  176 | void ProductionDialog::setProductionData(const QString &id, const QString &reference, const QString &produit,
+      |      ^~~~~~~~~~~~~~~~
+In file included from ..\..\productionview.cpp:1:
+..\..\productionview.h:56:10: note: candidate is: 'void ProductionDialog::setProductionData(const QString&, const QString&, const QString&, const QString&, const QString&, const QString&, const QString&, const QString&, const QString&, const QString&, const QString&)'
+   56 |     void setProductionData(const QString &id, const QString &reference,
+      |          ^~~~~~~~~~~~~~~~~
+..\..\productionview.h:38:7: note: 'class ProductionDialog' defined here
+   38 | class ProductionDialog : public QDialog
+      |       ^~~~~~~~~~~~~~~~
+mingw32-make: *** [Makefile.Debug:12321: debug/productionview.o] Error 1

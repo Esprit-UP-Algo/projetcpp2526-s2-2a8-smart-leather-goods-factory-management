@@ -53,10 +53,12 @@ public:
      * @brief Pré-remplit le formulaire avec les données d'une commande existante.
      * Utilisé en mode EditMode et DeleteMode.
      */
-    void setProductionData(const QString &id, const QString &reference, const QString &produit,
-                           const QString &quantite, const QString &statut, const QString &dateDebut,
-                           const QString &dateFin, const QString &responsable, const QString &priorite,
-                           const QString &mailClient = QString());
+    void setProductionData(const QString &id, const QString &reference,
+                           const QString &produit, const QString &quantite,
+                           const QString &statut, const QString &dateDebut,
+                           const QString &dateFin, const QString &responsable,
+                           const QString &priorite, const QString &mailClient = QString());
+    void setEtatPaiement(const QString &etatPaiement);
 
     // ── Getters des champs du formulaire ─────────────────────────────────────
     QString getId()          const;
@@ -69,6 +71,7 @@ public:
     QString getResponsable() const; ///< Nom complet de l'employé sélectionné
     QString getPriorite()    const;
     QString getMailClient()  const;
+    QString getEtatPaiement() const { return cmbEtatPaiement ? cmbEtatPaiement->currentText() : QString("Non payée"); }
 
     /** @brief Retourne l'ID de l'employé sélectionné (stocké dans currentData du ComboBox). */
     int getEmployeId() const;
@@ -102,7 +105,7 @@ private:
     QLabel      *lblTitle, *lblDeleteWarning;
     QLineEdit   *txtId, *txtReference;
     QDoubleSpinBox *spnPrix;
-    QComboBox   *cmbProduit, *cmbStatut, *cmbResponsable, *cmbPriorite, *cmbClient;
+    QComboBox   *cmbProduit, *cmbStatut, *cmbResponsable, *cmbPriorite, *cmbClient, *cmbEtatPaiement;
     QDateEdit   *dateDebut, *dateFin;
     QPushButton *btnSave, *btnCancel, *btnDelete;
 
@@ -136,6 +139,7 @@ public:
         COL_STATUT,
         COL_PRIORITE,
         COL_MONTANT,
+        COL_ETAT_PAIEMENT,
         COL_COUNT  ///< Nombre total de colonnes (sentinelle)
     };
 
@@ -180,6 +184,24 @@ private:
 
     /** @brief Retourne le libellé français d'une colonne par son index. */
     QString getColumnName(int column) const;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @class ProductionSortProxy
+ * @brief Proxy de tri qui compare les colonnes selon leur type réel
+ *        (QDate pour les dates, double pour le montant, rang pour la priorité).
+ */
+class ProductionSortProxy : public QSortFilterProxyModel
+{
+    Q_OBJECT
+public:
+    explicit ProductionSortProxy(QObject *parent = nullptr)
+        : QSortFilterProxyModel(parent) {}
+
+protected:
+    bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -284,7 +306,7 @@ private:
 
     // ── Modèles ───────────────────────────────────────────────────────────────
     ProductionViewModel   *m_model;      ///< Modèle source avec les données
-    QSortFilterProxyModel *m_proxyModel; ///< Proxy pour le filtrage/tri sans modifier le modèle source
+    ProductionSortProxy   *m_proxyModel; ///< Proxy pour le filtrage/tri avec comparaison typée
 
     // ── Système d'alertes ─────────────────────────────────────────────────────
     QTimer *m_timerAlertes;          ///< Déclenche verifierAlertes() périodiquement
