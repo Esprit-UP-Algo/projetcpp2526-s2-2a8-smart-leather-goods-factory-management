@@ -2986,6 +2986,11 @@ QPushButton:hover {
                 </column>
                 <column>
                  <property name="text">
+                  <string>ÉTAT PAIEMENT</string>
+                 </property>
+                </column>
+                <column>
+                 <property name="text">
                   <string>DATE CRÉATION</string>
                  </property>
                 </column>

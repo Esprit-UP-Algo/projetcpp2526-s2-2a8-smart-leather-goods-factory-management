@@ -233,7 +233,7 @@ bool ProductionDAO::ajouter(const Production &production)
     query.bindValue(":priorite",  production.getPriorite());
     query.bindValue(":montant",   production.getMontant());
     query.bindValue(":quantite",  production.getQuantite());
-    query.bindValue(":etat",      "En cours");
+    query.bindValue(":etat",      production.getEtatPaiement().isEmpty() ? "Non payée" : production.getEtatPaiement());
     query.bindValue(":idEmploye", production.getIdEmploye());
     query.bindValue(":mailClient", production.getMailClient());
 
@@ -292,7 +292,7 @@ QSqlQueryModel* ProductionDAO::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     QString sql = "SELECT C.ID_COMMANDE, C.REFERENCE, (E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
-                  "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT, C.MAIL_CLIENT "
+                  "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT, C.MAIL_CLIENT, C.ETAT "
                   "FROM COMMANDES C LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
                   "ORDER BY C.DATE_CREATION DESC";
     model->setQuery(sql, Connection::instance()->getDatabase());
@@ -307,7 +307,7 @@ QSqlQueryModel* ProductionDAO::rechercher(const QString &terme)
     QSqlQuery query(Connection::instance()->getDatabase());
     query.prepare(
         "SELECT C.ID_COMMANDE, C.REFERENCE, (E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
-        "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT, C.MAIL_CLIENT "
+        "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT, C.MAIL_CLIENT, C.ETAT "
         "FROM COMMANDES C LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
         "WHERE UPPER(C.REFERENCE)   LIKE UPPER(:t) "
         "OR UPPER(C.PRODUIT)        LIKE UPPER(:t) "
@@ -331,7 +331,7 @@ QSqlQueryModel* ProductionDAO::rechercher(const QString &terme)
 QSqlQueryModel* ProductionDAO::trierPar(const QString &colonne, bool croissant)
 {
     QSqlQueryModel* model = new QSqlQueryModel();
-    QStringList colonnesAutorisees = {"ID_COMMANDE","REFERENCE","PRODUIT","DATE_CREATION","DATE_LIVRAISON_PREVUE","STATUT","PRIORITE","MONTANT"};
+    QStringList colonnesAutorisees = {"ID_COMMANDE","REFERENCE","PRODUIT","DATE_CREATION","DATE_LIVRAISON","STATUT","PRIORITE","MONTANT"};
     QString col = colonnesAutorisees.contains(colonne.toUpper()) ? colonne.toUpper() : "DATE_CREATION";
     QString sql = QString("SELECT C.ID_COMMANDE, C.REFERENCE, (E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
                           "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT "
@@ -421,7 +421,7 @@ void ProductionDAO::configurerEntetes(QSqlQueryModel* model)
 {
     if (!model) return;
     // La requête SELECT retourne : 0=ID_COMMANDE, 1=REFERENCE, 2=EMPLOYE,
-    // 3=TYPE, 4=DATE_CREATION, 5=DATE_LIVRAISON, 6=STATUT, 7=PRIORITE, 8=MONTANT
+    // 3=TYPE, 4=DATE_CREATION, 5=DATE_LIVRAISON, 6=STATUT, 7=PRIORITE, 8=MONTANT, 9=MAIL_CLIENT, 10=ETAT
     model->setHeaderData(0, Qt::Horizontal, "ID");
     model->setHeaderData(1, Qt::Horizontal, "Référence");
     model->setHeaderData(2, Qt::Horizontal, "Employé");
@@ -432,6 +432,7 @@ void ProductionDAO::configurerEntetes(QSqlQueryModel* model)
     model->setHeaderData(7, Qt::Horizontal, "Priorité");
     model->setHeaderData(8, Qt::Horizontal, "Montant");
     model->setHeaderData(9, Qt::Horizontal, "Mail Client");
+    model->setHeaderData(10, Qt::Horizontal, "État Paiement");
 }
 
 
