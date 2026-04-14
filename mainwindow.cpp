@@ -3694,28 +3694,38 @@ void MainWindow::onFactureProduction()
          dc,                                           // %12
          QString::fromUtf8(QUrl::toPercentEncoding(condUrl))); // %13
 
-    connect(pdf, &QPushButton::clicked, [&, condUrl] {
+    connect(pdf, &QPushButton::clicked, [&, page, qrLink] {
         QString fn = QFileDialog::getSaveFileName(&dlg, "Enregistrer",
             "Facture_" + ref + ".pdf", "PDF (*.pdf)");
         if (fn.isEmpty()) return;
 
-        // Télécharger le QR en base64 puis générer le PDF
-        QNetworkAccessManager *pdfMgr = new QNetworkAccessManager(&dlg);
-        QString qrUrl = QString("https://api.qrserver.com/v1/create-qr-code/?size=120x120&ecc=M&data=%1")
-                        .arg(QString::fromUtf8(QUrl::toPercentEncoding(condUrl)));
-        QNetworkReply *r = pdfMgr->get(QNetworkRequest(QUrl(qrUrl)));
-        connect(r, &QNetworkReply::finished, &dlg, [r, fn, htmlPdf]() {
-            QString qrBase64 = QString::fromLatin1(r->readAll().toBase64());
-            r->deleteLater();
-            QString finalHtml = htmlPdf;
-            finalHtml.replace("%13", qrBase64);
-            QPrinter p(QPrinter::HighResolution);
-            p.setOutputFormat(QPrinter::PdfFormat);
-            p.setOutputFileName(fn);
-            p.setPageSize(QPageSize::A4);
-            QTextDocument doc; doc.setHtml(finalHtml); doc.print(&p);
-            QMessageBox::information(nullptr, "Succès", "Facture exportée :\n" + fn);
-        });
+        // Cacher "Ouvrir la fiche" dans le PDF
+        qrLink->hide();
+        page->repaint();
+        QApplication::processEvents();
+
+        QPixmap grab = page->grab();
+
+        // Remettre visible dans le dialog
+        qrLink->show();
+
+        QPrinter p(QPrinter::HighResolution);
+        p.setOutputFormat(QPrinter::PdfFormat);
+        p.setOutputFileName(fn);
+        p.setPageSize(QPageSize::A4);
+        p.setPageMargins(QMarginsF(5, 5, 5, 5), QPageLayout::Millimeter);
+
+        QPainter painter(&p);
+        QRectF pageRect = p.pageRect(QPrinter::DevicePixel);
+        QImage img = grab.toImage();
+        QSizeF scaled(img.size().scaled(pageRect.size().toSize(), Qt::KeepAspectRatio));
+        QPointF offset((pageRect.width()  - scaled.width())  / 2.0,
+                       (pageRect.height() - scaled.height()) / 2.0);
+        painter.drawImage(QRectF(offset, scaled), img);
+        painter.end();
+
+        QDesktopServices::openUrl(QUrl::fromLocalFile(fn));
+        QMessageBox::information(&dlg, "Succès", "Facture exportée :\n" + fn);
     });
     //fonction mail client
     connect(email, &QPushButton::clicked, [&] {
