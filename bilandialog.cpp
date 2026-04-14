@@ -148,7 +148,19 @@ void BilanDialog::setupUI()
 
     kpiCol->addWidget(caBox);
     kpiCol->addWidget(makeKpiBox("Meilleur produit du mois", m_lblBestProduct, true));
-    kpiCol->addWidget(makeKpiBox("Bénéfice net",             m_lblBenefice));
+
+    // Box Bénéfice net avec labels de conversion
+    auto *beneficeBox = makeKpiBox("Bénéfice net", m_lblBenefice);
+    m_lblBenefice_EUR = new QLabel("≈ … €");
+    m_lblBenefice_EUR->setAlignment(Qt::AlignCenter);
+    m_lblBenefice_EUR->setStyleSheet("font-size:12px;color:#27ae60;border:none");
+    m_lblBenefice_USD = new QLabel("≈ … $");
+    m_lblBenefice_USD->setAlignment(Qt::AlignCenter);
+    m_lblBenefice_USD->setStyleSheet("font-size:12px;color:#2980b9;border:none");
+    qobject_cast<QVBoxLayout*>(beneficeBox->layout())->addWidget(m_lblBenefice_EUR);
+    qobject_cast<QVBoxLayout*>(beneficeBox->layout())->addWidget(m_lblBenefice_USD);
+
+    kpiCol->addWidget(beneficeBox);
     kpiCol->addWidget(makeKpiBox("Marge brute",              m_lblMarge));
     kpiCol->addWidget(makeKpiBox("Commandes totales",        m_lblCommandes));
     kpiCol->addStretch();
@@ -443,6 +455,7 @@ void BilanDialog::onPeriodChanged()
     if (totalPrix <= 0 && ca > 0) { benefice = ca * 0.30; totalPrix = ca; }
     double marge = (totalPrix > 0) ? (benefice / totalPrix * 100.0) : 0.0;
 
+    m_totalBenefice = benefice;
     m_lblBenefice->setText(fmt(benefice));
     m_lblMarge->setText(QString::number(marge, 'f', 1) + " %");
 
@@ -673,6 +686,14 @@ void BilanDialog::onTauxReceived(QNetworkReply *reply)
             .arg(QLocale(QLocale::French).toString(caEUR, 'f', 0)));
         m_lblCA_USD->setText(QString("≈ %1 $")
             .arg(QLocale(QLocale::French).toString(caUSD, 'f', 0)));
+    }
+    if (eurToTND > 0 && m_totalBenefice > 0) {
+        double benEUR = m_totalBenefice / eurToTND;
+        double benUSD = benEUR * eurToUSD;
+        m_lblBenefice_EUR->setText(QString("≈ %1 €")
+            .arg(QLocale(QLocale::French).toString(benEUR, 'f', 0)));
+        m_lblBenefice_USD->setText(QString("≈ %1 $")
+            .arg(QLocale(QLocale::French).toString(benUSD, 'f', 0)));
     }
     reply->deleteLater();
 }

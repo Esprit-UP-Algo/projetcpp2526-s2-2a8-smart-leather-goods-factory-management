@@ -41,14 +41,17 @@ private:
     QLabel *m_lblCA          = nullptr;
     QLabel *m_lblCA_EUR      = nullptr;
     QLabel *m_lblCA_USD      = nullptr;
-    QLabel *m_lblBestProduct = nullptr;
     QLabel *m_lblBenefice    = nullptr;
+    QLabel *m_lblBenefice_EUR= nullptr;
+    QLabel *m_lblBenefice_USD= nullptr;
+    QLabel *m_lblBestProduct = nullptr;
     QLabel *m_lblMarge       = nullptr;
     QLabel *m_lblCommandes   = nullptr;
     QLabel *m_lblDate        = nullptr;
 
     QNetworkAccessManager *m_networkManager = nullptr;
-    double  m_totalCA = 0.0;
+    double  m_totalCA       = 0.0;
+    double  m_totalBenefice = 0.0;
 
     // Stockés comme QWidget* — castés en QChartView* dans le .cpp
     QWidget *m_pieView        = nullptr;
