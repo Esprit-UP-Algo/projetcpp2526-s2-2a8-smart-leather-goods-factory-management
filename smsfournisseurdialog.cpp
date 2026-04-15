@@ -13,9 +13,9 @@
 
 // ── Configuration Twilio ─────────────────────────────────────
 // Remplace ces 3 valeurs par tes infos depuis console.twilio.com
-static const QString TWILIO_ACCOUNT_SID = "ACXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
-static const QString TWILIO_AUTH_TOKEN  = "your_auth_token_here";
-static const QString TWILIO_FROM_NUMBER = "+1XXXXXXXXXX"; // Ton numéro Twilio
+static const QString TWILIO_ACCOUNT_SID = "AC6f730358c45660014261118c80cd611e";
+static const QString TWILIO_AUTH_TOKEN  = "b56b3a4da2956177eeb41a9b9f92af37";
+static const QString TWILIO_FROM_NUMBER = "+15076981452"; // Ton numéro Twilio
 // ─────────────────────────────────────────────────────────────
 
 SmsFournisseurDialog::SmsFournisseurDialog(const QString &nomEntreprise,
