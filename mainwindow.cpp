@@ -3424,15 +3424,25 @@ void MainWindow::onFactureProduction()
     {
         QString categoriePdf, couleurPdf, dimensionsPdf, prixPdf, statutArtPdf;
         QSqlQuery q2(Connection::instance()->getDatabase());
-        q2.prepare("SELECT CATEGORIE, COULEUR_R, COULEUR_G, COULEUR_B, "
-                   "LARGEUR, HAUTEUR, PROFONDEUR, PRIX_UNITAIRE, STATUT "
-                   "FROM ARTICLES WHERE UPPER(NOM) LIKE UPPER(:type) "
-                   "OR UPPER(TYPE) LIKE UPPER(:type2) "
-                   "OR UPPER(REFERENCE) LIKE UPPER(:ref)");
-        q2.bindValue(":type",  "%" + type + "%");
-        q2.bindValue(":type2", "%" + type + "%");
-        q2.bindValue(":ref",   "%" + type + "%");
-        if (q2.exec() && q2.next()) {
+        q2.prepare("SELECT A.CATEGORIE, A.COULEUR_R, A.COULEUR_G, A.COULEUR_B, "
+                   "A.LARGEUR, A.HAUTEUR, A.PROFONDEUR, A.PRIX_UNITAIRE, A.STATUT "
+                   "FROM ARTICLES A "
+                   "JOIN COMMANDES C ON UPPER(C.PRODUIT) = UPPER(A.NOM) "
+                   "WHERE C.ID_COMMANDE = :id");
+        q2.bindValue(":id", id.toInt());
+        bool found = q2.exec() && q2.next();
+        if (!found) {
+            // fallback: search by name similarity
+            q2.prepare("SELECT CATEGORIE, COULEUR_R, COULEUR_G, COULEUR_B, "
+                       "LARGEUR, HAUTEUR, PROFONDEUR, PRIX_UNITAIRE, STATUT "
+                       "FROM ARTICLES WHERE UPPER(NOM) = UPPER(:exacttype) "
+                       "OR UPPER(NOM) LIKE UPPER(:type) "
+                       "FETCH FIRST 1 ROWS ONLY");
+            q2.bindValue(":exacttype", type);
+            q2.bindValue(":type", "%" + type + "%");
+            found = q2.exec() && q2.next();
+        }
+        if (found) {
             categoriePdf = q2.value(0).toString();
             int r2 = q2.value(1).toInt(), g2 = q2.value(2).toInt(), b2 = q2.value(3).toInt();
             couleurPdf = QString("rgb(%1,%2,%3)").arg(r2).arg(g2).arg(b2);
@@ -3442,8 +3452,11 @@ void MainWindow::onFactureProduction()
             prixPdf      = q2.value(7).toString() + " DT";
             statutArtPdf = q2.value(8).toString();
         }
-        if (prixPdf.isEmpty())      prixPdf      = QString::number(ht, 'f', 2) + " DT";
-        if (statutArtPdf.isEmpty()) statutArtPdf = statut;
+        if (prixPdf.isEmpty())        prixPdf        = QString::number(ht, 'f', 2) + " DT";
+        if (statutArtPdf.isEmpty())   statutArtPdf   = statut;
+        if (categoriePdf.isEmpty())   categoriePdf   = "—";
+        if (couleurPdf.isEmpty())     couleurPdf     = "—";
+        if (dimensionsPdf.isEmpty())  dimensionsPdf  = "—";
 
         condUrl = QString("https://willowy-halva-d44d1d.netlify.app"
                           "?ref=%1&produit=%2&commande=%3&categorie=%4&type=%5&couleur=%6&dimensions=%7&prix=%8&statut=%9")
