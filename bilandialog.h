@@ -7,7 +7,6 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QComboBox>
-#include <QTableWidget>
 #include <QGroupBox>
 #include <QPushButton>
 #include <QScrollArea>

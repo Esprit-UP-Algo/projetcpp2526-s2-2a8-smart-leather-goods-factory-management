@@ -242,8 +242,8 @@ public:
     /** @brief Intervalle en minutes entre deux vérifications automatiques des alertes. */
     void setIntervalleVerification(int min) { m_intervalleVerification = min; }
 
-    /** @brief Injecte le pipeline IA pour les notifications intelligentes. */
-    void setNotificationPipeline(NotificationPipeline *pipeline) { m_pipeline = pipeline; }
+    /** @brief Injecte l'IA Groq pour les notifications intelligentes (optionnel). */
+    void setNotificationAI(NotificationAI *ai) { m_ai = ai; }
 
 private slots:
     /** @brief Filtre le tableau en temps réel sur la colonne Référence. */
@@ -320,8 +320,9 @@ private:
      */
     QSet<int> m_alertesNotifiees;
 
-    /** @brief Pipeline IA pour les toasts intelligents (optionnel). */
-    NotificationPipeline *m_pipeline = nullptr;
+    // ── Notification ──────────────────────────────────────────────────────────
+    NotificationBell *m_bell = nullptr;
+    NotificationAI   *m_ai   = nullptr;
 };
 
 #endif // PRODUCTIONVIEW_H
