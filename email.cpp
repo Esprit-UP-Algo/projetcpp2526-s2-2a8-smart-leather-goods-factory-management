@@ -6,26 +6,30 @@
 #include <QJsonArray>
 #include <QDebug>
 #include <QEventLoop>
+#include <QFile>
+#include <QFileInfo>
 
 Mail::Mail(QObject *parent) : QObject(parent)
 {
     manager = new QNetworkAccessManager(this);
 }
 
-bool Mail::sendEmail(const QString &recipient, const QString &subject, const QString &body)
+bool Mail::sendEmail(const QString &recipient,
+                     const QString &subject,
+                     const QString &body,
+                     const QString &attachmentPath)
 {
     QNetworkRequest request(QUrl("https://api.brevo.com/v3/smtp/email"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("api-key", ""); // remplacer par votre clé
+    request.setRawHeader("api-key", "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"); // your key
 
     QJsonObject senderObj;
-    senderObj["email"] = "aporiaaaaa1@gmail.com"; // email vérifié dans Brevo
+    senderObj["email"] = "aporiaaaaa1@gmail.com";
     senderObj["name"] = "CUIREA";
 
+    QJsonArray toArray;
     QJsonObject toObj;
     toObj["email"] = recipient;
-
-    QJsonArray toArray;
     toArray.append(toObj);
 
     QJsonObject root;
@@ -34,17 +38,44 @@ bool Mail::sendEmail(const QString &recipient, const QString &subject, const QSt
     root["subject"] = subject;
     root["htmlContent"] = body;
 
+    // =========================
+    // 📎 ATTACHMENT PART
+    // =========================
+    if (!attachmentPath.isEmpty())
+    {
+        QFile file(attachmentPath);
+
+        if (file.open(QIODevice::ReadOnly))
+        {
+            QByteArray fileData = file.readAll();
+            file.close();
+
+            QJsonObject attachmentObj;
+            attachmentObj["name"] = QFileInfo(file).fileName();
+            attachmentObj["content"] = QString(fileData.toBase64());
+
+            QJsonArray attachmentsArray;
+            attachmentsArray.append(attachmentObj);
+
+            root["attachment"] = attachmentsArray;
+        }
+        else
+        {
+            qDebug() << "❌ Impossible d'ouvrir le fichier:" << attachmentPath;
+        }
+    }
+
     QJsonDocument doc(root);
     QByteArray data = doc.toJson();
 
     QNetworkReply *reply = manager->post(request, data);
 
-    // Attente de la réponse (bloquant)
     QEventLoop loop;
     QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec();
 
-    if (reply->error() != QNetworkReply::NoError) {
+    if (reply->error() != QNetworkReply::NoError)
+    {
         qDebug() << "❌ Erreur envoi email:" << reply->errorString();
         reply->deleteLater();
         return false;

@@ -1064,6 +1064,8 @@ void MainWindow::on_searchBoxClient_textChanged(const QString &text)
             ui->clientTable->setItem(row, 5, new QTableWidgetItem(c.getPays()));
             ui->clientTable->setItem(row, 6, new QTableWidgetItem(c.getVille()));
             ui->clientTable->setItem(row, 7, new QTableWidgetItem(c.getAdresse()));
+            ui->clientTable->setItem(row, 8, new QTableWidgetItem(c.getEmail()));
+            ui->clientTable->setItem(row, 9, new QTableWidgetItem(c.getDate_inscription()));
             ++row;
         }
     }
@@ -1163,7 +1165,7 @@ void MainWindow::on_btnExportClient_clicked()
         this,
         "Exporter les clients",
         "",
-        "CSV (*.csv);;PDF (*.pdf);;Word (*.docx)"
+        "CSV (*.csv);;PDF (*.pdf);"
     );
 
     if (filePath.isEmpty())
@@ -3811,62 +3813,63 @@ void MainWindow::onFactureProduction()
             "<html>"
             "<body style='font-family:Arial; background:#f9f9f9; padding:20px;'>"
 
-            "<h2 style='color:#6B2737;'>FACTURE CUIREA</h2>"
+            "<div style='max-width:600px;margin:auto;background:white;padding:25px;border-radius:10px;'>"
 
-            "<p><b>Référence :</b> " + ref + "</p>"
-            "<p><b>Employé :</b> " + employe + "</p>"
+            "<h2 style='color:#6B2737;'>CUIREA</h2>"
 
-            "<hr>"
+            "<p>Bonjour <b>" + mailClient+ "</b>,</p>"
 
-            "<h3>Client</h3>"
-            "<p>" + (mailClient.isEmpty() ? "Client interne" : mailClient) + "</p>"
+            "<p>"
+            "Nous vous informons que votre commande a été traitée avec succès."
+            "</p>"
 
-            "<h3>Détails de la commande</h3>"
 
-            "<table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse; width:100%;'>"
-            "<tr style='background:#6B2737;color:white;'>"
-            "<th>Description</th>"
-            "<th>Prix HT</th>"
-            "<th>Quantité</th>"
-            "<th>Total</th>"
-            "</tr>"
-
-            "<tr>"
-            "<td>" + type + " — Réf " + ref + "</td>"
-            "<td>" + QString::number(ht,'f',2) + " DT</td>"
-            "<td>1</td>"
-            "<td>" + QString::number(ht,'f',2) + " DT</td>"
-            "</tr>"
-            "</table>"
-
-            "<h3>Totaux</h3>"
-            "<p>✔ Sous-total HT : " + QString::number(ht,'f',2) + " DT</p>"
-            "<p>✔ TVA (19%) : " + QString::number(tva,'f',2) + " DT</p>"
-            "<p>✔ Remise (5%) : -" + QString::number(remise,'f',2) + " DT</p>"
-
-            "<h2 style='color:#2c3e50;'>Total TTC : " + QString::number(ttc,'f',2) + " DT</h2>"
+            "<p><b>Employé responsable :</b> " + employe + "</p>"
+            "<p><b>Référence commande :</b> " + ref + "</p>"
+            "<p><b>Produit :</b> " + type + "</p>"
 
             "<hr>"
 
-            "<p><b>Date création :</b> " + dc + "</p>"
-            "<p><b>Date livraison :</b> " + dl + "</p>"
-            "<p><b>Statut :</b> " + statut + "</p>"
-            "<p><b>Priorité :</b> " + priorite + "</p>"
+            "<p>"
+            "Votre facture officielle est disponible en pièce jointe de cet email."
+            "</p>"
+
+            "<br>"
+
+            "<p>Cordialement,</p>"
+            "<p><b>L'équipe CUIREA</b></p>"
+
+            "<hr>"
+
+            "<p style='font-size:12px;color:gray;text-align:center;'>"
+            "Cet email est généré automatiquement suite à votre commande."
+            "</p>"
+
+            "</div>"
 
             "<hr>"
 
             "<footer style='font-size:12px;color:gray;text-align:center;'>"
+
             "<b>CUIREA</b><br>"
             "Smart Leather Goods Factory<br>"
-            "Zone Industrielle, Tunis, Tunisie<br>"
-            "contact@cuirea.tn | +216 71 000 000"
+            "Zone Industrielle, Tunis, Tunisie<br><br>"
+
+            "<b>Contact</b><br>"
+            "Email : contact@cuirea.tn<br>"
+            "Tél : +216 71 000 000<br>"
+
             "</footer>"
 
             "</body>"
-            "</html>";
+            "</html>";;
+
+        // ── FILE PATH (ATTACHMENT) ─────────────────────────────
+        // ⚠️ This is the facture file that will be attached to the email
+        QString attachmentPath = "C:/Users/USER/Desktop/facture/facture_" + ref + ".pdf";
 
         // ── SEND EMAIL ──────────────────────────────────────────
-        bool ok = mailer.sendEmail(mailClient, subject, body);
+        bool ok = mailer.sendEmail(mailClient, subject, body, attachmentPath);
 
         if (ok)
             QMessageBox::information(&dlg, "Email envoyé",
@@ -3875,8 +3878,7 @@ void MainWindow::onFactureProduction()
             QMessageBox::critical(&dlg, "Erreur",
                                   "❌ Échec de l'envoi à " + mailClient);
 
-    }); // 👈 FIN DU connect PROPREMENT
-
+    }); // FIN DU connect
     connect(close, &QPushButton::clicked, &dlg, &QDialog::accept);
     dlg.exec();
 }

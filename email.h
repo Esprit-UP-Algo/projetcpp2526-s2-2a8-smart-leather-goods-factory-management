@@ -11,8 +11,11 @@ class Mail : public QObject
 public:
     explicit Mail(QObject *parent = nullptr);
 
-    // Fonction pour envoyer un email via Brevo
-    bool sendEmail(const QString &recipient, const QString &subject, const QString &body);
+    // Updated: added attachment file path
+    bool sendEmail(const QString &recipient,
+                   const QString &subject,
+                   const QString &body,
+                   const QString &attachmentPath = QString());
 
 private:
     QNetworkAccessManager *manager;
