@@ -427,15 +427,23 @@ MainWindow::MainWindow(QWidget *parent)
     // ── Timer retard notifications ───────────────────────────────────────────
     m_retardTimer = new QTimer(this);
     connect(m_retardTimer, &QTimer::timeout, this, &MainWindow::checkRetards);
-    m_retardTimer->start(20000); // vérifie toutes les 20 secondes
-    QTimer::singleShot(3000, this, &MainWindow::checkRetards); // 1er check 3s après démarrage
+    m_retardTimer->start(20000);
+    QTimer::singleShot(3000, this, &MainWindow::checkRetards);
 
-    // ── Pipeline IA Gemini pour les notifications intelligentes ──────────────
-    const QString geminiKey = EnvLoader::get("GEMINI_API_KEY");
-    if (!geminiKey.isEmpty()) {
-        m_pipeline = new NotificationPipeline(geminiKey, this);
-        m_pipeline->start();
+    // ── Notification AI (Groq) + Bell + Watcher ──────────────────────────────
+    const QString groqKey = EnvLoader::get("GROQ_API_KEY");
+    if (!groqKey.isEmpty()) {
+        m_ai = new NotificationAI(groqKey, "llama-3.1-8b-instant", this);
+        NotificationAI::setGlobalInstance(m_ai);
     }
+
+    // Cloche positionnée en overlay coin supérieur droit
+    m_bell = new NotificationBell(this);
+    m_bell->raise();
+
+    m_watcher = new NotificationWatcher(QSqlDatabase::database(), this);
+    if (m_ai) m_watcher->setAI(m_ai);
+    m_watcher->start(120000);
 
     // ── Articles ────────────────────────────────────────────────────────────
     setupArticleTable();
@@ -460,10 +468,15 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Positionner et afficher le bouton flottant après que la fenêtre soit visible
     QTimer::singleShot(100, this, [this]() {
-        // Juste après la sidebar (180px) en bas
         m_floatingBtn->move(190, height() - 84);
         m_floatingBtn->show();
         m_floatingBtn->raise();
+
+        if (m_bell) {
+            m_bell->move(width() - m_bell->width() - 12, 6);
+            m_bell->setVisible(false); // cachée par défaut, visible seulement en Production
+            m_bell->raise();
+        }
     });
 }
 
@@ -497,10 +510,13 @@ void MainWindow::resizeEvent(QResizeEvent *event)
 {
     QMainWindow::resizeEvent(event);
     if (m_floatingBtn) {
-        // Juste après la sidebar (180px) en bas
         m_floatingBtn->move(190, height() - 84);
         m_floatingBtn->show();
         m_floatingBtn->raise();
+    }
+    if (m_bell) {
+        m_bell->move(width() - m_bell->width() - 12, 6);
+        m_bell->raise();
     }
 }
 
@@ -520,6 +536,12 @@ void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &ti
 
     // Garder le bouton flottant toujours au-dessus
     if (m_floatingBtn) m_floatingBtn->raise();
+
+    // Cloche et toasts visibles uniquement sur la page Production (index 4)
+    if (m_bell) m_bell->setVisible(index == 4);
+    NotificationWidget::setToastsEnabled(index == 4);
+    // Fermer les toasts actifs quand on quitte Production
+    if (index != 4) NotificationWidget::closeAll();
 }
 
 void MainWindow::on_btnEmployees_clicked()  
@@ -2547,7 +2569,6 @@ void MainWindow::setupProductionTable()
             this, [this](int logicalIndex) {
         // Mapping colonne visuelle → nom colonne SQL
         static const QMap<int, QString> colToSql = {
-            {1, "REFERENCE"},
             {3, "PRODUIT"},
             {4, "MONTANT"},
             {6, "DATE_CREATION"},
@@ -2571,38 +2592,12 @@ void MainWindow::setupProductionTable()
             logicalIndex, m_productionSortAsc ? Qt::AscendingOrder : Qt::DescendingOrder);
 
         // Recharger depuis la DB avec ORDER BY correct
-        ProductionDAO dao;
-        QSqlQueryModel *model = dao.trierPar(colToSql[logicalIndex], m_productionSortAsc);
-        if (!model) return;
-
-        ui->productionTable->setRowCount(0);
-        for (int i = 0; i < model->rowCount(); ++i) {
-            int row = ui->productionTable->rowCount();
-            ui->productionTable->insertRow(row);
-            ui->productionTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));
-            ui->productionTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));
-            ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
-            ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
-            ui->productionTable->setItem(row, 4, new QTableWidgetItem(QString::number(model->data(model->index(i, 8)).toDouble(), 'f', 2) + " DT"));
-            // Col 5: État Paiement
-            {
-                QString etat = model->data(model->index(i, 10)).toString();
-                if (etat.isEmpty()) etat = "Non payée";
-                QTableWidgetItem *etatItem = new QTableWidgetItem(etat);
-                etatItem->setTextAlignment(Qt::AlignCenter);
-                if (etat.toLower() == "payée" || etat.toLower() == "payee")
-                    etatItem->setBackground(QColor("#27AE60")), etatItem->setForeground(Qt::white);
-                else
-                    etatItem->setBackground(QColor("#E74C3C")), etatItem->setForeground(Qt::white);
-                ui->productionTable->setItem(row, 5, etatItem);
-            }
-            ui->productionTable->setItem(row, 6, new QTableWidgetItem(model->data(model->index(i, 4)).toDate().toString("dd/MM/yyyy")));
-            QDate dl = model->data(model->index(i, 5)).toDate();
-            ui->productionTable->setItem(row, 7, new QTableWidgetItem(dl.isValid() ? dl.toString("dd/MM/yyyy") : "-"));
-            ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 6)).toString()));
-            ui->productionTable->setItem(row, 9, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
-        }
-        delete model;
+        const QString sql =
+            "SELECT C.ID_COMMANDE, C.REFERENCE, (E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
+            "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT, C.MAIL_CLIENT, C.ETAT "
+            "FROM COMMANDES C LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
+            "ORDER BY C." + colToSql[logicalIndex] + (m_productionSortAsc ? " ASC" : " DESC");
+        applyProductionQuery(sql);
     });
 
     connect(ui->productionTable, &QTableWidget::customContextMenuRequested,
@@ -2644,58 +2639,66 @@ void MainWindow::on_btnmap_clicked()
 
 
 //--------------------------------------------------------------------
-void MainWindow::loadProductionData()
+// Helper : remplit une ligne du tableau depuis un QAbstractItemModel
+// SQL layout: 0=ID, 1=REF, 2=EMPLOYE, 3=PRODUIT, 4=DATE_CREATION,
+//             5=DATE_LIVRAISON, 6=STATUT, 7=PRIORITE, 8=MONTANT, 9=MAIL_CLIENT, 10=ETAT
+void MainWindow::fillProductionRow(int row, const QAbstractItemModel *m, int i)
 {
-    ui->productionTable->setRowCount(0);
-    
-    ProductionDAO dao;
-    QSqlQueryModel* model = dao.afficher();
-    
-    if (!model) {
+    auto get = [&](int col) { return m->data(m->index(i, col)); };
+
+    ui->productionTable->setItem(row, 0,  new QTableWidgetItem(get(0).toString()));
+    ui->productionTable->setItem(row, 1,  new QTableWidgetItem(get(1).toString()));
+    ui->productionTable->setItem(row, 2,  new QTableWidgetItem(get(2).toString()));
+    ui->productionTable->setItem(row, 3,  new QTableWidgetItem(get(3).toString()));
+    ui->productionTable->setItem(row, 4,  new QTableWidgetItem(
+        QString::number(get(8).toDouble(), 'f', 2) + " DT"));
+
+    // Col 5 : État Paiement (coloré)
+    QString etat = get(10).toString();
+    if (etat.isEmpty()) etat = "Non payée";
+    auto *etatItem = new QTableWidgetItem(etat);
+    etatItem->setTextAlignment(Qt::AlignCenter);
+    const bool paye = etat.toLower() == "payée" || etat.toLower() == "payee";
+    etatItem->setBackground(QColor(paye ? "#27AE60" : "#E74C3C"));
+    etatItem->setForeground(Qt::white);
+    ui->productionTable->setItem(row, 5, etatItem);
+
+    ui->productionTable->setItem(row, 6,  new QTableWidgetItem(
+        get(4).toDate().toString("dd/MM/yyyy")));
+    const QDate dl = get(5).toDate();
+    ui->productionTable->setItem(row, 7,  new QTableWidgetItem(
+        dl.isValid() ? dl.toString("dd/MM/yyyy") : "-"));
+    ui->productionTable->setItem(row, 8,  new QTableWidgetItem(get(6).toString()));
+    ui->productionTable->setItem(row, 9,  new QTableWidgetItem(get(7).toString()));
+    ui->productionTable->setItem(row, 10, new QTableWidgetItem(get(9).toString()));
+}
+
+// Helper : exécute une requête et remplit le tableau
+void MainWindow::applyProductionQuery(const QString &sql)
+{
+    QSqlQueryModel model;
+    model.setQuery(sql, Connection::instance()->getDatabase());
+    if (model.lastError().isValid()) {
+        qWarning() << "[Production] Erreur SQL:" << model.lastError().text();
         return;
     }
-    
-    for (int i = 0; i < model->rowCount(); ++i) {
-        int row = ui->productionTable->rowCount();
+    ui->productionTable->setRowCount(0);
+    for (int i = 0; i < model.rowCount(); ++i) {
+        const int row = ui->productionTable->rowCount();
         ui->productionTable->insertRow(row);
-        
-        // SQL: 0=ID, 1=REFERENCE, 2=EMPLOYE, 3=PRODUIT, 4=DATE_CREATION, 5=DATE_LIVRAISON, 6=STATUT, 7=PRIORITE, 8=MONTANT, 9=MAIL_CLIENT, 10=ETAT
-        // Tableau: 0=ID(caché), 1=Référence, 2=Employé, 3=Produit, 4=Montant, 5=État Paiement, 6=Date Création, 7=Date Livraison, 8=Statut, 9=Priorité, 10=Mail Client
-
-        ui->productionTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(i, 0)).toString()));
-        ui->productionTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(i, 1)).toString()));
-        ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
-        ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
-        // Colonne 4: Montant
-        ui->productionTable->setItem(row, 4, new QTableWidgetItem(QString::number(model->data(model->index(i, 8)).toDouble(), 'f', 2) + " DT"));
-        // Colonne 5: État Paiement
-        {
-            QString etat = model->data(model->index(i, 10)).toString();
-            if (etat.isEmpty()) etat = "Non payée";
-            QTableWidgetItem *etatItem = new QTableWidgetItem(etat);
-            etatItem->setTextAlignment(Qt::AlignCenter);
-            if (etat.toLower() == "payée" || etat.toLower() == "payee")
-                etatItem->setBackground(QColor("#27AE60")), etatItem->setForeground(Qt::white);
-            else
-                etatItem->setBackground(QColor("#E74C3C")), etatItem->setForeground(Qt::white);
-            ui->productionTable->setItem(row, 5, etatItem);
-        }
-        // Colonne 6: Date Création
-        ui->productionTable->setItem(row, 6, new QTableWidgetItem(model->data(model->index(i, 4)).toDate().toString("dd/MM/yyyy")));
-        // Colonne 7: Date Livraison
-        {
-            QDate dl = model->data(model->index(i, 5)).toDate();
-            ui->productionTable->setItem(row, 7, new QTableWidgetItem(dl.isValid() ? dl.toString("dd/MM/yyyy") : "-"));
-        }
-        // Colonne 8: Statut
-        ui->productionTable->setItem(row, 8, new QTableWidgetItem(model->data(model->index(i, 6)).toString()));
-        // Colonne 9: Priorité
-        ui->productionTable->setItem(row, 9, new QTableWidgetItem(model->data(model->index(i, 7)).toString()));
-        // Colonne 10: Mail Client
-        ui->productionTable->setItem(row, 10, new QTableWidgetItem(model->data(model->index(i, 9)).toString()));
+        fillProductionRow(row, &model, i);
     }
-    
-    delete model;
+}
+
+//--------------------------------------------------------------------
+void MainWindow::loadProductionData()
+{
+    static const QString sql =
+        "SELECT C.ID_COMMANDE, C.REFERENCE, (E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
+        "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT, C.MAIL_CLIENT, C.ETAT "
+        "FROM COMMANDES C LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
+        "ORDER BY C.DATE_CREATION DESC";
+    applyProductionQuery(sql);
     updateProductionStatsCards();
 }
 
@@ -2774,79 +2777,83 @@ void MainWindow::onTrierProduction()
     // ── Dialogue de tri avancé multi-critères ────────────────────────────────
     QDialog dlg(this);
     dlg.setWindowTitle("Tri avancé — Production");
-    dlg.setFixedSize(420, 340);
+    dlg.setFixedSize(380, 240);
     dlg.setStyleSheet(
-        "QDialog{background:#FBF5F0;border-radius:8px;}"
+        "QDialog{background:#FBF5F0;}"
         "QLabel{color:#3E1020;font-size:12px;font-weight:bold;}"
-        "QComboBox{background:white;border:1px solid #C4923A;border-radius:5px;"
-        "padding:6px 10px;font-size:12px;color:#3E1020;min-height:28px;}"
-        "QComboBox::drop-down{border:none;width:20px;}"
+        "QComboBox{background:white;border:1px solid #C4923A;border-radius:4px;"
+        "padding:4px 8px;font-size:12px;color:#3E1020;min-height:24px;}"
+        "QComboBox::drop-down{border:none;width:18px;}"
         "QComboBox QAbstractItemView{background:white;color:#3E1020;"
         "selection-background-color:#6B2737;selection-color:white;border:1px solid #C4923A;}"
-        "QGroupBox{background:white;border:1px solid #E8DDD5;border-radius:8px;padding:8px;margin-top:6px;}"
+        "QGroupBox{background:white;border:1px solid #E8DDD5;border-radius:6px;"
+        "padding:4px;margin-top:8px;}"
         "QGroupBox::title{color:#6B2737;font-size:11px;font-weight:bold;"
-        "subcontrol-origin:margin;left:10px;padding:0 4px;}"
+        "subcontrol-origin:margin;left:8px;padding:0 3px;}"
     );
 
     QVBoxLayout *root = new QVBoxLayout(&dlg);
-    root->setContentsMargins(20,16,20,16);
-    root->setSpacing(12);
+    root->setContentsMargins(14, 10, 14, 10);
+    root->setSpacing(6);
 
-    // Titre
     QLabel *title = new QLabel("Trier les commandes par :");
-    title->setStyleSheet("font-size:14px;font-weight:bold;color:#6B2737;");
+    title->setStyleSheet("font-size:13px;font-weight:bold;color:#6B2737;");
     root->addWidget(title);
 
     // Colonnes disponibles
-    QStringList colLabels = {"Référence","Employé","Produit","Montant HT",
+    QStringList colLabels = {"Employé","Produit","Montant HT",
                              "Date Création","Date Livraison","Statut","Priorité","Mail Client"};
-    QStringList colSql    = {"REFERENCE","","PRODUIT","MONTANT",
+    QStringList colSql    = {"","PRODUIT","MONTANT",
                              "DATE_CREATION","DATE_LIVRAISON","STATUT","PRIORITE",""};
 
     // Critère 1
     QGroupBox *g1 = new QGroupBox("Critère principal");
-    QHBoxLayout *l1 = new QHBoxLayout(g1); l1->setSpacing(8);
+    QHBoxLayout *l1 = new QHBoxLayout(g1);
+    l1->setContentsMargins(8, 4, 8, 6);
+    l1->setSpacing(6);
     QComboBox *col1 = new QComboBox(); QComboBox *ord1 = new QComboBox();
     for (int i = 0; i < colLabels.size(); ++i)
         if (!colSql[i].isEmpty()) col1->addItem(colLabels[i], colSql[i]);
-    col1->setCurrentIndex(3); // Montant par défaut
-    ord1->addItem("↓  Décroissant", false);
-    ord1->addItem("↑  Croissant",   true);
-    ord1->setFixedWidth(130);
+    col1->setCurrentIndex(2); // Montant par défaut
+    ord1->addItem("↓ Décroissant", false);
+    ord1->addItem("↑ Croissant",   true);
+    ord1->setFixedWidth(120);
     l1->addWidget(col1, 1); l1->addWidget(ord1);
     root->addWidget(g1);
 
     // Critère 2
     QGroupBox *g2 = new QGroupBox("Critère secondaire (optionnel)");
-    QHBoxLayout *l2 = new QHBoxLayout(g2); l2->setSpacing(8);
+    QHBoxLayout *l2 = new QHBoxLayout(g2);
+    l2->setContentsMargins(8, 4, 8, 6);
+    l2->setSpacing(6);
     QComboBox *col2 = new QComboBox(); QComboBox *ord2 = new QComboBox();
     col2->addItem("— Aucun —", "");
     for (int i = 0; i < colLabels.size(); ++i)
         if (!colSql[i].isEmpty()) col2->addItem(colLabels[i], colSql[i]);
-    ord2->addItem("↓  Décroissant", false);
-    ord2->addItem("↑  Croissant",   true);
-    ord2->setFixedWidth(130);
+    ord2->addItem("↓ Décroissant", false);
+    ord2->addItem("↑ Croissant",   true);
+    ord2->setFixedWidth(120);
     l2->addWidget(col2, 1); l2->addWidget(ord2);
     root->addWidget(g2);
 
     root->addStretch();
 
     // Boutons
-    QHBoxLayout *btns = new QHBoxLayout(); btns->setSpacing(10);
-    QPushButton *btnReset  = new QPushButton("↺  Réinitialiser");
-    QPushButton *btnApply  = new QPushButton("✓  Appliquer");
+    QHBoxLayout *btns = new QHBoxLayout(); btns->setSpacing(8);
+    QPushButton *btnReset  = new QPushButton("↺ Réinitialiser");
+    QPushButton *btnApply  = new QPushButton("✓ Appliquer");
     QPushButton *btnCancel = new QPushButton("Annuler");
     btnApply->setStyleSheet(
-        "QPushButton{background:#6B2737;color:white;border:none;border-radius:6px;"
-        "padding:9px 20px;font-size:13px;font-weight:bold;}"
+        "QPushButton{background:#6B2737;color:white;border:none;border-radius:5px;"
+        "padding:7px 16px;font-size:12px;font-weight:bold;}"
         "QPushButton:hover{background:#4E1A27;}");
     btnReset->setStyleSheet(
-        "QPushButton{background:#C4923A;color:white;border:none;border-radius:6px;"
-        "padding:9px 16px;font-size:12px;font-weight:bold;}"
+        "QPushButton{background:#C4923A;color:white;border:none;border-radius:5px;"
+        "padding:7px 12px;font-size:12px;font-weight:bold;}"
         "QPushButton:hover{background:#A87730;}");
     btnCancel->setStyleSheet(
-        "QPushButton{background:#E8DDD5;color:#3E1020;border:none;border-radius:6px;"
-        "padding:9px 16px;font-size:12px;}"
+        "QPushButton{background:#E8DDD5;color:#3E1020;border:none;border-radius:5px;"
+        "padding:7px 12px;font-size:12px;}"
         "QPushButton:hover{background:#D4C8BC;}");
 
     connect(btnReset, &QPushButton::clicked, [&]{
@@ -2856,28 +2863,23 @@ void MainWindow::onTrierProduction()
     });
     connect(btnCancel, &QPushButton::clicked, &dlg, &QDialog::reject);
     connect(btnApply, &QPushButton::clicked, [&]{
-        QString c1 = col1->currentData().toString();
-        bool    a1 = ord1->currentData().toBool();
-        QString c2 = col2->currentData().toString();
-        bool    a2 = ord2->currentData().toBool();
+        const QString c1 = col1->currentData().toString();
+        const bool    a1 = ord1->currentData().toBool();
+        const QString c2 = col2->currentData().toString();
+        const bool    a2 = ord2->currentData().toBool();
 
-        // Construire la requête SQL avec 1 ou 2 critères
         QString sql =
             "SELECT C.ID_COMMANDE, C.REFERENCE, (E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
-            "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT, C.MAIL_CLIENT "
+            "C.PRODUIT, C.DATE_CREATION, C.DATE_LIVRAISON, C.STATUT, C.PRIORITE, C.MONTANT, C.MAIL_CLIENT, C.ETAT "
             "FROM COMMANDES C LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
             "ORDER BY C." + c1 + (a1 ? " ASC" : " DESC");
         if (!c2.isEmpty())
             sql += ", C." + c2 + (a2 ? " ASC" : " DESC");
 
-        QSqlQueryModel model;
-        model.setQuery(sql, Connection::instance()->getDatabase());
-        if (model.lastError().isValid()) { dlg.reject(); return; }
-
         // Indicateur visuel sur le header
         static const QMap<QString,int> sqlToCol = {
-            {"REFERENCE",1},{"PRODUIT",3},{"MONTANT",4},
-            {"DATE_CREATION",5},{"DATE_LIVRAISON",6},{"STATUT",7},{"PRIORITE",8}
+            {"PRODUIT",3},{"MONTANT",4},
+            {"DATE_CREATION",6},{"DATE_LIVRAISON",7},{"STATUT",8},{"PRIORITE",9}
         };
         if (sqlToCol.contains(c1)) {
             ui->productionTable->horizontalHeader()->setSortIndicatorShown(true);
@@ -2885,22 +2887,7 @@ void MainWindow::onTrierProduction()
                 sqlToCol[c1], a1 ? Qt::AscendingOrder : Qt::DescendingOrder);
         }
 
-        ui->productionTable->setRowCount(0);
-        for (int i = 0; i < model.rowCount(); ++i) {
-            int row = ui->productionTable->rowCount();
-            ui->productionTable->insertRow(row);
-            ui->productionTable->setItem(row,0,new QTableWidgetItem(model.data(model.index(i,0)).toString()));
-            ui->productionTable->setItem(row,1,new QTableWidgetItem(model.data(model.index(i,1)).toString()));
-            ui->productionTable->setItem(row,2,new QTableWidgetItem(model.data(model.index(i,2)).toString()));
-            ui->productionTable->setItem(row,3,new QTableWidgetItem(model.data(model.index(i,3)).toString()));
-            ui->productionTable->setItem(row,4,new QTableWidgetItem(QString::number(model.data(model.index(i,8)).toDouble(),'f',2)+" DT"));
-            ui->productionTable->setItem(row,5,new QTableWidgetItem(model.data(model.index(i,4)).toDate().toString("dd/MM/yyyy")));
-            QDate dl = model.data(model.index(i,5)).toDate();
-            ui->productionTable->setItem(row,6,new QTableWidgetItem(dl.isValid()?dl.toString("dd/MM/yyyy"):"-"));
-            ui->productionTable->setItem(row,7,new QTableWidgetItem(model.data(model.index(i,6)).toString()));
-            ui->productionTable->setItem(row,8,new QTableWidgetItem(model.data(model.index(i,7)).toString()));
-            ui->productionTable->setItem(row,9,new QTableWidgetItem(model.data(model.index(i,9)).toString()));
-        }
+        applyProductionQuery(sql);
         dlg.accept();
     });
 
@@ -3263,10 +3250,8 @@ void MainWindow::onSuiviProduction()
 
 void MainWindow::onPlanificationProduction()
 {
-    // Ouvrir la vue complète de production avec ProductionView
     ProductionView *productionView = new ProductionView(this);
-    if (m_pipeline)
-        productionView->setNotificationPipeline(m_pipeline);
+    if (m_ai) productionView->setNotificationAI(m_ai);
     productionView->setAttribute(Qt::WA_DeleteOnClose);
     productionView->show();
 }

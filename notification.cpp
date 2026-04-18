@@ -1,4 +1,5 @@
 ﻿#include "notification.h"
+
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QScreen>
@@ -6,19 +7,31 @@
 #include <QGraphicsDropShadowEffect>
 #include <QMouseEvent>
 #include <QShowEvent>
-#include <QNetworkRequest>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QDebug>
+#include <QPainter>
+#include <QFrame>
+#include <QScrollBar>
+#include <QNetworkRequest>
 #include <QUrl>
+#include <QAudioSink>
+#include <QAudioFormat>
+#include <QBuffer>
+#include <QtMath>
+#include <QPointer>
+#include <QRegularExpression>
+
+// ── Statics ──────────────────────────────────────────────────────────────────
+QList<NotificationWidget*> NotificationWidget::s_active;
+bool                       NotificationWidget::s_toastsEnabled = false;
+NotificationAI*            NotificationAI::s_instance          = nullptr;
 
 // ===============================================================
 //  NotificationWidget
 // ===============================================================
-
-QList<NotificationWidget*> NotificationWidget::s_active;
 
 void NotificationWidget::repositionAll()
 {
@@ -26,9 +39,8 @@ void NotificationWidget::repositionAll()
     int offsetY = 20;
     for (int i = s_active.size() - 1; i >= 0; --i) {
         auto *w = s_active[i];
-        int targetX = screen.right() - w->width() - 20;
-        int targetY = screen.bottom() - offsetY - w->height();
-        w->move(targetX, targetY);
+        w->move(screen.right() - w->width() - 20,
+                screen.bottom() - offsetY - w->height());
         offsetY += w->height() + 10;
     }
 }
@@ -38,14 +50,18 @@ void NotificationWidget::show(const QString &title, const QString &message, Type
                                const QString &action2Label, std::function<void()> action2,
                                int durationMs, bool aiGenerated)
 {
+    NotificationHistory::instance().add({title, message, type,
+                                         QDateTime::currentDateTime(), false, aiGenerated});
+    if (!s_toastsEnabled) return;
+
     if (s_active.size() >= MAX_TOASTS && !s_active.isEmpty())
         s_active.first()->fadeOut();
 
-    auto *w = new NotificationWidget(title, message, type,
-                                     action1Label, action1,
-                                     action2Label, action2,
-                                     durationMs, aiGenerated);
-    s_active.append(w);
+    NotificationSound::play(type);
+    s_active.append(new NotificationWidget(title, message, type,
+                                           action1Label, action1,
+                                           action2Label, action2,
+                                           durationMs, aiGenerated));
 }
 
 void NotificationWidget::closeAll()
@@ -66,24 +82,21 @@ NotificationWidget::NotificationWidget(const QString &title, const QString &mess
     setAttribute(Qt::WA_DeleteOnClose);
     setFixedWidth(340);
 
-    struct Theme { QString bg, border, icon, progressColor; };
-    static const Theme themes[] = {
-        {"#1A2E4A", "#378ADD", "\xF0\x9F\x94\xB5", "#85B7EB"}, // Info
-        {"#7A4A1A", "#C4923A", "\xF0\x9F\x9F\xA0", "#F0C070"}, // Warning
-        {"#6B2737", "#A0485A", "\xF0\x9F\x94\xB4", "#C4923A"}, // Critical
-        {"#2D4228", "#7A9E6F", "\xF0\x9F\x9F\xA2", "#A0D090"}, // Success
+    struct Theme { const char *bg, *border, *icon, *progressColor; };
+    static constexpr Theme themes[] = {
+        {"#1A2E4A", "#378ADD", "\xF0\x9F\x94\xB5", "#85B7EB"},
+        {"#7A4A1A", "#C4923A", "\xF0\x9F\x9F\xA0", "#F0C070"},
+        {"#6B2737", "#A0485A", "\xF0\x9F\x94\xB4", "#C4923A"},
+        {"#2D4228", "#7A9E6F", "\xF0\x9F\x9F\xA2", "#A0D090"},
     };
-    const Theme &theme = themes[qBound(0, static_cast<int>(type), 3)];
-
-    const QString borderColor = aiGenerated ? "#F5C518" : theme.border;
-    const QString borderWidth = aiGenerated ? "6px"     : "5px";
+    const Theme &t = themes[qBound(0, static_cast<int>(type), 3)];
 
     auto *container = new QWidget(this);
     container->setObjectName("container");
     container->setStyleSheet(
         QString("#container { background:%1; border-left:%2 solid %3;"
                 " border-radius:10px; padding:12px 14px 8px 14px; }")
-        .arg(theme.bg, borderWidth, borderColor));
+        .arg(t.bg, aiGenerated ? "6px" : "5px", aiGenerated ? "#F5C518" : t.border));
 
     auto *shadow = new QGraphicsDropShadowEffect(container);
     shadow->setBlurRadius(aiGenerated ? 28 : 20);
@@ -99,11 +112,10 @@ NotificationWidget::NotificationWidget(const QString &title, const QString &mess
     lay->setSpacing(5);
     lay->setContentsMargins(0, 0, 0, 0);
 
-    // Titre
     auto *titleRow = new QHBoxLayout();
     titleRow->setSpacing(6);
 
-    m_icon = new QLabel(theme.icon, container);
+    m_icon = new QLabel(t.icon, container);
     m_icon->setStyleSheet("font-size:15px;");
     m_icon->setFixedWidth(22);
 
@@ -115,12 +127,11 @@ NotificationWidget::NotificationWidget(const QString &title, const QString &mess
     titleRow->addWidget(m_title, 1);
 
     if (aiGenerated) {
-        auto *aiBadge = new QLabel("✨ IA", container);
-        aiBadge->setStyleSheet(
-            "background:#F5C518; color:#1A1A1A; font-size:9px; font-weight:bold;"
-            " border-radius:4px; padding:2px 5px;");
-        aiBadge->setFixedHeight(16);
-        titleRow->addWidget(aiBadge);
+        auto *badge = new QLabel("✨ IA", container);
+        badge->setStyleSheet("background:#F5C518; color:#1A1A1A; font-size:9px; font-weight:bold;"
+                             " border-radius:4px; padding:2px 5px;");
+        badge->setFixedHeight(16);
+        titleRow->addWidget(badge);
     }
 
     m_closeBtn = new QPushButton("x", container);
@@ -138,7 +149,6 @@ NotificationWidget::NotificationWidget(const QString &title, const QString &mess
     m_message->setWordWrap(true);
     lay->addWidget(m_message);
 
-    // Boutons d'action
     if (!action1Label.isEmpty() || !action2Label.isEmpty()) {
         static const QString btnP =
             "QPushButton { background:rgba(255,255,255,0.20); color:white;"
@@ -151,18 +161,13 @@ NotificationWidget::NotificationWidget(const QString &title, const QString &mess
 
         auto *actRow = new QHBoxLayout();
         actRow->setSpacing(6);
-
         auto makeBtn = [&](QPushButton *&btn, const QString &label,
                            const QString &style, std::function<void()> cb) {
             btn = new QPushButton(label, container);
             btn->setStyleSheet(style);
-            connect(btn, &QPushButton::clicked, this, [this, cb]() {
-                if (cb) cb();
-                fadeOut();
-            });
+            connect(btn, &QPushButton::clicked, this, [this, cb]() { if (cb) cb(); fadeOut(); });
             actRow->addWidget(btn);
         };
-
         if (!action1Label.isEmpty()) makeBtn(m_action1Btn, action1Label, btnP, action1);
         if (!action2Label.isEmpty()) makeBtn(m_action2Btn, action2Label, btnS, action2);
         actRow->addStretch();
@@ -176,26 +181,20 @@ NotificationWidget::NotificationWidget(const QString &title, const QString &mess
     m_progress->setFixedHeight(3);
     m_progress->setStyleSheet(
         QString("QProgressBar { background:rgba(255,255,255,0.15); border-radius:1px; border:none; }"
-                "QProgressBar::chunk { background:%1; border-radius:1px; }")
-        .arg(theme.progressColor));
+                "QProgressBar::chunk { background:%1; border-radius:1px; }").arg(t.progressColor));
     lay->addWidget(m_progress);
 
-    setFixedWidth(340);
     setWindowOpacity(0.0);
 
-    // Timers (démarrent après show via showEvent)
     m_autoClose = new QTimer(this);
     m_autoClose->setSingleShot(true);
     connect(m_autoClose, &QTimer::timeout, this, &NotificationWidget::fadeOut);
 
     m_progressTimer = new QTimer(this);
     connect(m_progressTimer, &QTimer::timeout, this, [this]() {
-        if (m_paused) return;
-        m_elapsed += 50;
-        m_progress->setValue(m_durationMs - m_elapsed);
+        if (!m_paused) m_progress->setValue(m_durationMs - (m_elapsed += 50));
     });
 
-    // Positionner hors écran puis afficher — showEvent fait le vrai positionnement
     const QRect screen = QApplication::primaryScreen()->availableGeometry();
     move(screen.right() + 10, screen.bottom());
     QWidget::show();
@@ -204,8 +203,6 @@ NotificationWidget::NotificationWidget(const QString &title, const QString &mess
 void NotificationWidget::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
-
-    // Ici la taille est garantie finale
     ensurePolished();
     if (layout()) layout()->activate();
     adjustSize();
@@ -213,29 +210,22 @@ void NotificationWidget::showEvent(QShowEvent *event)
     const QRect screen = QApplication::primaryScreen()->availableGeometry();
     const int finalX   = screen.right() - width() - 20;
 
-    // Calcul Y : empiler depuis le bas en comptant les toasts déjà affichés
     int offsetY = 20;
-    for (auto *w : std::as_const(s_active)) {
-        if (w != this)
-            offsetY += w->height() + 10;
-    }
+    for (auto *w : std::as_const(s_active))
+        if (w != this) offsetY += w->height() + 10;
     const int finalY = screen.bottom() - offsetY - height();
-
-    // Slide depuis la droite
     move(screen.right() + 10, finalY);
 
-    m_slideIn = new QPropertyAnimation(this, "pos", this);
-    m_slideIn->setDuration(350);
-    m_slideIn->setStartValue(QPoint(screen.right() + 10, finalY));
-    m_slideIn->setEndValue(QPoint(finalX, finalY));
-    m_slideIn->setEasingCurve(QEasingCurve::OutCubic);
-    m_slideIn->start(QAbstractAnimation::DeleteWhenStopped);
-
-    m_fadeIn = new QPropertyAnimation(this, "opacity", this);
-    m_fadeIn->setDuration(350);
-    m_fadeIn->setStartValue(0.0);
-    m_fadeIn->setEndValue(1.0);
-    m_fadeIn->start(QAbstractAnimation::DeleteWhenStopped);
+    auto makeAnim = [this](const QByteArray &prop, const QVariant &from, const QVariant &to,
+                           int ms, QEasingCurve::Type curve = QEasingCurve::Linear) {
+        auto *a = new QPropertyAnimation(this, prop, this);
+        a->setDuration(ms); a->setStartValue(from); a->setEndValue(to);
+        a->setEasingCurve(curve);
+        a->start(QAbstractAnimation::DeleteWhenStopped);
+        return a;
+    };
+    m_slideIn = makeAnim("pos",   QPoint(screen.right()+10, finalY), QPoint(finalX, finalY), 350, QEasingCurve::OutCubic);
+    m_fadeIn  = makeAnim("opacity", 0.0, 1.0, 350);
 
     m_autoClose->start(m_durationMs);
     m_progressTimer->start(50);
@@ -246,16 +236,17 @@ void NotificationWidget::fadeOut()
     if (m_autoClose)     m_autoClose->stop();
     if (m_progressTimer) m_progressTimer->stop();
 
-    m_fadeOut = new QPropertyAnimation(this, "opacity", this);
-    m_fadeOut->setDuration(400);
-    m_fadeOut->setStartValue(windowOpacity());
-    m_fadeOut->setEndValue(0.0);
-    connect(m_fadeOut, &QPropertyAnimation::finished, this, [this]() {
+    auto *anim = new QPropertyAnimation(this, "opacity", this);
+    anim->setDuration(400);
+    anim->setStartValue(windowOpacity());
+    anim->setEndValue(0.0);
+    connect(anim, &QPropertyAnimation::finished, this, [this]() {
         s_active.removeAll(this);
-        repositionAll(); // réempile les toasts restants
+        repositionAll();
         close();
     });
-    m_fadeOut->start(QAbstractAnimation::DeleteWhenStopped);
+    anim->start(QAbstractAnimation::DeleteWhenStopped);
+    m_fadeOut = anim;
 }
 
 void NotificationWidget::enterEvent(QEnterEvent *)
@@ -278,111 +269,510 @@ void NotificationWidget::mousePressEvent(QMouseEvent *event)
 }
 
 // ===============================================================
+//  NotificationHistory
+// ===============================================================
+
+NotificationHistory &NotificationHistory::instance()
+{
+    static NotificationHistory inst;
+    return inst;
+}
+
+void NotificationHistory::add(const NotificationHistoryItem &item)
+{
+    m_items.prepend(item);
+    if (m_items.size() > 100) m_items.removeLast();
+    emit changed();
+}
+
+void NotificationHistory::markAllRead()
+{
+    for (auto &item : m_items) item.read = true;
+    emit changed();
+}
+
+int NotificationHistory::unreadCount() const
+{
+    return static_cast<int>(std::count_if(m_items.cbegin(), m_items.cend(),
+                                          [](const NotificationHistoryItem &i) { return !i.read; }));
+}
+
+// ===============================================================
+//  NotificationBell
+// ===============================================================
+
+NotificationBell::NotificationBell(QWidget *parent) : QWidget(parent)
+{
+    setFixedSize(42, 42);
+    setCursor(Qt::PointingHandCursor);
+    setToolTip("Notifications");
+    setAttribute(Qt::WA_TranslucentBackground);
+    connect(&NotificationHistory::instance(), &NotificationHistory::changed,
+            this, &NotificationBell::refresh);
+}
+
+void NotificationBell::refresh() { update(); }
+
+void NotificationBell::paintEvent(QPaintEvent *)
+{
+    QPainter p(this);
+    p.setRenderHint(QPainter::Antialiasing);
+
+    p.setBrush(m_hovered ? QColor(70, 42, 22, 240) : QColor(44, 26, 14, 220));
+    p.setPen(QPen(QColor(196, 121, 90, 120), 1));
+    p.drawEllipse(rect().adjusted(2, 2, -2, -2));
+
+    const int unread = NotificationHistory::instance().unreadCount();
+    QFont iconFont("Segoe UI Emoji", 16);
+    iconFont.setStyleStrategy(QFont::PreferAntialias);
+    p.setFont(iconFont);
+    p.setPen(unread > 0 ? QColor("#FFD580") : QColor("#E8C9A0"));
+    p.drawText(rect().adjusted(0, -1, 0, -1), Qt::AlignCenter, "🔔");
+
+    if (unread > 0) {
+        const QRectF badge(24, 3, 15, 15);
+        p.setBrush(QColor("#E53935"));
+        p.setPen(QPen(QColor(44, 26, 14), 1.5));
+        p.drawEllipse(badge);
+        p.setPen(Qt::white);
+        p.setFont(QFont("Arial", unread > 9 ? 6 : 7, QFont::Bold));
+        p.drawText(badge, Qt::AlignCenter, unread > 9 ? "9+" : QString::number(unread));
+    }
+}
+
+void NotificationBell::mousePressEvent(QMouseEvent *event)
+{
+    if (event->button() == Qt::LeftButton) openPanel();
+    QWidget::mousePressEvent(event);
+}
+
+void NotificationBell::enterEvent(QEnterEvent *) { m_hovered = true;  update(); }
+void NotificationBell::leaveEvent(QEvent *)       { m_hovered = false; update(); }
+
+void NotificationBell::openPanel()
+{
+    NotificationHistory::instance().markAllRead();
+
+    auto *panel = new NotificationPanel(window());
+    panel->adjustSize();
+
+    const QRect  screen    = QApplication::primaryScreen()->availableGeometry();
+    const QPoint globalPos = mapToGlobal(QPoint(width(), height() + 6));
+
+    int x = qBound(screen.left() + 8, globalPos.x() - panel->width(), screen.right() - panel->width() - 8);
+    int y = globalPos.y();
+    if (y + panel->height() > screen.bottom() - 8)
+        y = mapToGlobal(QPoint(0, 0)).y() - panel->height() - 6;
+
+    panel->move(x, y);
+    panel->show();
+    panel->raise();
+}
+
+// ===============================================================
+//  NotificationPanel
+// ===============================================================
+
+NotificationPanel::NotificationPanel(QWidget *parent)
+    : QWidget(parent, Qt::Tool | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint)
+{
+    setAttribute(Qt::WA_DeleteOnClose);
+    setFixedWidth(400);
+    setStyleSheet("NotificationPanel { background:#1A0F07;"
+                  " border:1px solid rgba(196,121,90,0.5); border-radius:12px; }");
+
+    auto *lay = new QVBoxLayout(this);
+    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setSpacing(0);
+
+    // Header
+    auto *header = new QWidget(this);
+    header->setFixedHeight(46);
+    header->setStyleSheet("background:#2C1A0E; border-radius:12px 12px 0 0;");
+    auto *hlay = new QHBoxLayout(header);
+    hlay->setContentsMargins(12, 0, 10, 0);
+    hlay->setSpacing(5);
+
+    auto *titleLbl = new QLabel("🔔 Notifications", header);
+    titleLbl->setStyleSheet("color:#F5EDE0; font-size:13px; font-weight:bold; background:transparent;");
+
+    const int unread = NotificationHistory::instance().unreadCount();
+    auto *countLbl = new QLabel(unread > 0 ? QString::number(unread) + " non lues" : "A jour", header);
+    countLbl->setStyleSheet(unread > 0
+        ? "color:#FFD580; font-size:10px; background:transparent;"
+        : "color:rgba(245,237,224,0.3); font-size:10px; background:transparent;");
+
+    static const QString btnStyle =
+        "QPushButton { background:rgba(196,121,90,0.15); color:#E8A87C; font-size:10px;"
+        " border:1px solid rgba(196,121,90,0.3); border-radius:4px; padding:2px 8px; }"
+        "QPushButton:hover { background:rgba(196,121,90,0.35); color:#F5EDE0; }";
+
+    m_markAllBtn = new QPushButton("Lu", header);
+    m_markAllBtn->setStyleSheet(btnStyle);
+    connect(m_markAllBtn, &QPushButton::clicked, this, [this]() {
+        NotificationHistory::instance().markAllRead();
+        populate();
+    });
+
+    auto *summaryBtn = new QPushButton("Resume IA", header);
+    summaryBtn->setStyleSheet(btnStyle);
+    connect(summaryBtn, &QPushButton::clicked, this, [this, summaryBtn]() {
+        auto *ai = NotificationAI::globalInstance();
+        if (!ai) return;
+        summaryBtn->setText("...");
+        summaryBtn->setEnabled(false);
+        QPointer<NotificationPanel> guard(this);
+        QPointer<QPushButton>       btnGuard(summaryBtn);
+        ai->generateSummary([guard, btnGuard](const QString &summary) {
+            if (!guard) return;
+            if (btnGuard) { btnGuard->setText("Resume IA"); btnGuard->setEnabled(true); }
+            guard->showSummary(summary);
+        });
+    });
+
+    auto *closeBtn = new QPushButton("x", header);
+    closeBtn->setFixedSize(22, 22);
+    closeBtn->setStyleSheet(
+        "QPushButton { background:rgba(255,255,255,0.08); color:rgba(245,237,224,0.6);"
+        " border:none; border-radius:11px; font-size:11px; font-weight:bold; }"
+        "QPushButton:hover { background:#C0392B; color:white; }");
+    connect(closeBtn, &QPushButton::clicked, this, &NotificationPanel::close);
+
+    hlay->addWidget(titleLbl);
+    hlay->addSpacing(4);
+    hlay->addWidget(countLbl);
+    hlay->addStretch();
+    hlay->addWidget(m_markAllBtn);
+    hlay->addWidget(summaryBtn);
+    hlay->addWidget(closeBtn);
+    lay->addWidget(header);
+
+    auto *sep = new QFrame(this);
+    sep->setFrameShape(QFrame::HLine);
+    sep->setFixedHeight(1);
+    sep->setStyleSheet("background:rgba(196,121,90,0.25);");
+    lay->addWidget(sep);
+
+    m_scroll = new QScrollArea(this);
+    m_scroll->setWidgetResizable(true);
+    m_scroll->setFrameShape(QFrame::NoFrame);
+    m_scroll->setFixedHeight(420);
+    m_scroll->setStyleSheet(
+        "QScrollArea { background:#1A0F07; border:none; }"
+        "QScrollBar:vertical { width:4px; background:transparent; }"
+        "QScrollBar::handle:vertical { background:#5C3317; border-radius:2px; min-height:20px; }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height:0; }");
+
+    m_container = new QWidget();
+    m_container->setStyleSheet("background:#1A0F07;");
+    m_scroll->setWidget(m_container);
+    lay->addWidget(m_scroll);
+
+    populate();
+}
+
+void NotificationPanel::populate()
+{
+    delete m_container->layout();
+    auto *vlay = new QVBoxLayout(m_container);
+    vlay->setContentsMargins(0, 0, 0, 0);
+    vlay->setSpacing(0);
+
+    const auto &items = NotificationHistory::instance().items();
+    if (items.isEmpty()) {
+        auto *empty = new QLabel("Aucune notification", m_container);
+        empty->setAlignment(Qt::AlignCenter);
+        empty->setStyleSheet("color:rgba(245,237,224,0.3); font-size:12px; padding:40px;");
+        vlay->addWidget(empty);
+        vlay->addStretch();
+        return;
+    }
+
+    static constexpr const char* accentColors[] = {"#378ADD","#EF9F27","#E24B4A","#4CAF50"};
+    static constexpr const char* tagLabels[]    = {"Info","Alerte","Urgente","Succes"};
+    static constexpr const char* tagBg[]        = {"#1A2E4A","#7A4A1A","#6B2737","#1E3A1E"};
+    static constexpr const char* tagFg[]        = {"#85B7EB","#F0C070","#F09595","#A0D090"};
+
+    for (const auto &item : items) {
+        const int t = qBound(0, static_cast<int>(item.type), 3);
+        const QString timeStr = item.timestamp.date() == QDate::currentDate()
+            ? item.timestamp.toString("hh:mm")
+            : item.timestamp.toString("dd/MM hh:mm");
+
+        auto *row = new QWidget(m_container);
+        row->setObjectName("row");
+        row->setStyleSheet(
+            QString("QWidget#row { background:%1; %2 border-bottom:1px solid rgba(255,255,255,0.06); }")
+            .arg(item.read ? "transparent" : "rgba(255,255,255,0.04)")
+            .arg(item.read ? "" : QString("border-left:3px solid %1;").arg(accentColors[t])));
+
+        auto *rlay = new QHBoxLayout(row);
+        rlay->setContentsMargins(12, 10, 12, 10);
+        rlay->setSpacing(10);
+
+        auto *dot = new QLabel(row);
+        dot->setFixedSize(7, 7);
+        dot->setStyleSheet(item.read
+            ? "background:transparent; border-radius:3px;"
+            : QString("background:%1; border-radius:3px;").arg(accentColors[t]));
+
+        auto *textCol = new QVBoxLayout();
+        textCol->setSpacing(3);
+        textCol->setContentsMargins(0, 0, 0, 0);
+
+        auto *titleLbl2 = new QLabel(item.title, row);
+        titleLbl2->setStyleSheet(
+            QString("color:%1; font-size:12px; font-weight:bold; background:transparent;")
+            .arg(item.read ? "rgba(245,237,224,0.55)" : "#F5EDE0"));
+        titleLbl2->setWordWrap(true);
+
+        auto *msgLbl = new QLabel(item.message, row);
+        msgLbl->setStyleSheet("color:rgba(245,237,224,0.65); font-size:11px; background:transparent;");
+        msgLbl->setWordWrap(true);
+
+        auto *metaRow = new QHBoxLayout();
+        metaRow->setSpacing(5);
+        metaRow->setContentsMargins(0, 2, 0, 0);
+
+        auto *timeLbl = new QLabel(timeStr, row);
+        timeLbl->setStyleSheet("color:rgba(245,237,224,0.3); font-size:10px; background:transparent;");
+
+        auto *tag = new QLabel(tagLabels[t], row);
+        tag->setStyleSheet(QString("background:%1; color:%2; font-size:10px;"
+                                   " border-radius:3px; padding:1px 6px;")
+                           .arg(tagBg[t], tagFg[t]));
+
+        metaRow->addWidget(timeLbl);
+        metaRow->addWidget(tag);
+        if (item.aiGenerated) {
+            auto *aiBadge = new QLabel("IA", row);
+            aiBadge->setStyleSheet("background:#3A3000; color:#F5C518; font-size:9px;"
+                                   " border-radius:3px; padding:1px 5px;");
+            metaRow->addWidget(aiBadge);
+        }
+        metaRow->addStretch();
+
+        textCol->addWidget(titleLbl2);
+        textCol->addWidget(msgLbl);
+        textCol->addLayout(metaRow);
+
+        rlay->addWidget(dot, 0, Qt::AlignTop | Qt::AlignHCenter);
+        rlay->addLayout(textCol, 1);
+        vlay->addWidget(row);
+    }
+    vlay->addStretch();
+}
+
+void NotificationPanel::focusOutEvent(QFocusEvent *event)
+{
+    QWidget::focusOutEvent(event);
+}
+
+void NotificationPanel::showSummary(const QString &text)
+{
+    auto *existing = m_container->findChild<QWidget*>("summaryBox");
+    if (existing) existing->deleteLater();
+
+    // Convertir markdown basique → HTML (regex compilée une seule fois)
+    static const QRegularExpression reBold("\\*\\*(.+?)\\*\\*");
+    QString html = text.toHtmlEscaped();
+    html.replace(reBold, "<b>\\1</b>");
+    html.replace('\n', QLatin1String("<br>"));
+
+    auto *box = new QWidget(m_container);
+    box->setObjectName("summaryBox");
+    box->setStyleSheet("QWidget#summaryBox { background:#2A1505;"
+                       " border-left:3px solid #E8A87C; }");
+
+    auto *blay = new QVBoxLayout(box);
+    blay->setContentsMargins(12, 8, 12, 10);
+    blay->setSpacing(4);
+
+    auto *hdrLbl = new QLabel("✨ Resume IA", box);
+    hdrLbl->setStyleSheet("color:#E8A87C; font-size:11px; font-weight:bold; background:transparent;");
+
+    auto *body = new QLabel(box);
+    body->setText(html);
+    body->setTextFormat(Qt::RichText);
+    body->setStyleSheet("color:#F5EDE0; font-size:11px; background:transparent;");
+    body->setWordWrap(true);
+    body->setTextInteractionFlags(Qt::TextSelectableByMouse);
+
+    blay->addWidget(hdrLbl);
+    blay->addWidget(body);
+
+    auto *containerLay = qobject_cast<QVBoxLayout*>(m_container->layout());
+    if (containerLay) {
+        containerLay->insertWidget(0, box);
+        m_scroll->verticalScrollBar()->setValue(0);
+    }
+}
+
+// ===============================================================
+//  NotificationSound
+// ===============================================================
+
+void NotificationSound::beep(int frequencyHz, int durationMs, float volume)
+{
+    QAudioFormat fmt;
+    fmt.setSampleRate(44100);
+    fmt.setChannelCount(1);
+    fmt.setSampleFormat(QAudioFormat::Int16);
+
+    const int samples = fmt.sampleRate() * durationMs / 1000;
+    QByteArray pcm(samples * static_cast<int>(sizeof(qint16)), Qt::Uninitialized);
+    auto *data = reinterpret_cast<qint16*>(pcm.data());
+
+    for (int i = 0; i < samples; ++i) {
+        const float t    = float(i) / fmt.sampleRate();
+        const float fade = (i > samples * 0.8f)
+                               ? 1.0f - float(i - samples * 0.8f) / (samples * 0.2f)
+                               : 1.0f;
+        data[i] = static_cast<qint16>(qSin(2.0 * M_PI * frequencyHz * t) * 32767 * volume * fade);
+    }
+
+    auto *buf = new QBuffer();
+    buf->setData(pcm);
+    buf->open(QIODevice::ReadOnly);
+
+    auto *sink = new QAudioSink(fmt);
+    QObject::connect(sink, &QAudioSink::stateChanged, sink, [sink, buf](QAudio::State s) {
+        if (s == QAudio::IdleState) { sink->deleteLater(); buf->deleteLater(); }
+    });
+    sink->start(buf);
+}
+
+void NotificationSound::playSequence(const QList<QPair<int,int>> &notes)
+{
+    int delay = 0;
+    for (const auto &note : notes) {
+        QTimer::singleShot(delay, [note]() { beep(note.first, note.second); });
+        delay += note.second + 30;
+    }
+}
+
+void NotificationSound::play(NotificationWidget::Type type)
+{
+    switch (type) {
+    case NotificationWidget::Success:  playSequence({{880, 80}});                          break;
+    case NotificationWidget::Info:     playSequence({{660, 120}});                         break;
+    case NotificationWidget::Warning:  playSequence({{550, 130}, {550, 130}});             break;
+    case NotificationWidget::Critical: playSequence({{440, 150}, {550, 150}, {660, 200}}); break;
+    }
+}
+
+// ===============================================================
 //  NotificationAI
 // ===============================================================
 
-NotificationAI::NotificationAI(const QString &apiKey, QObject *parent)
-    : QObject(parent)
-    , m_network(new QNetworkAccessManager(this))
-    , m_apiKey(apiKey)
+NotificationAI::NotificationAI(const QString &apiKey, const QString &model, QObject *parent)
+    : QObject(parent), m_apiKey(apiKey), m_model(model)
+    , m_nam(new QNetworkAccessManager(this))
 {
-    connect(m_network, &QNetworkAccessManager::finished,
-            this, &NotificationAI::onReplyFinished);
+    connect(m_nam, &QNetworkAccessManager::finished, this, &NotificationAI::onReply);
 }
 
-void NotificationAI::analyze(const QMap<QString, QString> &context)
+// Factorisation interne : construit et envoie une requête Groq
+QNetworkReply *NotificationAI::postGroq(const QString &system, const QString &user, int maxTokens)
 {
-    if (m_apiKey.isEmpty()) {
-        emit errorOccurred("Cle API Google non configuree.");
-        return;
+    QJsonObject body {
+        {"model",      m_model},
+        {"max_tokens", maxTokens},
+        {"messages", QJsonArray{
+            QJsonObject{{"role","system"}, {"content", system}},
+            QJsonObject{{"role","user"},   {"content", user}}
+        }}
+    };
+    QNetworkRequest req(QUrl("https://api.groq.com/openai/v1/chat/completions"));
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    req.setRawHeader("Authorization", ("Bearer " + m_apiKey).toUtf8());
+    return m_nam->post(req, QJsonDocument(body).toJson(QJsonDocument::Compact));
+}
+
+void NotificationAI::summarize(const QString &context,
+                                std::function<void(const QString&, const QString&,
+                                                   NotificationWidget::Type)> onResult)
+{
+    static const QString sys =
+        "Tu es l'assistant IA de CUIREA, une entreprise de maroquinerie en Tunisie. "
+        "On te donne un contexte technique brut sur une commande. "
+        "Réponds UNIQUEMENT avec un objet JSON valide, sans texte autour, avec exactement ces 3 clés : "
+        "{\"title\": \"...\", \"message\": \"...\", \"type\": \"Info|Warning|Critical|Success\"}. "
+        "Le message doit être une phrase claire en français, maximum 2 phrases. Pas de markdown.";
+
+    m_pending[postGroq(sys, context, 200)] = {onResult, nullptr};
+}
+
+void NotificationAI::generateSummary(std::function<void(const QString &summary)> onResult)
+{
+    const auto &items = NotificationHistory::instance().items();
+    if (items.isEmpty()) { if (onResult) onResult("Aucune notification en cours."); return; }
+
+    static const QStringList typeNames = {"Info", "Alerte", "Urgente", "Succes"};
+    QStringList lines;
+    int i = 0;
+    for (const auto &item : items) {
+        if (i++ >= 20) break;
+        lines << QString("- [%1] %2 : %3")
+                     .arg(typeNames[qBound(0, static_cast<int>(item.type), 3)],
+                          item.title, item.message);
     }
 
-    const QString urlStr =
-        QLatin1String("https://generativelanguage.googleapis.com/v1beta/models/"
-                      "gemini-2.0-flash:generateContent?key=") + m_apiKey;
+    static const QString sys =
+        "Tu es l'assistant IA de CUIREA, une entreprise de maroquinerie en Tunisie. "
+        "On te donne la liste des notifications récentes du système. "
+        "Génère un résumé clair en français en 3 parties :\n"
+        "1. Un résumé en 1-2 phrases du nombre et type de notifications.\n"
+        "2. L'état général de la production (critique / stable / bon).\n"
+        "3. Les 2-3 actions prioritaires à faire maintenant.\n"
+        "Sois direct, concis, professionnel. Maximum 6 phrases. Pas de markdown, pas de gras, pas de listes.";
 
-    QNetworkRequest request;
-    request.setUrl(QUrl(urlStr));
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-    QJsonObject sysPart;
-    sysPart["text"] = QLatin1String(
-        "Tu es l'assistant IA de CUIREA Management. "
-        "Reponds UNIQUEMENT en JSON valide, sans markdown. "
-        "Format: {\"title\":\"...\",\"message\":\"...\",\"type\":\"Info|Warning|Critical|Success\"} "
-        "Titre < 6 mots, message actionnable en francais. "
-        "Critical=retard/urgence, Warning=suspendu/stock, Success=livre/paye, Info=general.");
-
-    QJsonArray sysParts;
-    sysParts.append(sysPart);
-    QJsonObject sysInstruction;
-    sysInstruction["parts"] = sysParts;
-
-    QJsonObject part;
-    part["text"] = buildPrompt(context);
-    QJsonObject userMsg;
-    userMsg["role"]  = QLatin1String("user");
-    userMsg["parts"] = QJsonArray{ part };
-
-    QJsonObject body;
-    body["system_instruction"] = sysInstruction;
-    body["contents"]           = QJsonArray{ userMsg };
-
-    m_network->post(request, QJsonDocument(body).toJson());
+    m_pending[postGroq(sys, "Notifications :\n" + lines.join("\n"), 350)] = {nullptr, onResult};
 }
 
-void NotificationAI::analyzeText(const QString &situation)
+void NotificationAI::onReply(QNetworkReply *reply)
 {
-    analyze({{"situation", situation}});
-}
-
-QString NotificationAI::buildPrompt(const QMap<QString, QString> &context) const
-{
-    QString prompt = "Analyse cette situation dans CUIREA Management"
-                     " et genere une notification appropriee :\n\n";
-    for (auto it = context.cbegin(); it != context.cend(); ++it)
-        prompt += QString("- %1 : %2\n").arg(it.key(), it.value());
-    prompt += "\nCriteres : Critical=retard/urgence, Warning=suspendu/stock,"
-              " Success=termine/paiement, Info=general.";
-    return prompt;
-}
-
-void NotificationAI::onReplyFinished(QNetworkReply *reply)
-{
+    const QByteArray raw  = reply->readAll();
+    const auto       err  = reply->error();
+    const QString    estr = reply->errorString();
     reply->deleteLater();
 
-    if (reply->error() != QNetworkReply::NoError) {
-        emit errorOccurred(reply->errorString());
-        NotificationWidget::show("Erreur connexion", "Impossible de joindre l'assistant IA.",
-                                 NotificationWidget::Warning, {}, {}, {}, {}, 5000, true);
+    auto it = m_pending.find(reply);
+    if (it == m_pending.end()) return;
+    auto pending = *it;
+    m_pending.erase(it);
+
+    if (err != QNetworkReply::NoError) {
+        const QString detail = raw.isEmpty() ? estr : QString::fromUtf8(raw);
+        qWarning() << "[NotificationAI]" << detail;
+        if (pending.summaryCallback) pending.summaryCallback("Erreur API : " + detail);
         return;
     }
 
-    const QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-    const QString rawText =
-        doc["candidates"][0]["content"]["parts"][0]["text"].toString().trimmed();
+    const QString content = QJsonDocument::fromJson(raw).object()
+                                ["choices"].toArray().first().toObject()
+                                ["message"].toObject()["content"].toString().trimmed();
 
-    const QJsonDocument parsed = QJsonDocument::fromJson(rawText.toUtf8());
-    if (parsed.isNull() || !parsed.isObject()) {
-        emit errorOccurred("Reponse JSON invalide : " + rawText);
+    if (pending.summaryCallback) {
+        pending.summaryCallback(content.isEmpty() ? "Aucune réponse reçue." : content);
         return;
     }
 
-    const QJsonObject obj = parsed.object();
-    const QString title   = obj["title"].toString("Notification CUIREA");
-    const QString message = obj["message"].toString("Une mise a jour est disponible.");
-    const auto    type    = parseType(obj["type"].toString("Info"));
+    QJsonParseError jerr;
+    const QJsonObject result = QJsonDocument::fromJson(content.toUtf8(), &jerr).object();
+    if (jerr.error != QJsonParseError::NoError || result.isEmpty()) {
+        qWarning() << "[NotificationAI] JSON invalide:" << content;
+        return;
+    }
 
-    emit notificationReady(title, message, type);
-    NotificationWidget::show(title, message, type, {}, {}, {}, {}, 5000, true);
-}
+    const QString typeStr = result["type"].toString();
+    NotificationWidget::Type type = NotificationWidget::Info;
+    if      (typeStr == "Warning")  type = NotificationWidget::Warning;
+    else if (typeStr == "Critical") type = NotificationWidget::Critical;
+    else if (typeStr == "Success")  type = NotificationWidget::Success;
 
-NotificationWidget::Type NotificationAI::parseType(const QString &t) const
-{
-    if (t == "Critical") return NotificationWidget::Critical;
-    if (t == "Warning")  return NotificationWidget::Warning;
-    if (t == "Success")  return NotificationWidget::Success;
-    return NotificationWidget::Info;
+    if (pending.callback)
+        pending.callback(result["title"].toString(), result["message"].toString(), type);
 }
 
 // ===============================================================
@@ -392,14 +782,13 @@ NotificationWidget::Type NotificationAI::parseType(const QString &t) const
 NotificationServer::NotificationServer(quint16 port, QObject *parent)
     : QObject(parent), m_server(new QTcpServer(this)), m_port(port)
 {
-    connect(m_server, &QTcpServer::newConnection,
-            this, &NotificationServer::onNewConnection);
+    connect(m_server, &QTcpServer::newConnection, this, &NotificationServer::onNewConnection);
 }
 
 bool NotificationServer::start()
 {
     const bool ok = m_server->listen(QHostAddress::LocalHost, m_port);
-    if (ok) qDebug() << "[NotificationServer] Ecoute sur localhost:" << m_port;
+    if (ok) qDebug()   << "[NotificationServer] Ecoute sur localhost:" << m_port;
     else    qWarning() << "[NotificationServer] Erreur:" << m_server->errorString();
     return ok;
 }
@@ -424,58 +813,16 @@ void NotificationServer::processRequest(const QByteArray &data)
 {
     const int bodyStart = data.indexOf("\r\n\r\n");
     if (bodyStart == -1) return;
-    const QJsonObject obj =
-        QJsonDocument::fromJson(data.mid(bodyStart + 4).trimmed()).object();
+    const QJsonObject obj = QJsonDocument::fromJson(data.mid(bodyStart + 4).trimmed()).object();
     if (!obj.isEmpty()) emit webhookReceived(obj);
-}
-
-// ===============================================================
-//  NotificationPipeline
-// ===============================================================
-
-NotificationPipeline::NotificationPipeline(const QString &apiKey, QObject *parent)
-    : QObject(parent)
-    , m_server(new NotificationServer(9876, this))
-    , m_ai(new NotificationAI(apiKey, this))
-{
-    connect(m_server, &NotificationServer::webhookReceived,
-            this,     &NotificationPipeline::onWebhookReceived);
-    connect(m_ai, &NotificationAI::notificationReady,
-            this, &NotificationPipeline::notificationTriggered);
-}
-
-bool NotificationPipeline::start(quint16 port)
-{
-    Q_UNUSED(port)
-    return m_server->start();
-}
-
-void NotificationPipeline::triggerFromApp(const QMap<QString, QString> &context)
-{
-    m_ai->analyze(context);
-}
-
-void NotificationPipeline::triggerText(const QString &situation)
-{
-    m_ai->analyzeText(situation);
-}
-
-void NotificationPipeline::onWebhookReceived(const QJsonObject &payload)
-{
-    QMap<QString, QString> ctx;
-    for (auto it = payload.begin(); it != payload.end(); ++it)
-        ctx[it.key()] = it.value().toString();
-    m_ai->analyze(ctx);
 }
 
 // ===============================================================
 //  NotificationWatcher
 // ===============================================================
 
-NotificationWatcher::NotificationWatcher(NotificationPipeline *pipeline,
-                                         QSqlDatabase db, QObject *parent)
-    : QObject(parent), m_pipeline(pipeline), m_db(db)
-    , m_timer(new QTimer(this))
+NotificationWatcher::NotificationWatcher(QSqlDatabase db, QObject *parent)
+    : QObject(parent), m_db(db), m_timer(new QTimer(this))
 {
     connect(m_timer, &QTimer::timeout, this, &NotificationWatcher::onTimerTick);
 }
@@ -493,110 +840,103 @@ void NotificationWatcher::onTimerTick()
     checkLivraisonsProches();
 }
 
-// Helper : évite la répétition du pattern "déjà notifié ?"
 static bool shouldNotify(QSet<QString> &notified, const QString &key)
 {
-    if (notified.contains(key)) return false;
-    notified.insert(key);
-    return true;
+    return notified.contains(key) ? false : (notified.insert(key), true);
+}
+
+static void runCheck(QSqlQuery &q, QSet<QString> &notified, const QString &prefix,
+                     std::function<void(QSqlQuery &, const QString &)> notify)
+{
+    if (!q.exec()) { qWarning() << q.lastError().text(); return; }
+    while (q.next()) {
+        const QString ref = q.value("reference").toString();
+        if (shouldNotify(notified, prefix + ref))
+            notify(q, ref);
+    }
+}
+
+void NotificationWatcher::showWithAI(const QString &context,
+                                      const QString &fallbackTitle,
+                                      const QString &fallbackMessage,
+                                      NotificationWidget::Type type)
+{
+    if (m_ai) {
+        m_ai->summarize(context, [=](const QString &t, const QString &m, NotificationWidget::Type tp) {
+            NotificationWidget::show(t, m, tp, {}, {}, {}, {}, 6000, true);
+        });
+    } else {
+        NotificationWidget::show(fallbackTitle, fallbackMessage, type);
+    }
 }
 
 void NotificationWatcher::checkCommandesEnRetard()
 {
     QSqlQuery q(m_db);
-    q.prepare("SELECT reference, produit, montant_ht, date_livraison, mail_client "
-              "FROM commandes "
-              "WHERE priorite = 'Urgente' "
-              "  AND statut NOT IN ('Termine','Annule') "
+    q.prepare("SELECT reference, date_livraison FROM commandes "
+              "WHERE priorite = 'Urgente' AND statut NOT IN ('Termine','Annule') "
               "  AND date_livraison < :today");
     q.bindValue(":today", QDate::currentDate().toString("yyyy-MM-dd"));
-    if (!q.exec()) { qWarning() << q.lastError().text(); return; }
 
-    while (q.next()) {
-        const QString ref = q.value("reference").toString();
-        if (!shouldNotify(m_notifiedRefs, "retard_" + ref)) continue;
-
-        const int jours = QDate::fromString(q.value("date_livraison").toString(), "yyyy-MM-dd")
+    runCheck(q, m_notifiedRefs, "retard_", [this](QSqlQuery &row, const QString &ref) {
+        const int jours = QDate::fromString(row.value("date_livraison").toString(), "yyyy-MM-dd")
                               .daysTo(QDate::currentDate());
-        m_pipeline->triggerFromApp({
-            {"commande",     ref},
-            {"produit",      q.value("produit").toString()},
-            {"montant",      q.value("montant_ht").toString() + " DT"},
-            {"statut",       "retard livraison"},
-            {"priorite",     "Urgente"},
-            {"jours_retard", QString::number(jours)},
-            {"client",       q.value("mail_client").toString()}
-        });
-    }
+        showWithAI(
+            QString("Commande %1 · statut=En_Retard · priorite=Urgente · retard=%2 jours · date_livraison=%3")
+                .arg(ref).arg(jours).arg(row.value("date_livraison").toString()),
+            "Retard livraison",
+            ref + " — " + QString::number(jours) + " jour(s) de retard.",
+            NotificationWidget::Critical);
+    });
 }
 
 void NotificationWatcher::checkCommandesEnAttente()
 {
     QSqlQuery q(m_db);
-    q.prepare("SELECT reference, produit, montant_ht, date_creation FROM commandes "
+    q.prepare("SELECT reference, date_creation FROM commandes "
               "WHERE statut = 'En Attente' AND date_creation < :limite");
     q.bindValue(":limite", QDate::currentDate().addDays(-7).toString("yyyy-MM-dd"));
-    if (!q.exec()) { qWarning() << q.lastError().text(); return; }
 
-    while (q.next()) {
-        const QString ref = q.value("reference").toString();
-        if (!shouldNotify(m_notifiedRefs, "attente_" + ref)) continue;
-
-        const int jours = QDate::fromString(q.value("date_creation").toString(), "yyyy-MM-dd")
+    runCheck(q, m_notifiedRefs, "attente_", [this](QSqlQuery &row, const QString &ref) {
+        const int jours = QDate::fromString(row.value("date_creation").toString(), "yyyy-MM-dd")
                               .daysTo(QDate::currentDate());
-        m_pipeline->triggerFromApp({
-            {"commande", ref},
-            {"produit",  q.value("produit").toString()},
-            {"montant",  q.value("montant_ht").toString() + " DT"},
-            {"statut",   "En Attente depuis " + QString::number(jours) + " jours"},
-            {"probleme", "commande bloquee sans traitement"}
-        });
-    }
+        showWithAI(
+            QString("Commande %1 · statut=En_Attente · bloquee_depuis=%2 jours · aucun_employe_assigne")
+                .arg(ref).arg(jours),
+            "Commande en attente",
+            ref + " — bloquée depuis " + QString::number(jours) + " jours.",
+            NotificationWidget::Warning);
+    });
 }
 
 void NotificationWatcher::checkCommandesSuspendues()
 {
     QSqlQuery q(m_db);
-    q.prepare("SELECT reference, produit, montant_ht, mail_client FROM commandes "
+    q.prepare("SELECT reference FROM commandes "
               "WHERE statut = 'Suspendu' AND date_creation < :limite");
     q.bindValue(":limite", QDate::currentDate().addDays(-3).toString("yyyy-MM-dd"));
-    if (!q.exec()) { qWarning() << q.lastError().text(); return; }
 
-    while (q.next()) {
-        const QString ref = q.value("reference").toString();
-        if (!shouldNotify(m_notifiedRefs, "suspendu_" + ref)) continue;
-
-        m_pipeline->triggerFromApp({
-            {"commande", ref},
-            {"produit",  q.value("produit").toString()},
-            {"montant",  q.value("montant_ht").toString() + " DT"},
-            {"statut",   "Suspendu depuis 3+ jours"},
-            {"client",   q.value("mail_client").toString()},
-            {"probleme", "commande suspendue necessite verification"}
-        });
-    }
+    runCheck(q, m_notifiedRefs, "suspendu_", [this](QSqlQuery &, const QString &ref) {
+        showWithAI(
+            QString("Commande %1 · statut=Suspendu · suspendue_depuis=3+ jours · verification_requise").arg(ref),
+            "Commande suspendue",
+            ref + " — suspendue depuis 3+ jours, vérification requise.",
+            NotificationWidget::Warning);
+    });
 }
 
 void NotificationWatcher::checkLivraisonsProches()
 {
     QSqlQuery q(m_db);
-    q.prepare("SELECT reference, produit, montant_ht, date_livraison, mail_client FROM commandes "
+    q.prepare("SELECT reference FROM commandes "
               "WHERE statut NOT IN ('Termine','Annule') AND date_livraison = :demain");
     q.bindValue(":demain", QDate::currentDate().addDays(1).toString("yyyy-MM-dd"));
-    if (!q.exec()) { qWarning() << q.lastError().text(); return; }
 
-    while (q.next()) {
-        const QString ref = q.value("reference").toString();
-        if (!shouldNotify(m_notifiedRefs, "livraison24h_" + ref)) continue;
-
-        m_pipeline->triggerFromApp({
-            {"commande",       ref},
-            {"produit",        q.value("produit").toString()},
-            {"montant",        q.value("montant_ht").toString() + " DT"},
-            {"statut",         "livraison prevue demain"},
-            {"date_livraison", q.value("date_livraison").toString()},
-            {"client",         q.value("mail_client").toString()},
-            {"alerte",         "livraison dans moins de 24 heures"}
-        });
-    }
+    runCheck(q, m_notifiedRefs, "livraison24h_", [this](QSqlQuery &, const QString &ref) {
+        showWithAI(
+            QString("Commande %1 · livraison_dans=24h · verifier_etat_production").arg(ref),
+            "Livraison demain",
+            ref + " — livraison prévue dans moins de 24 heures.",
+            NotificationWidget::Info);
+    });
 }

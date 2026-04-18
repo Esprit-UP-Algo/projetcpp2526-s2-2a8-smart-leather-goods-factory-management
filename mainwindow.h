@@ -235,6 +235,8 @@ private:
     // Production
     void setupProductionTable();
     void loadProductionData();
+    void fillProductionRow(int row, const QAbstractItemModel *model, int i);
+    void applyProductionQuery(const QString &sql);
     void ajouterCommandeProduction(const QString&, const QString&, const QString&,
                                    const QString&, const QString&, const QString&,
                                    const QString&, const QString&);
@@ -253,10 +255,12 @@ private:
 
     // Retard notifications
     QTimer *m_retardTimer;
-    QSet<int> m_notifiedIds;  // évite de notifier 2x la même commande
+    QSet<int> m_notifiedIds;
 
-    // Pipeline IA Gemini pour les notifications intelligentes
-    NotificationPipeline *m_pipeline = nullptr;
+    // Notification system
+    NotificationAI      *m_ai      = nullptr;
+    NotificationBell    *m_bell    = nullptr;
+    NotificationWatcher *m_watcher = nullptr;
 };
 
 #endif // MAINWINDOW_H
