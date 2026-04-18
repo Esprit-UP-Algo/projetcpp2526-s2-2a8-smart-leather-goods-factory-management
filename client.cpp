@@ -368,7 +368,7 @@ bool Client::exporterListe(QTableWidget* table, const QString& fileName)
     }
 
     // ===== WORD EXPORT =====
-    else if (fileName.endsWith(".txt") ) {
+    else if (fileName.endsWith(".docx") ) {
         QFile file(fileName);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
             return false;
