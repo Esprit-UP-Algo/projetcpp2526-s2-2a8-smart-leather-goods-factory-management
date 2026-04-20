@@ -73,8 +73,6 @@ private:
     QLabel       *m_title;
     QLabel       *m_message;
     QPushButton  *m_closeBtn;
-    QPushButton  *m_action1Btn;
-    QPushButton  *m_action2Btn;
     QProgressBar *m_progress;
 
     QTimer             *m_autoClose;
@@ -86,6 +84,9 @@ private:
     int  m_durationMs;
     int  m_elapsed;
     bool m_paused;
+
+    QPushButton  *m_action1Btn;
+    QPushButton  *m_action2Btn;
 
     static constexpr int MAX_TOASTS = 5;
     static QList<NotificationWidget*> s_active;

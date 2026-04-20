@@ -28,6 +28,7 @@ public:
                         int cr, int cg, int cb,
                         double largeur, double hauteur, double profondeur,
                         double prix, double cout, const QString &statut);
+    void setImagePath(const QString &path);
 
     QString getReference() const;
     QString getNom() const;

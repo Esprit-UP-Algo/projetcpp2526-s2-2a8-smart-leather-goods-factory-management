@@ -326,6 +326,7 @@ void EmployeeDialog::setEmployeeData(const QString &id, const QString &matricule
                                     const QString &email, const QString &poste, const QString &role,
                                     const QString &departement, const QString &dateEmbauche, const QString &photoPath)
 {
+    Q_UNUSED(role);
     if (mode == DeleteMode) {
         deleteId = id;
         deleteMatricule = matricule;

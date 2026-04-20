@@ -34,6 +34,7 @@ public:
     double getCoutFabrication() const { return coutFabrication; }
     QString getStatut() const { return statut; }
     QDate getDateCreation() const { return dateCreation; }
+    QString getImagePath() const { return imagePath; }
     
     // Setters
     void setIdArticle(int id) { idArticle = id; }
@@ -52,6 +53,7 @@ public:
     void setCoutFabrication(double cout) { coutFabrication = cout; }
     void setStatut(const QString &s) { statut = s; }
     void setDateCreation(const QDate &date) { dateCreation = date; }
+    void setImagePath(const QString &path) { imagePath = path; }
     
     // Helpers couleur/dimensions
     QString getCouleur() const { return QString("rgb(%1,%2,%3)").arg(couleurR).arg(couleurG).arg(couleurB); }
@@ -71,13 +73,23 @@ public:
     // Méthodes de validation
     bool valider(QString &erreur) const;
     static bool referenceExiste(const QString &ref, int excludeId = -1);
+    static bool updateImagePath(int idArticle, const QString &imagePath);
     
     // Prédiction de prix
     static double predirePrix(const QString &categorie, const QString &type,
                                const QString &couleur, double coutFabrication);
     static QMap<QString, double> getMoyennesPrixParCategorie();
     
-    // Prédiction avancée - retourne un résultat détaillé
+    // Prédiction avancée - retourne un résultat détaillé avec IA explicable
+    struct VoisinKNN {
+        QString nom;
+        QString type;
+        QString couleur;
+        double cout;
+        double prix;
+        double distance;
+    };
+    
     struct PredictionResult {
         double prixPredit;        // Prix prédit final (moyenne pondérée)
         double prixMin;           // Borne basse (intervalle de confiance)
@@ -85,12 +97,18 @@ public:
         double prixCategorie;     // Prédiction par catégorie seule
         double prixType;          // Prédiction par type seul
         double prixCouleur;       // Prédiction par couleur seule
-        double prixKNN;           // Prédiction k-NN (3 articles les plus proches)
+        double prixKNN;           // Prédiction k-NN (5 articles les plus proches)
         double margeEstimee;      // Marge estimée en %
         int    nbArticlesRef;     // Nombre d'articles de référence utilisés
-        QString niveauConfiance;  // "Élevé", "Moyen", "Faible"
+        
+        // Score de confiance (IA explicable)
+        double scoreConfiance;    // 0.0 à 1.0
+        QString niveauConfiance;  // "Très fiable", "Fiable", "Moyen", "Estimation large"
+        double distanceMoyenne;   // Distance moyenne des k voisins
+        
         QString recommandation;   // Conseil stratégique
-        QList<QPair<QString,double>> articlesProches; // k-NN voisins
+        QList<QPair<QString,double>> articlesProches; // k-NN voisins (nom, prix) - legacy
+        QList<VoisinKNN> voisinsKNN; // Détails complets des 5 voisins pour affichage
     };
     static PredictionResult predirePrixAvance(const QString &categorie, const QString &type,
                                                const QString &couleur, double coutFabrication);
@@ -113,6 +131,7 @@ private:
     double coutFabrication;
     QString statut;
     QDate dateCreation;
+    QString imagePath;
 };
 
 #endif // ARTICLE_H

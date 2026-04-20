@@ -1,6 +1,8 @@
-﻿#include "article.h"
+#include "article.h"
 #include "connection.h"
 #include <QDebug>
+#include <QCoreApplication>
+#include <QFile>
 
 // Helper pour cr├®er une query avec la bonne connexion
 static QSqlQuery makeQuery() {
@@ -53,6 +55,26 @@ bool Article::referenceExiste(const QString &ref, int excludeId)
     query.bindValue(":id", excludeId == -1 ? 0 : excludeId);
     if (query.exec() && query.next()) return query.value(0).toInt() > 0;
     return false;
+}
+
+// Mettre a jour le chemin image dans la BD (silencieux si colonne n'existe pas)
+bool Article::updateImagePath(int idArticle, const QString &path)
+{
+    QSqlQuery q = makeQuery();
+    q.prepare("UPDATE ARTICLES SET IMAGE_PATH = :path WHERE ID_ARTICLE = :id");
+    q.bindValue(":path", path);
+    q.bindValue(":id", idArticle);
+    if (!q.exec()) {
+        // Ignorer l'erreur si la colonne n'existe pas (ORA-00904)
+        QString err = q.lastError().text();
+        if (err.contains("ORA-00904") || err.contains("IMAGE_PATH")) {
+            qDebug() << "Note: colonne IMAGE_PATH non presente, ignorer";
+            return true; // Pas une erreur critique
+        }
+        qDebug() << "Erreur updateImagePath:" << err;
+        return false;
+    }
+    return true;
 }
 
 // AJOUTER
@@ -158,8 +180,8 @@ bool Article::supprimer()
     return true;
 }
 
-// Helper pour remplir un Article depuis une query
-static Article fromQuery(QSqlQuery &q) {
+// Helper pour remplir un Article depuis une query (16 colonnes de base, IMAGE_PATH optionnel)
+static Article fromQuery(QSqlQuery &q, bool hasImagePath = false) {
     Article a;
     a.setIdArticle(q.value(0).toInt());
     a.setReference(q.value(1).toString());
@@ -177,9 +199,13 @@ static Article fromQuery(QSqlQuery &q) {
     a.setCoutFabrication(q.value(13).toDouble());
     a.setStatut(q.value(14).toString());
     a.setDateCreation(q.value(15).toDate());
+    if (hasImagePath) {
+        a.setImagePath(q.value(16).toString());
+    }
     return a;
 }
 
+// Requete SELECT de base (sans IMAGE_PATH pour compatibilite)
 static const QString SELECT_COLS =
     "SELECT ID_ARTICLE, REFERENCE, NOM, CATEGORIE, TYPE, "
     "MODELE_3D, COULEUR_R, COULEUR_G, COULEUR_B, "
@@ -203,7 +229,18 @@ Article Article::rechercherParId(int id)
     QSqlQuery query = makeQuery();
     query.prepare(SELECT_COLS + "WHERE ID_ARTICLE=:id");
     query.bindValue(":id", id);
-    if (query.exec() && query.next()) return fromQuery(query);
+    if (query.exec() && query.next()) {
+        Article a = fromQuery(query);
+        // Essayer de trouver l'image generee par IA
+        QString ref = a.getReference();
+        QString safeRef = ref;
+        safeRef.replace("/", "_").replace("\\", "_").replace(" ", "_");
+        QString imgPath = QCoreApplication::applicationDirPath() + "/photos_articles/" + safeRef + ".png";
+        if (QFile::exists(imgPath)) {
+            a.setImagePath(imgPath);
+        }
+        return a;
+    }
     return Article();
 }
 
@@ -328,25 +365,32 @@ Article::PredictionResult Article::predirePrixAvance(
     res.prixPredit = 0; res.prixMin = 0; res.prixMax = 0;
     res.prixCategorie = 0; res.prixType = 0; res.prixCouleur = 0;
     res.prixKNN = 0; res.margeEstimee = 0; res.nbArticlesRef = 0;
-    res.niveauConfiance = "Faible";
+    res.scoreConfiance = 0.0;
+    res.niveauConfiance = "Estimation large";
+    res.distanceMoyenne = 0.0;
 
-    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
-    // ALGORITHME : k-NN pond├®r├® multi-crit├¿res (k=5)
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ALGORITHME : k-NN pondéré multi-critères (k=5) avec IA EXPLICABLE
     //
-    // Pourquoi k-NN ? Avec 50 articles de r├®f├®rence, c'est l'algo le plus
-    // fiable : il pr├®dit en se basant sur les articles r├®els les plus
-    // similaires, sans hypoth├¿se sur la distribution des donn├®es.
+    // Pourquoi k-NN ? Avec 50 articles de référence, c'est l'algo le plus
+    // fiable : il prédit en se basant sur les articles réels les plus
+    // similaires, sans hypothèse sur la distribution des données.
     //
-    // Distance = |co├╗t_ref - co├╗t_input| + p├®nalit├®_type + p├®nalit├®_couleur
-    //   - M├¬me type   ÔåÆ p├®nalit├® 0,  type diff├®rent ÔåÆ +20
-    //   - M├¬me couleur ÔåÆ p├®nalit├® 0, couleur diff.  ÔåÆ +5
+    // Distance = |coût_ref - coût_input| + pénalité_type + pénalité_couleur
+    //   - Même type   → pénalité 0,  type différent → +20
+    //   - Même couleur → pénalité 0, couleur diff.  → +5
     // Poids = 1 / (distance + 1)
-    // Prix pr├®dit = somme(poids_i * prix_ref_i) / somme(poids_i)
-    // ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
+    // Prix prédit = somme(poids_i * prix_ref_i) / somme(poids_i)
+    //
+    // SCORE DE CONFIANCE (IA Explicable) :
+    //   - Basé sur : nb voisins, distance moyenne, cohérence des prix voisins
+    //   - 0.0 à 1.0 → traduit en niveau textuel
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    // ÔöÇÔöÇ ├ëtape 1 : k-NN principal (k=5, m├¬me cat├®gorie) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    // ── Étape 1 : k-NN principal (k=5, même catégorie) avec détails complets ──
     {
         QSqlQuery q = makeQuery();
+        // D'abord essayer avec la même catégorie
         q.prepare("SELECT NOM, PRIX_UNITAIRE, COUT_FABRICATION, TYPE, COULEUR "
                   "FROM REF_ARTICLES_MARCHE "
                   "WHERE UPPER(CATEGORIE)=UPPER(:cat) AND COUT_FABRICATION>0 "
@@ -354,9 +398,14 @@ Article::PredictionResult Article::predirePrixAvance(
                   "FETCH FIRST 10 ROWS ONLY");
         q.bindValue(":cat",  categorie);
         q.bindValue(":cout", coutFabrication);
+        
+        bool foundVoisins = false;
         if (q.exec()) {
-            struct Voisin { QString nom; double prix; double cout; double poids; };
-            QVector<Voisin> voisins;
+            struct VoisinInterne { 
+                QString nom; QString typeRef; QString couleurRef;
+                double prix; double cout; double distance; double poids; 
+            };
+            QVector<VoisinInterne> voisins;
 
             while (q.next()) {
                 QString nomRef  = q.value(0).toString();
@@ -365,33 +414,110 @@ Article::PredictionResult Article::predirePrixAvance(
                 QString typeRef = q.value(3).toString();
                 QString colRef  = q.value(4).toString();
 
-                // Distance composite : co├╗t + p├®nalit├®s type/couleur
+                // Distance composite : coût + pénalités type/couleur
                 double distCout = qAbs(coutRef - coutFabrication);
                 double penType  = (typeRef.toUpper() == type.toUpper()) ? 0.0 : 20.0;
                 double penCoul  = (colRef.toUpper() == couleur.toUpper()) ? 0.0 : 5.0;
                 double distance = distCout + penType + penCoul;
                 double poids    = 1.0 / (distance + 1.0);
 
-                voisins.append({nomRef, prixRef, coutRef, poids});
+                voisins.append({nomRef, typeRef, colRef, prixRef, coutRef, distance, poids});
+            }
+            
+            // Si aucun voisin trouvé dans la catégorie, chercher dans TOUTES les catégories
+            if (voisins.isEmpty()) {
+                QSqlQuery qAll = makeQuery();
+                qAll.prepare("SELECT NOM, PRIX_UNITAIRE, COUT_FABRICATION, TYPE, COULEUR "
+                          "FROM REF_ARTICLES_MARCHE "
+                          "WHERE COUT_FABRICATION>0 "
+                          "ORDER BY ABS(COUT_FABRICATION - :cout) ASC "
+                          "FETCH FIRST 10 ROWS ONLY");
+                qAll.bindValue(":cout", coutFabrication);
+                if (qAll.exec()) {
+                    while (qAll.next()) {
+                        QString nomRef  = qAll.value(0).toString();
+                        double prixRef  = qAll.value(1).toDouble();
+                        double coutRef  = qAll.value(2).toDouble();
+                        QString typeRef = qAll.value(3).toString();
+                        QString colRef  = qAll.value(4).toString();
+
+                        double distCout = qAbs(coutRef - coutFabrication);
+                        double penType  = (typeRef.toUpper() == type.toUpper()) ? 0.0 : 20.0;
+                        double penCoul  = (colRef.toUpper() == couleur.toUpper()) ? 0.0 : 5.0;
+                        double penCat   = 15.0; // Pénalité catégorie différente
+                        double distance = distCout + penType + penCoul + penCat;
+                        double poids    = 1.0 / (distance + 1.0);
+
+                        voisins.append({nomRef, typeRef, colRef, prixRef, coutRef, distance, poids});
+                    }
+                }
             }
 
-            // Garder les k=5 meilleurs (d├®j├á tri├®s par co├╗t, re-trier par poids)
-            std::sort(voisins.begin(), voisins.end(),
-                      [](const Voisin &a, const Voisin &b) { return a.poids > b.poids; });
-            int k = qMin(5, voisins.size());
+            if (!voisins.isEmpty()) {
+                foundVoisins = true;
+                
+                // Garder les k=5 meilleurs (re-trier par poids décroissant)
+                std::sort(voisins.begin(), voisins.end(),
+                          [](const VoisinInterne &a, const VoisinInterne &b) { return a.poids > b.poids; });
+                int k = qMin(5, voisins.size());
 
-            double sommePrix = 0, sommePoids = 0;
-            for (int i = 0; i < k; ++i) {
-                // Ajuster le prix proportionnellement au co├╗t
-                double ratio = voisins[i].prix / voisins[i].cout;
-                sommePrix  += voisins[i].poids * ratio;
-                sommePoids += voisins[i].poids;
-                res.articlesProches.append({voisins[i].nom, voisins[i].prix});
+                double sommePrix = 0, sommePoids = 0, sommeDistance = 0;
+                double minRatio = 999, maxRatio = 0;
+                
+                for (int i = 0; i < k; ++i) {
+                    // Ajuster le prix proportionnellement au coût
+                    double ratio = voisins[i].prix / voisins[i].cout;
+                    sommePrix  += voisins[i].poids * ratio;
+                    sommePoids += voisins[i].poids;
+                    sommeDistance += voisins[i].distance;
+                    minRatio = qMin(minRatio, ratio);
+                    maxRatio = qMax(maxRatio, ratio);
+                    
+                    // Legacy : articlesProches (nom, prix)
+                    res.articlesProches.append({voisins[i].nom, voisins[i].prix});
+                    
+                    // Nouveau : voisinsKNN avec détails complets pour affichage
+                    VoisinKNN vknn;
+                    vknn.nom = voisins[i].nom;
+                    vknn.type = voisins[i].typeRef;
+                    vknn.couleur = voisins[i].couleurRef;
+                    vknn.cout = voisins[i].cout;
+                    vknn.prix = voisins[i].prix;
+                    vknn.distance = voisins[i].distance;
+                    res.voisinsKNN.append(vknn);
+                }
+                
+                if (sommePoids > 0)
+                    res.prixKNN = coutFabrication * (sommePrix / sommePoids);
+
+                res.nbArticlesRef = k;
+                res.distanceMoyenne = k > 0 ? sommeDistance / k : 999.0;
+                
+                // ── Calcul du SCORE DE CONFIANCE (IA Explicable) ──
+                // Facteurs : nb voisins, distance moyenne, cohérence des ratios
+                double scoreNbVoisins = qMin(1.0, k / 5.0);  // 5 voisins = score max
+                double scoreDistance = qMax(0.0, 1.0 - res.distanceMoyenne / 50.0);  // distance < 50 = bon
+                double ecartRatio = (maxRatio > 0 && minRatio < 999) ? (maxRatio - minRatio) / maxRatio : 1.0;
+                double scoreCoherence = qMax(0.0, 1.0 - ecartRatio);  // ratios proches = bon
+                
+                // Score final pondéré
+                res.scoreConfiance = scoreNbVoisins * 0.35 + scoreDistance * 0.40 + scoreCoherence * 0.25;
+                res.scoreConfiance = qBound(0.0, res.scoreConfiance, 1.0);
+                
+                // Niveau textuel
+                if (res.scoreConfiance >= 0.75)      res.niveauConfiance = "Tres fiable";
+                else if (res.scoreConfiance >= 0.55) res.niveauConfiance = "Fiable";
+                else if (res.scoreConfiance >= 0.35) res.niveauConfiance = "Moyen";
+                else                                  res.niveauConfiance = "Estimation large";
             }
-            if (sommePoids > 0)
-                res.prixKNN = coutFabrication * (sommePrix / sommePoids);
-
-            res.nbArticlesRef = k;
+        }
+        
+        // Fallback ultime si aucun voisin trouvé : ratio par défaut
+        if (!foundVoisins || res.prixKNN <= 0) {
+            res.prixKNN = coutFabrication * 2.5; // Ratio standard maroquinerie
+            res.scoreConfiance = 0.15;
+            res.niveauConfiance = "Estimation large";
+            res.distanceMoyenne = 100.0;
         }
     }
 
@@ -468,10 +594,19 @@ Article::PredictionResult Article::predirePrixAvance(
         ? ((prixFinal - coutFabrication) / coutFabrication) * 100.0
         : 0.0;
 
-    // ÔöÇÔöÇ ├ëtape 8 : niveau de confiance ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
-    if (res.nbArticlesRef >= 5)       res.niveauConfiance = "Eleve";
-    else if (res.nbArticlesRef >= 3)  res.niveauConfiance = "Moyen";
-    else                              res.niveauConfiance = "Faible";
+    // ── Étape 8 : niveau de confiance (déjà calculé dans étape 1 avec score) ──
+    // Le scoreConfiance et niveauConfiance sont calculés dans l'étape k-NN
+    // On ajuste l'intervalle de confiance en fonction du score
+    if (res.scoreConfiance >= 0.75) {
+        marge_ic = 0.06;  // ±6% pour très fiable
+    } else if (res.scoreConfiance >= 0.55) {
+        marge_ic = 0.10;  // ±10% pour fiable
+    } else if (res.scoreConfiance >= 0.35) {
+        marge_ic = 0.15;  // ±15% pour moyen
+    }
+    // Recalculer les bornes avec la nouvelle marge
+    res.prixMin = prixFinal * (1.0 - marge_ic);
+    res.prixMax = prixFinal * (1.0 + marge_ic);
 
     // ÔöÇÔöÇ ├ëtape 9 : recommandation strat├®gique ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
     if (res.margeEstimee >= 150)

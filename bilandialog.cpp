@@ -478,7 +478,7 @@ void BilanDialog::onPeriodChanged()
         while (q.next()) prio[q.value(0).toString()] = q.value(1).toDouble();
 
         auto *set = new QBarSet("CA"); set->setColor(QColor(ACCENT));
-        for (const QString &p : {"Basse", "Normale", "Urgente"}) *set << prio.value(p, 0.0);
+        for (const QString p : {"Basse", "Normale", "Urgente"}) *set << prio.value(p, 0.0);
 
         auto *series = new QBarSeries(); series->append(set);
         chart->addSeries(series);
