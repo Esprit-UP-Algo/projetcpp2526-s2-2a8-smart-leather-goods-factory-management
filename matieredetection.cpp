@@ -575,7 +575,7 @@ void MatiereDetection::showNonCuirResult(const QString &materialType)
     headerLayout->addWidget(statusLabel);
     
     // Type de matériau détecté
-    QLabel *materialLabel = new QLabel("Matériau non identifié", headerFrame);
+    QLabel *materialLabel = new QLabel(materialType, headerFrame);
     materialLabel->setAlignment(Qt::AlignCenter);
     materialLabel->setStyleSheet(
         "QLabel { color: rgba(255,255,255,0.9); font-size: 14px; font-weight: 500; }"

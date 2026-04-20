@@ -1,4 +1,4 @@
-QT       += core gui charts printsupport sql network multimedia
+QT       += core gui charts printsupport sql network multimedia serialport
 QT += charts
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 CONFIG += c++17
@@ -11,6 +11,7 @@ TEMPLATE = app
 
 SOURCES += \
     aichatwidget.cpp \
+    arduino.cpp \
     articleviewer3d.cpp \
     bilandialog.cpp \
     client.cpp \
@@ -44,6 +45,7 @@ SOURCES += \
 
 HEADERS += \
     aichatwidget.h \
+    arduino.h \
     articleviewer3d.h \
     bilandialog.h \
     email.h \

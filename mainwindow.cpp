@@ -5953,3 +5953,44 @@ void MainWindow::logout()
         });
     }
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ARDUINO - Test de connexion simple
+// ══════════════════════════════════════════════════════════════════════════════
+
+void MainWindow::onTestArduino()
+{
+    Arduino arduino;
+    
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Test Connexion Arduino");
+    msgBox.setStyleSheet(
+        "QMessageBox { background-color: #FAF5F0; }"
+        "QMessageBox QLabel { color: #291C0E; font-size: 12px; }"
+        "QPushButton { background-color: #8D6E63; color: white; border: none; "
+        "border-radius: 6px; padding: 8px 20px; font-size: 12px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #A0826D; }"
+    );
+    
+    int result = arduino.connect_arduino();
+    
+    if (result == 0) {
+        msgBox.setIcon(QMessageBox::Information);
+        msgBox.setText(QString("✅ Arduino connecté avec succès!\n\n"
+                               "Port: %1\n"
+                               "Baud Rate: 9600\n\n"
+                               "La connexion est fonctionnelle.")
+                       .arg(arduino.getPortName()));
+    } else {
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setText("❌ Aucun Arduino détecté!\n\n"
+                      "Vérifiez que:\n"
+                      "• L'Arduino est branché en USB\n"
+                      "• Les drivers sont installés\n"
+                      "• Le port COM est disponible\n\n"
+                      "Ports testés: COM3-COM8");
+    }
+    
+    msgBox.exec();
+    arduino.close_arduino();
+}

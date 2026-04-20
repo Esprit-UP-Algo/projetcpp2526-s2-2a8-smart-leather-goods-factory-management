@@ -38,6 +38,7 @@
 #include "notification.h"
 #include "matieredetection.h"
 #include "voicematieres.h"
+#include "arduino.h"
 #include <QTimer>
 #include <QPainter>
 #include <QConicalGradient>
@@ -151,6 +152,9 @@ private slots:
     // Raw materials
     void onAddMatiere();
     void onEditMatiere();
+    
+    // Arduino - Test connexion
+    void onTestArduino();
 
     // Suppliers
     void on_btnAddFournisseur_clicked();
