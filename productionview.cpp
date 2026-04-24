@@ -240,19 +240,19 @@ void ProductionDialog::onSaveClicked()
         m_mode == AddMode ? "Commande cr��e" : "Commande mise � jour",
         txtReference->text() + " � " + (m_mode == AddMode ? "enregistr�e avec succ�s." : "modifi�e avec succ�s."),
         NotificationWidget::Success
-    );
+        );
     accept();
 }
 
 void ProductionDialog::onDeleteConfirmed()
 {
     if (QMessageBox::question(this,"Confirmation","�tes-vous s�r de vouloir supprimer cette commande ?",
-            QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes) {
+                              QMessageBox::Yes|QMessageBox::No) == QMessageBox::Yes) {
         NotificationWidget::show(
             "Commande supprim�e",
             txtReference->text() + " � supprim�e d�finitivement.",
             NotificationWidget::Warning
-        );
+            );
         accept();
     }
 }
@@ -363,9 +363,9 @@ QVariant ProductionViewModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid() || index.row() >= m_commandes.count())
         return QVariant();
-    
+
     const ProductionCommande &cmd = m_commandes.at(index.row());
-    
+
     // Qt::DisplayRole : texte affich� dans chaque cellule
     if (role == Qt::DisplayRole) {
         switch (index.column()) {
@@ -379,7 +379,7 @@ QVariant ProductionViewModel::data(const QModelIndex &index, int role) const
         case COL_MONTANT: return QString::number(cmd.montant, 'f', 2) + " DT";
         }
     }
-    
+
     // Qt::BackgroundRole : couleur de fond de la cellule Statut selon l'�tat
     if (role == Qt::BackgroundRole) {
         if (index.column() == COL_STATUT) {
@@ -389,14 +389,14 @@ QVariant ProductionViewModel::data(const QModelIndex &index, int role) const
             if (cmd.etatProduction == "Planifi�") return QBrush(QColor("#3498DB")); // bleu
         }
     }
-    
+
     // Qt::ForegroundRole : texte blanc sur les cellules color�es du statut
     if (role == Qt::ForegroundRole) {
         if (index.column() == COL_STATUT) {
             return QBrush(Qt::white);
         }
     }
-    
+
     // Qt::TextAlignmentRole : montant align� � droite, reste � gauche
     if (role == Qt::TextAlignmentRole) {
         if (index.column() == COL_MONTANT) {
@@ -404,7 +404,7 @@ QVariant ProductionViewModel::data(const QModelIndex &index, int role) const
         }
         return int(Qt::AlignLeft | Qt::AlignVCenter);
     }
-    
+
     return QVariant();
 }
 
@@ -412,11 +412,11 @@ QVariant ProductionViewModel::headerData(int section, Qt::Orientation orientatio
 {
     if (role != Qt::DisplayRole)
         return QVariant();
-    
+
     if (orientation == Qt::Horizontal) {
         return getColumnName(section);
     }
-    
+
     return section + 1;
 }
 
@@ -478,7 +478,7 @@ void ProductionViewModel::loadFromDatabase()
 {
     beginResetModel(); // Signale � la vue que les donn�es vont changer
     m_commandes.clear();
-    
+
     // Jointure avec EMPLOYES pour afficher le nom complet de l'employ� responsable
     QSqlQuery query(Connection::instance()->getDatabase());
     query.prepare("SELECT C.REFERENCE, (E.NOM || ' ' || E.PRENOM) AS EMPLOYE, "
@@ -486,7 +486,7 @@ void ProductionViewModel::loadFromDatabase()
                   "FROM COMMANDES C "
                   "LEFT JOIN EMPLOYES E ON C.ID_EMPLOYE = E.ID_EMPLOYE "
                   "ORDER BY C.DATE_CREATION DESC");
-    
+
     if (query.exec()) {
         while (query.next()) {
             ProductionCommande cmd;
@@ -504,7 +504,7 @@ void ProductionViewModel::loadFromDatabase()
     } else {
         qDebug() << "? Erreur chargement donn�es:" << query.lastError().text();
     }
-    
+
     endResetModel(); // Signale � la vue que les donn�es sont pr�tes
 }
 
@@ -551,7 +551,7 @@ ProductionView::ProductionView(QWidget *parent)
     setWindowTitle("Vue Production Compl�te - Planification, Suivi & Livraison");
     setMinimumSize(1200, 650);
     resize(1200, 650);
-    
+
     setupUI();          // Construit tous les widgets
     setupConnections(); // Connecte les signaux/slots
     setupTimer();       // D�marre le timer de v�rification des alertes
@@ -567,35 +567,35 @@ void ProductionView::setupUI()
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
     centralWidget->setStyleSheet("background-color: #F8F9FA;");  // Gris tr�s clair moderne
-    
+
     QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
     mainLayout->setContentsMargins(20, 20, 20, 20);
     mainLayout->setSpacing(15);
-    
+
     // Titre moderne avec d�grad� bleu
     QWidget *titleWidget = new QWidget(this);
     titleWidget->setStyleSheet(
         "background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
         "stop:0 #2C3E50, stop:1 #3498DB); "
         "border-radius: 8px; padding: 12px;"
-    );
+        );
     QHBoxLayout *titleLayout = new QHBoxLayout(titleWidget);
     QLabel *title = new QLabel("?? GESTION DE LA PRODUCTION");
     title->setStyleSheet("font-size: 20px; font-weight: bold; color: white; letter-spacing: 1px;");
     title->setAlignment(Qt::AlignCenter);
     titleLayout->addWidget(title);
     mainLayout->addWidget(titleWidget);
-    
+
     // Barre de filtres moderne
     QWidget *filterWidget = new QWidget(this);
     filterWidget->setStyleSheet(
         "QWidget { background-color: white; border-radius: 8px; padding: 12px; "
         "border: 1px solid #E0E0E0; }"
         "QLabel { color: #2C3E50; font-weight: 600; font-size: 12px; }"
-    );
+        );
     QHBoxLayout *filterLayout = new QHBoxLayout(filterWidget);
     filterLayout->setSpacing(15);
-    
+
     m_searchBox = new QLineEdit(this);
     m_searchBox->setPlaceholderText("?? Rechercher...");
     m_searchBox->setMinimumWidth(250);
@@ -613,8 +613,8 @@ void ProductionView::setupUI()
         "border-color: #3498DB; "
         "background-color: white; "
         "}"
-    );
-    
+        );
+
     m_etatFilter = new QComboBox(this);
     m_etatFilter->addItems({"Tous les �tats", "Planifi�", "En cours", "Bloqu�", "Termin�"});
     m_etatFilter->setMinimumWidth(150);
@@ -642,18 +642,18 @@ void ProductionView::setupUI()
         "border-right: 4px solid transparent; "
         "border-top: 5px solid #3498DB; "
         "}"
-    );
-    
+        );
+
     m_statutLivraisonFilter = new QComboBox(this);
     m_statutLivraisonFilter->addItems({"Tous les statuts", "Non exp�di�e", "En livraison", "Livr�e"});
     m_statutLivraisonFilter->setMinimumWidth(150);
     m_statutLivraisonFilter->setMinimumHeight(36);
     m_statutLivraisonFilter->setStyleSheet(m_etatFilter->styleSheet());
-    
+
     QLabel *lblRecherche = new QLabel("Recherche:", this);
     QLabel *lblEtat = new QLabel("�tat:", this);
     QLabel *lblStatut = new QLabel("Livraison:", this);
-    
+
     filterLayout->addWidget(lblRecherche);
     filterLayout->addWidget(m_searchBox);
     filterLayout->addWidget(lblEtat);
@@ -661,16 +661,16 @@ void ProductionView::setupUI()
     filterLayout->addWidget(lblStatut);
     filterLayout->addWidget(m_statutLivraisonFilter);
     filterLayout->addStretch();
-    
+
     mainLayout->addWidget(filterWidget);
-    
+
     // Boutons d'action modernes
     QWidget *buttonWidget = new QWidget(this);
     buttonWidget->setStyleSheet("background-color: transparent;");
     QHBoxLayout *buttonLayout = new QHBoxLayout(buttonWidget);
     buttonLayout->setSpacing(12);
-    
-    QString btnStyle = 
+
+    QString btnStyle =
         "QPushButton { "
         "background-color: #3498DB; "
         "color: white; "
@@ -687,15 +687,15 @@ void ProductionView::setupUI()
         "QPushButton:pressed { "
         "background-color: #21618C; "
         "}";
-    
+
     m_btnPlanification = new QPushButton("?? Planification", this);
     m_btnPlanification->setStyleSheet(btnStyle);
     m_btnPlanification->setCursor(Qt::PointingHandCursor);
-    
+
     m_btnDetails = new QPushButton("?? D�tails", this);
     m_btnDetails->setStyleSheet(btnStyle);
     m_btnDetails->setCursor(Qt::PointingHandCursor);
-    
+
     m_btnRefresh = new QPushButton("?? Actualiser", this);
     m_btnRefresh->setStyleSheet(
         "QPushButton { "
@@ -714,16 +714,16 @@ void ProductionView::setupUI()
         "QPushButton:pressed { "
         "background-color: #1E8449; "
         "}"
-    );
+        );
     m_btnRefresh->setCursor(Qt::PointingHandCursor);
-    
+
     buttonLayout->addWidget(m_btnPlanification);
     buttonLayout->addWidget(m_btnDetails);
     buttonLayout->addStretch();
     buttonLayout->addWidget(m_btnRefresh);
-    
+
     mainLayout->addWidget(buttonWidget);
-    
+
     // TableView avec design moderne et professionnel
     m_tableView = new QTableView(this);
     m_tableView->setStyleSheet(
@@ -766,7 +766,7 @@ void ProductionView::setupUI()
         "background-color: #34495E; "
         "border: none; "
         "}"
-    );
+        );
     m_tableView->setAlternatingRowColors(true);
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_tableView->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -776,18 +776,18 @@ void ProductionView::setupUI()
     m_tableView->setShowGrid(true);
     m_tableView->setGridStyle(Qt::SolidLine);
     m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Interactive);
-    
+
     // Mod�le source + proxy pour filtrage/tri sans modifier les donn�es originales
     m_model = new ProductionViewModel(this);
     m_proxyModel = new ProductionSortProxy(this);
     m_proxyModel->setSourceModel(m_model);
     m_proxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
     m_proxyModel->setFilterKeyColumn(ProductionViewModel::COL_REFERENCE); // Filtre par d�faut sur la r�f�rence
-    
+
     m_tableView->setModel(m_proxyModel);
-    
+
     mainLayout->addWidget(m_tableView);
-    
+
     // L�gende moderne et compacte
     QWidget *legendWidget = new QWidget(this);
     legendWidget->setStyleSheet(
@@ -795,29 +795,29 @@ void ProductionView::setupUI()
         "border: 1px solid #E0E0E0; "
         "border-radius: 8px; "
         "padding: 10px;"
-    );
+        );
     QHBoxLayout *legendLayout = new QHBoxLayout(legendWidget);
-    
+
     QLabel *legend = new QLabel(
         "<b style='color:#2C3E50; font-size:12px;'>�tats:</b> "
         "<span style='background:#27AE60;color:white;padding:4px 10px;border-radius:4px;font-weight:600;margin-left:8px;font-size:11px;'>Termin�</span> "
         "<span style='background:#F39C12;color:white;padding:4px 10px;border-radius:4px;font-weight:600;margin-left:6px;font-size:11px;'>En cours</span> "
         "<span style='background:#E74C3C;color:white;padding:4px 10px;border-radius:4px;font-weight:600;margin-left:6px;font-size:11px;'>Bloqu�</span> "
         "<span style='background:#3498DB;color:white;padding:4px 10px;border-radius:4px;font-weight:600;margin-left:6px;font-size:11px;'>Planifi�</span>"
-    );
+        );
     legend->setStyleSheet("font-size: 12px;");
     legendLayout->addWidget(legend);
     legendLayout->addStretch();
-    
+
     mainLayout->addWidget(legendWidget);
 }
 
 void ProductionView::setupConnections()
 {
     connect(m_searchBox, &QLineEdit::textChanged, this, &ProductionView::onSearchTextChanged);
-    connect(m_etatFilter, QOverload<int>::of(&QComboBox::currentIndexChanged), 
+    connect(m_etatFilter, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &ProductionView::onEtatFilterChanged);
-    connect(m_statutLivraisonFilter, QOverload<int>::of(&QComboBox::currentIndexChanged), 
+    connect(m_statutLivraisonFilter, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &ProductionView::onStatutLivraisonFilterChanged);
     connect(m_btnDetails, &QPushButton::clicked, this, &ProductionView::onDetailsClicked);
     connect(m_btnPlanification, &QPushButton::clicked, this, &ProductionView::onPlanificationClicked);
@@ -829,7 +829,7 @@ void ProductionView::loadData()
     qDebug() << "ProductionView::loadData() appel�e";
     m_model->loadFromDatabase();
     qDebug() << "Nombre de lignes dans le mod�le:" << m_model->rowCount();
-    
+
     // Largeurs de colonnes optimis�es pour la lisibilit�
     m_tableView->setColumnWidth(ProductionViewModel::COL_REFERENCE, 150);
     m_tableView->setColumnWidth(ProductionViewModel::COL_EMPLOYE, 180);
@@ -839,15 +839,15 @@ void ProductionView::loadData()
     m_tableView->setColumnWidth(ProductionViewModel::COL_STATUT, 120);
     m_tableView->setColumnWidth(ProductionViewModel::COL_PRIORITE, 100);
     m_tableView->setColumnWidth(ProductionViewModel::COL_MONTANT, 120);
-    
+
     // V�rifier les alertes d�s le chargement (sans attendre le timer)
     verifierAlertes();
-    
+
     if (m_model->rowCount() == 0) {
         qDebug() << "? Aucune donn�e charg�e!";
-        QMessageBox::information(this, "Information", 
-            "Aucune commande trouv�e dans la base de donn�es.\n\n"
-            "Ajoutez d'abord des commandes depuis l'onglet Production.");
+        QMessageBox::information(this, "Information",
+                                 "Aucune commande trouv�e dans la base de donn�es.\n\n"
+                                 "Ajoutez d'abord des commandes depuis l'onglet Production.");
     }
 }
 
@@ -886,47 +886,47 @@ void ProductionView::onDetailsClicked()
         QMessageBox::warning(this, "Attention", "Veuillez s�lectionner une commande.");
         return;
     }
-    
+
     // Convertir l'index proxy ? index source pour acc�der aux donn�es r�elles
     QModelIndex sourceIndex = m_proxyModel->mapToSource(currentIndex);
     ProductionCommande cmd = m_model->getCommande(sourceIndex.row());
-    
+
     QDialog dlg(this);
     dlg.setWindowTitle("D�tails Complets - " + cmd.reference);
     dlg.setMinimumSize(750, 650);
     dlg.setStyleSheet(
         "QDialog { background-color: #F5F5F5; }"
         "QLabel { color: #424242; }"
-    );
-    
+        );
+
     QVBoxLayout *layout = new QVBoxLayout(&dlg);
     layout->setContentsMargins(25, 25, 25, 25);
     layout->setSpacing(20);
-    
+
     // Titre avec fond
     QWidget *titleWidget = new QWidget(&dlg);
     titleWidget->setStyleSheet(
         "background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
         "stop:0 #6D4C41, stop:1 #8D6E63); "
         "border-radius: 10px; padding: 15px;"
-    );
+        );
     QHBoxLayout *titleLayout = new QHBoxLayout(titleWidget);
     QLabel *title = new QLabel("?? D�TAILS COMPLETS DE LA COMMANDE");
     title->setStyleSheet("font-size: 20px; font-weight: bold; color: white;");
     title->setAlignment(Qt::AlignCenter);
     titleLayout->addWidget(title);
     layout->addWidget(titleWidget);
-    
+
     // Scroll area pour le contenu
     QScrollArea *scrollArea = new QScrollArea(&dlg);
     scrollArea->setWidgetResizable(true);
     scrollArea->setStyleSheet("QScrollArea { border: none; background-color: transparent; }");
-    
+
     QWidget *contentWidget = new QWidget();
     contentWidget->setStyleSheet("background-color: transparent;");
     QVBoxLayout *contentLayout = new QVBoxLayout(contentWidget);
     contentLayout->setSpacing(15);
-    
+
     // Lambda : cr�e une section avec titre color� dans le scroll area
     auto addSection = [&](const QString &sectionTitle, const QString &icon) {
         QWidget *sectionWidget = new QWidget();
@@ -934,11 +934,11 @@ void ProductionView::onDetailsClicked()
             "background-color: white; "
             "border-radius: 10px; "
             "border: 2px solid #E0E0E0;"
-        );
+            );
         QVBoxLayout *sectionLayout = new QVBoxLayout(sectionWidget);
         sectionLayout->setContentsMargins(20, 15, 20, 15);
         sectionLayout->setSpacing(12);
-        
+
         QLabel *section = new QLabel(icon + " " + sectionTitle);
         section->setStyleSheet(
             "font-size: 16px; "
@@ -948,28 +948,28 @@ void ProductionView::onDetailsClicked()
             "border: none; "
             "padding-bottom: 10px; "
             "border-bottom: 2px solid #8D6E63;"
-        );
+            );
         sectionLayout->addWidget(section);
-        
+
         contentLayout->addWidget(sectionWidget);
         return sectionLayout;
     };
-    
+
     // Lambda : ajoute une ligne label/valeur dans une section
     auto addField = [&](QVBoxLayout *sectionLayout, const QString &label, const QString &value) {
         QWidget *fieldWidget = new QWidget();
         fieldWidget->setStyleSheet("background-color: transparent;");
         QHBoxLayout *fieldLayout = new QHBoxLayout(fieldWidget);
         fieldLayout->setContentsMargins(0, 5, 0, 5);
-        
+
         QLabel *labelWidget = new QLabel(label + ":");
         labelWidget->setStyleSheet(
             "font-weight: bold; "
             "color: #616161; "
             "font-size: 13px; "
             "min-width: 180px;"
-        );
-        
+            );
+
         QLabel *valueLabel = new QLabel(value);
         valueLabel->setStyleSheet(
             "background: #FAFAFA; "
@@ -979,53 +979,53 @@ void ProductionView::onDetailsClicked()
             "color: #212121; "
             "font-size: 13px; "
             "font-weight: 600;"
-        );
+            );
         valueLabel->setWordWrap(true);
-        
+
         fieldLayout->addWidget(labelWidget);
         fieldLayout->addWidget(valueLabel, 1);
         sectionLayout->addWidget(fieldWidget);
     };
-    
+
     QVBoxLayout *identSection = addSection("IDENTIFICATION", "??");
     addField(identSection, "ID Commande", QString::number(cmd.idCommande));
     addField(identSection, "R�f�rence", cmd.reference);
     addField(identSection, "Priorit�", cmd.priorite);
     addField(identSection, "Date Livraison Pr�vue", cmd.dateLivraisonPrevue.toString("dd/MM/yyyy"));
-    
+
     QVBoxLayout *planSection = addSection("PLANIFICATION", "??");
     addField(planSection, "Date D�but Pr�vue", cmd.dateDebutPrevue.toString("dd/MM/yyyy"));
     addField(planSection, "Date Fin Pr�vue", cmd.dateFinPrevue.toString("dd/MM/yyyy"));
     addField(planSection, "Atelier", cmd.atelier);
     addField(planSection, "Ordre de Passage", QString::number(cmd.ordrePassage));
-    
+
     QVBoxLayout *suiviSection = addSection("SUIVI DE PRODUCTION", "??");
     addField(suiviSection, "�tat Production", cmd.etatProduction);
     addField(suiviSection, "�tape Actuelle", cmd.etapeActuelle);
     addField(suiviSection, "Avancement", cmd.getAvancementText());
     addField(suiviSection, "Retard", cmd.getRetardText());
-    
+
     QVBoxLayout *livraisonSection = addSection("LIVRAISON", "??");
     addField(livraisonSection, "Soci�t� de Livraison", cmd.societeLivraison);
     addField(livraisonSection, "Num�ro de Suivi", cmd.numeroSuiviColis.isEmpty() ? "Non attribu�" : cmd.numeroSuiviColis);
     addField(livraisonSection, "Date Exp�dition Pr�vue", cmd.dateExpeditionPrevue.toString("dd/MM/yyyy"));
-    addField(livraisonSection, "Date Exp�dition R�elle", cmd.dateExpeditionReelle.isValid() ? 
-             cmd.dateExpeditionReelle.toString("dd/MM/yyyy") : "Non exp�di�e");
+    addField(livraisonSection, "Date Exp�dition R�elle", cmd.dateExpeditionReelle.isValid() ?
+                                                             cmd.dateExpeditionReelle.toString("dd/MM/yyyy") : "Non exp�di�e");
     addField(livraisonSection, "Statut Livraison", cmd.statutLivraison);
-    
+
     scrollArea->setWidget(contentWidget);
     layout->addWidget(scrollArea);
-    
+
     QPushButton *closeBtn = new QPushButton("? Fermer", &dlg);
     closeBtn->setStyleSheet(BTN_STYLE_CLOSE);
     closeBtn->setCursor(Qt::PointingHandCursor);
     connect(closeBtn, &QPushButton::clicked, &dlg, &QDialog::accept);
-    
+
     QHBoxLayout *btnLayout = new QHBoxLayout();
     btnLayout->addStretch();
     btnLayout->addWidget(closeBtn);
     layout->addLayout(btnLayout);
-    
+
     dlg.exec();
 }
 
@@ -1036,35 +1036,35 @@ void ProductionView::onPlanificationClicked()
         QMessageBox::warning(this, "Attention", "Veuillez s�lectionner une commande.");
         return;
     }
-    
+
     // Convertir l'index proxy ? index source pour modifier les donn�es r�elles
     QModelIndex sourceIndex = m_proxyModel->mapToSource(currentIndex);
     ProductionCommande cmd = m_model->getCommande(sourceIndex.row());
-    
+
     QDialog dlg(this);
     dlg.setWindowTitle("Modifier Planification - " + cmd.reference);
     dlg.setMinimumSize(450, 380);  // Taille r�duite
     dlg.setMaximumSize(500, 420);  // Limite la taille maximale
     dlg.setStyleSheet("QDialog { background-color: #F5F5F5; }");
-    
+
     QVBoxLayout *layout = new QVBoxLayout(&dlg);
     layout->setContentsMargins(25, 25, 25, 25);
     layout->setSpacing(20);
-    
+
     // Titre avec fond
     QWidget *titleWidget = new QWidget(&dlg);
     titleWidget->setStyleSheet(
         "background: qlineargradient(x1:0, y1:0, x2:1, y2:0, "
         "stop:0 #6D4C41, stop:1 #8D6E63); "
         "border-radius: 10px; padding: 15px;"
-    );
+        );
     QHBoxLayout *titleLayout = new QHBoxLayout(titleWidget);
     QLabel *title = new QLabel("?? MODIFIER LA PLANIFICATION");
     title->setStyleSheet("font-size: 20px; font-weight: bold; color: white;");
     title->setAlignment(Qt::AlignCenter);
     titleLayout->addWidget(title);
     layout->addWidget(titleWidget);
-    
+
     // Formulaire dans un widget blanc
     QWidget *formWidget = new QWidget(&dlg);
     formWidget->setStyleSheet(
@@ -1073,15 +1073,15 @@ void ProductionView::onPlanificationClicked()
         "border-radius: 10px; "
         "border: 2px solid #E0E0E0; "
         "}"
-    );
+        );
     QVBoxLayout *formContainer = new QVBoxLayout(formWidget);
     formContainer->setContentsMargins(25, 25, 25, 25);
-    
+
     QFormLayout *form = new QFormLayout();
     form->setSpacing(20);
     form->setLabelAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    
-    QString fieldStyle = 
+
+    QString fieldStyle =
         "background: #FAFAFA; "
         "border: 2px solid #BDBDBD; "
         "border-radius: 8px; "
@@ -1089,12 +1089,12 @@ void ProductionView::onPlanificationClicked()
         "font-size: 14px; "
         "color: #212121; "
         "min-height: 40px;";
-    
-    QString labelStyle = 
+
+    QString labelStyle =
         "color: #424242; "
         "font-weight: bold; "
         "font-size: 14px;";
-    
+
     QLabel *lblDateDebut = new QLabel("Date D�but Pr�vue:");
     lblDateDebut->setStyleSheet(labelStyle);
     QDateEdit *dateDebut = new QDateEdit(&dlg);
@@ -1102,7 +1102,7 @@ void ProductionView::onPlanificationClicked()
     dateDebut->setCalendarPopup(true);
     dateDebut->setDisplayFormat("dd/MM/yyyy");
     dateDebut->setStyleSheet(fieldStyle);
-    
+
     QLabel *lblDateFin = new QLabel("Date Fin Pr�vue:");
     lblDateFin->setStyleSheet(labelStyle);
     QDateEdit *dateFin = new QDateEdit(&dlg);
@@ -1110,47 +1110,47 @@ void ProductionView::onPlanificationClicked()
     dateFin->setCalendarPopup(true);
     dateFin->setDisplayFormat("dd/MM/yyyy");
     dateFin->setStyleSheet(fieldStyle);
-    
+
     QLabel *lblAtelier = new QLabel("Atelier:");
     lblAtelier->setStyleSheet(labelStyle);
     QLineEdit *atelier = new QLineEdit(cmd.atelier, &dlg);
     atelier->setStyleSheet(fieldStyle);
-    
+
     QLabel *lblOrdre = new QLabel("Ordre de Passage:");
     lblOrdre->setStyleSheet(labelStyle);
     QSpinBox *ordre = new QSpinBox(&dlg);
     ordre->setRange(1, 999);
     ordre->setValue(cmd.ordrePassage);
     ordre->setStyleSheet(fieldStyle);
-    
+
     form->addRow(lblDateDebut, dateDebut);
     form->addRow(lblDateFin, dateFin);
     form->addRow(lblAtelier, atelier);
     form->addRow(lblOrdre, ordre);
-    
+
     formContainer->addLayout(form);
     layout->addWidget(formWidget);
     layout->addStretch();
-    
+
     // Boutons
     QHBoxLayout *btnLayout = new QHBoxLayout();
     btnLayout->setSpacing(15);
-    
+
     QPushButton *saveBtn = new QPushButton("?? Enregistrer", &dlg);
     saveBtn->setStyleSheet(BTN_STYLE_SAVE);
     saveBtn->setCursor(Qt::PointingHandCursor);
-    
+
     QPushButton *cancelBtn = new QPushButton("? Annuler", &dlg);
     cancelBtn->setStyleSheet(BTN_STYLE_CLOSE);
     cancelBtn->setCursor(Qt::PointingHandCursor);
-    
+
     connect(saveBtn, &QPushButton::clicked, [&]() {
         // Mettre � jour les champs de planification dans l'objet cmd
         cmd.dateDebutPrevue = dateDebut->date();
         cmd.dateFinPrevue = dateFin->date();
         cmd.atelier = atelier->text();
         cmd.ordrePassage = ordre->value();
-        
+
         // Mettre � jour le mod�le en m�moire (pas de persistance DB ici)
         m_model->updateCommande(sourceIndex.row(), cmd);
 
@@ -1158,18 +1158,18 @@ void ProductionView::onPlanificationClicked()
             "Planification mise � jour",
             cmd.reference + " � dates et atelier enregistr�s.",
             NotificationWidget::Success
-        );
+            );
         dlg.accept();
     });
-    
+
     connect(cancelBtn, &QPushButton::clicked, &dlg, &QDialog::reject);
-    
+
     btnLayout->addStretch();
     btnLayout->addWidget(saveBtn);
     btnLayout->addWidget(cancelBtn);
     btnLayout->addStretch();
     layout->addLayout(btnLayout);
-    
+
     dlg.exec();
 }
 
@@ -1186,18 +1186,18 @@ void ProductionView::onRefreshClicked()
 void ProductionView::setupTimer()
 {
     qDebug() << "ProductionView::setupTimer() - Configuration du timer d'alertes";
-    
+
     m_timerAlertes = new QTimer(this);
-    
+
     // Convertir les minutes en millisecondes pour QTimer::setInterval
     int intervalleMs = m_intervalleVerification * 60 * 1000;
     m_timerAlertes->setInterval(intervalleMs);
-    
+
     // � chaque expiration du timer, v�rifier les alertes de retard
     connect(m_timerAlertes, &QTimer::timeout, this, &ProductionView::verifierAlertes);
-    
+
     m_timerAlertes->start();
-    
+
     qDebug() << "Timer configur� avec intervalle de" << m_intervalleVerification << "minutes";
 }
 
@@ -1248,34 +1248,34 @@ void ProductionView::afficherNotification(const ProductionCommande &commande)
             commande.reference + " - " + QString::number(commande.getJoursRetard()) + " jour(s) de retard.",
             NotificationWidget::Critical,
             "Voir", [this, commande]{ Q_UNUSED(commande) loadData(); }
-        );
+            );
     } else {
         NotificationWidget::show(
             "Risque de retard",
             commande.reference + " - avancement " + commande.getAvancementText() + ", livraison proche.",
             NotificationWidget::Warning
-        );
+            );
     }
 }
 
 void ProductionView::recalculerToutesLesAlertes()
 {
     qDebug() << "ProductionView::recalculerToutesLesAlertes() - Recalcul de toutes les alertes";
-    
+
     if (!m_model) {
         qDebug() << "? Mod�le non initialis�";
         return;
     }
-    
+
     // R�initialiser l'historique pour permettre de re-notifier toutes les alertes
     m_alertesNotifiees.clear();
-    
+
     // Recalculer le niveau d'alerte de chaque commande et mettre � jour le mod�le
     for (int row = 0; row < m_model->rowCount(); ++row) {
         ProductionCommande cmd = m_model->getCommande(row);
         cmd.alerteRetard = cmd.calculerAlerteRetard(m_joursAlerte, m_seuilAvancement);
         m_model->updateCommande(row, cmd);
     }
-    
+
     qDebug() << "Recalcul termin� pour" << m_model->rowCount() << "commandes";
 }

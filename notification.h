@@ -19,6 +19,8 @@
 #include <QScrollArea>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QSystemTrayIcon>
+#include <QMenu>
 #include <functional>
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -46,6 +48,14 @@ public:
     static int  activeCount() { return s_active.size(); }
     static void repositionAll();
     static void setToastsEnabled(bool enabled) { s_toastsEnabled = enabled; }
+
+    // ── Notifications système Windows (tray) ──────────────────────
+    // Appeler UNE SEULE FOIS au démarrage dans main.cpp :
+    //   NotificationWidget::initTray(QIcon(":/icons/cuirea.ico"));
+    static void initTray(const QIcon &icon);
+    static void showTray(const QString &title,
+                         const QString &message,
+                         Type type = Info);
 
 signals:
     void clicked();
@@ -90,6 +100,7 @@ private:
     static constexpr int MAX_TOASTS = 5;
     static QList<NotificationWidget*> s_active;
     static bool s_toastsEnabled;
+    static QSystemTrayIcon *s_tray;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

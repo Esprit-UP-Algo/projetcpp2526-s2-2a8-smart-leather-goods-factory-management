@@ -38,6 +38,7 @@
 #include "notification.h"
 #include "matieredetection.h"
 #include "voicematieres.h"
+#include "arduino.h"
 #include <QTimer>
 #include <QPainter>
 #include <QConicalGradient>
@@ -164,6 +165,11 @@ private slots:
     void on_searchBoxFournisseur_textChanged(const QString &text);
     void on_btnmap_clicked();
 
+    // Arduino
+    void on_btnExpedier_clicked();       // toggle → affiche saisir/expédier
+    void expedierActionArduino();        // OUTPUT → envoyer "1" ou "0"
+    void recevoir_donnee();              // INPUT  ← données Arduino
+
     // Articles
     void on_btnAddArticle_clicked();
     void on_btnEditArticle_clicked();
@@ -248,6 +254,10 @@ private:
     // AI floating button
     AIChatWidget     *m_aiWidget;
     FloatingAIButton *m_floatingBtn;
+
+    // Arduino
+    Arduino A;
+    QByteArray arduinoData;
 
     // Production sort state
     int  m_productionSortCol;

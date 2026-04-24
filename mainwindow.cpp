@@ -422,13 +422,43 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnExcelProduction,       &QPushButton::clicked, this, &MainWindow::onExcelProduction);
     connect(ui->btnTrierProduction,       &QPushButton::clicked, this, &MainWindow::onTrierProduction);
     connect(ui->btnStatistiquesProduction,&QPushButton::clicked, this, &MainWindow::onStatistiquesProduction);
+    connect(ui->btnExpedier,              &QPushButton::clicked, this, &MainWindow::on_btnExpedier_clicked);
+    connect(ui->btnSaisir, &QPushButton::clicked, this, [this]() {
+        // Saisie uniquement via keypad Arduino — ce bouton est juste un indicateur
+        QMessageBox::information(this, "Saisie Arduino",
+            "Utilisez le clavier 16 touches connecté à l'Arduino\n"
+            "pour saisir l'ID de la commande.\n\n"
+            "Appuyez sur # pour confirmer.");
+        ui->btnSaisir->setVisible(false);
+        ui->btnExpedierAction->setVisible(false);
+        ui->btnExpedier->setVisible(true);
+    });
+    connect(ui->btnExpedierAction, &QPushButton::clicked, this, &MainWindow::expedierActionArduino);
     connect(ui->searchBoxProduction, &QLineEdit::textChanged, this, &MainWindow::onRechercherProduction);
+
+    // ── Arduino ──────────────────────────────────────────────────────────────
+    {
+        int ret = A.connection()->connect_arduino();
+        switch (ret) {
+        case 0:
+            qDebug() << "✅ Arduino connecté :" << A.connection()->getPortName();
+            QObject::connect(A.connection()->getSerial(), SIGNAL(readyRead()),
+                             this, SLOT(recevoir_donnee()));
+            break;
+        case 1:
+            qDebug() << "⚠️ Arduino trouvé mais non ouvert";
+            break;
+        default:
+            qDebug() << "❌ Arduino non trouvé";
+            break;
+        }
+    }
 
     // ── Timer retard notifications ───────────────────────────────────────────
     m_retardTimer = new QTimer(this);
     connect(m_retardTimer, &QTimer::timeout, this, &MainWindow::checkRetards);
     m_retardTimer->start(20000);
-    QTimer::singleShot(3000, this, &MainWindow::checkRetards);
+    QTimer::singleShot(500, this, &MainWindow::checkRetards);
 
     // ── Notification AI (Groq) + Bell + Watcher ──────────────────────────────
     const QString groqKey = EnvLoader::get("GROQ_API_KEY");
@@ -537,10 +567,9 @@ void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &ti
     // Garder le bouton flottant toujours au-dessus
     if (m_floatingBtn) m_floatingBtn->raise();
 
-    // Cloche et toasts visibles uniquement sur la page Production (index 4)
+    // Cloche visible uniquement sur la page Production (index 4)
     if (m_bell) m_bell->setVisible(index == 4);
-    NotificationWidget::setToastsEnabled(index == 4);
-    // Fermer les toasts actifs quand on quitte Production
+    // Fermer les toasts actifs si présents
     if (index != 4) NotificationWidget::closeAll();
 }
 
@@ -2922,10 +2951,16 @@ void MainWindow::updateProductionStatsCards()
         montantTotal = query.value(3).toDouble();
     }
     
-    // Mettre à jour les labels
+    // Calcul des pourcentages
+    double pctEnProd   = total > 0 ? 100.0 * enProd    / total : 0.0;
+    double pctTermines = total > 0 ? 100.0 * terminees / total : 0.0;
+
+    // Mettre à jour les labels avec pourcentages
     ui->statsValueProduction1->setText(QString::number(total));
-    ui->statsValueProduction2->setText(QString::number(enProd));
-    ui->statsValueProduction3->setText(QString::number(terminees));
+    ui->statsValueProduction2->setText(QString::number(enProd)
+        + "  (" + QString::number(pctEnProd, 'f', 1) + "%)");
+    ui->statsValueProduction3->setText(QString::number(terminees)
+        + "  (" + QString::number(pctTermines, 'f', 1) + "%)");
     ui->statsValueProduction4->setText(QString::number(montantTotal, 'f', 2) + " DT");
     
     qDebug() << "📊 Statistiques mises à jour:";
@@ -4096,18 +4131,23 @@ void MainWindow::afficherStatistiquesModernes()
     kpiLay->setSpacing(12);
     kpiLay->setContentsMargins(0,0,0,0);
 
+    double pctAttente = total > 0 ? 100.0 * enAttente / total : 0.0;
+    int enCours = statCnt.value("En Cours", 0) + statCnt.value("En Production", 0);
+    double pctEnCours = total > 0 ? 100.0 * enCours / total : 0.0;
+
     kpiLay->addWidget(makeKPI("📦",
         QString::number(total),
         "Total commandes",
-        QString::number(enAttente) + " en attente"));
-    kpiLay->addWidget(makeKPI("💰",
+        QString::number(enAttente) + " en attente ("
+            + QString::number(pctAttente,'f',1) + "%)"));
+    kpiLay->addWidget(makeKPI("�",
         QLocale(QLocale::French).toString(montantTotal,'f',0) + " DT",
         "Chiffre d'affaires",
-        "+12% ce mois"));
-    kpiLay->addWidget(makeKPI("📊",
-        QLocale(QLocale::French).toString(moyenne,'f',0) + " DT",
-        "Montant moyen",
-        "par commande"));
+        "Moy. " + QLocale(QLocale::French).toString(moyenne,'f',0) + " DT/cmd"));
+    kpiLay->addWidget(makeKPI("🔄",
+        QString::number(enCours),
+        "En cours de production",
+        QString::number(pctEnCours,'f',1) + "% du total"));
     kpiLay->addWidget(makeKPI("✅",
         QString::number(taux,'f',1) + "%",
         "Taux complétion",
@@ -4139,9 +4179,9 @@ void MainWindow::afficherStatistiquesModernes()
         return card;
     };
 
-    // Camembert statuts
+    // ── Camembert statuts ─────────────────────────────────────────────────────
     auto *pie = new QPieSeries();
-    pie->setHoleSize(0.45);
+    pie->setHoleSize(0.42);
     QMap<QString,QColor> statClrs;
     statClrs["En Attente"]    = QColor(C_OR);
     statClrs["Suspendu"]      = QColor(C_OR_PALE);
@@ -4149,32 +4189,38 @@ void MainWindow::afficherStatistiquesModernes()
     statClrs["En Production"] = QColor(C_BORDEAUX_MID);
     statClrs["Planifié"]      = QColor("#B8956A");
     statClrs["Annulé"]        = QColor("#7A3545");
+    statClrs["En Cours"]      = QColor("#8C5A6A");
+
     for (auto it = statCnt.begin(); it != statCnt.end(); ++it) {
-        auto *sl = pie->append(it.key(), it.value());
+        double pct = total > 0 ? 100.0 * it.value() / total : 0.0;
+        // Label court sur la tranche : juste le %
+        auto *sl = pie->append(
+            QString("%1  —  %2  (%3%)").arg(it.key()).arg(it.value()).arg(pct, 0, 'f', 1),
+            it.value());
         sl->setColor(statClrs.value(it.key(), QColor(C_GRIS)));
         sl->setBorderColor(QColor(C_BLANC));
+        sl->setLabelVisible(false);
         QObject::connect(sl, &QPieSlice::hovered, [sl](bool on){ sl->setExploded(on); });
     }
+
     auto *pc = new QChart();
     pc->addSeries(pie);
     pc->setBackgroundBrush(QColor(C_BLANC));
     pc->setBackgroundRoundness(0);
-    pc->setMargins(QMargins(0,0,0,0));
+    pc->setMargins(QMargins(4, 4, 4, 4));
     pc->setAnimationOptions(QChart::AllAnimations);
-    // Texte central du donut
-    QGraphicsTextItem *centerText = new QGraphicsTextItem(pc);
-    centerText->setHtml(QString("<div style='text-align:center;'>"
-        "<b style='color:%1;font-size:13px;'>Statuts</b><br/>"
-        "<span style='color:%2;font-size:11px;'>%3 types</span></div>")
-        .arg(C_BORDEAUX, C_GRIS).arg(statCnt.size()));
-    pc->legend()->setAlignment(Qt::AlignBottom);
+    pc->legend()->setAlignment(Qt::AlignRight);
     pc->legend()->setFont(QFont("Arial", 9));
     pc->legend()->setLabelColor(QColor(C_GRIS));
+    pc->legend()->setMarkerShape(QLegend::MarkerShapeCircle);
+
     auto *pv = new QChartView(pc);
     pv->setRenderHint(QPainter::Antialiasing);
+    pv->setMinimumHeight(300);
     chartsLay->addWidget(wrapChart(pv, "Répartition des statuts"), 1);
 
-    // Barres priorités — 1 set par priorité, 1 valeur chacun, catégories distinctes
+    // ── Barres priorités ──────────────────────────────────────────────────────
+    // Une seule QBarSeries avec 1 QBarSet par priorité → barres groupées propres
     QStringList prioOrder = {"Urgente","Haute","Normale","Basse"};
     QMap<QString,QColor> prioClrs;
     prioClrs["Urgente"] = QColor(C_BORDEAUX);
@@ -4182,64 +4228,76 @@ void MainWindow::afficherStatistiquesModernes()
     prioClrs["Normale"] = QColor(C_OR);
     prioClrs["Basse"]   = QColor(C_OR_PALE);
 
-    // Une série par priorité présente, chacune avec 1 seule valeur
-    // et attachée à sa propre catégorie via QBarCategoryAxis
-    QStringList cats;
-    QList<QBarSet*> sets;
-    for (const QString &p : prioOrder) {
-        if (!prioCnt.contains(p)) continue;
-        cats << p;
-        auto *set = new QBarSet(p);
-        set->setColor(prioClrs.value(p, QColor(C_GRIS)));
-        set->setLabelColor(Qt::white);
-        set->setBorderColor(Qt::transparent);
-        *set << prioCnt[p];
-        sets << set;
-    }
+    // ── Barres priorités : une QBarSeries par priorité ───────────────────────
+    // Chaque série a 1 set avec N valeurs (0 pour les autres catégories)
+    // → chaque barre apparaît sous sa propre catégorie sur l'axe X
 
-    // Utiliser une série par set pour que chaque barre soit dans sa propre catégorie
     auto *bc = new QChart();
     bc->setBackgroundBrush(QColor(C_BLANC));
     bc->setBackgroundRoundness(0);
-    bc->setMargins(QMargins(0,0,0,0));
+    bc->setMargins(QMargins(4, 4, 4, 4));
     bc->setAnimationOptions(QChart::SeriesAnimations);
+
+    // Construire la liste ordonnée des catégories présentes
+    QStringList cats;
+    QList<int>  vals;
+    for (const QString &p : prioOrder) {
+        if (!prioCnt.contains(p)) continue;
+        cats << p;
+        vals << prioCnt[p];
+    }
+
+    int maxCnt = 0;
+    for (int v : vals) maxCnt = qMax(maxCnt, v);
 
     auto *axX = new QBarCategoryAxis();
     axX->append(cats);
     axX->setLabelsColor(QColor(C_GRIS));
+    axX->setLabelsFont(QFont("Arial", 10));
     axX->setGridLineVisible(false);
     bc->addAxis(axX, Qt::AlignBottom);
 
     auto *axY = new QValueAxis();
+    axY->setRange(0, maxCnt + 1);
     axY->setLabelFormat("%d");
     axY->setLabelsColor(QColor(C_GRIS));
     axY->setGridLineColor(QColor(C_BORDURE));
+    axY->setTickCount(maxCnt + 2);
     bc->addAxis(axY, Qt::AlignLeft);
 
-    // Une QBarSeries par set — chaque série a 1 set avec 1 valeur → 1 barre par catégorie
-    for (int i = 0; i < sets.size(); ++i) {
-        auto *series = new QBarSeries();
-        series->setLabelsVisible(true);
-        series->setLabelsPosition(QAbstractBarSeries::LabelsCenter);
-        series->setLabelsFormat("@value");
-        // Remplir avec 0 pour les autres catégories, valeur réelle pour la sienne
-        auto *set = new QBarSet(sets[i]->label());
-        set->setColor(sets[i]->color());
-        set->setLabelColor(Qt::white);
+    // Une série par catégorie : valeur réelle à sa position, 0 ailleurs
+    for (int i = 0; i < cats.size(); ++i) {
+        const QString &p   = cats[i];
+        int            cnt = vals[i];
+        double         pct = total > 0 ? 100.0 * cnt / total : 0.0;
+
+        auto *set = new QBarSet(QString("%1  %2 (%3%)").arg(p).arg(cnt).arg(pct, 0, 'f', 1));
+        set->setColor(prioClrs.value(p, QColor(C_GRIS)));
+        set->setLabelColor(QColor(C_BORDEAUX));
         set->setBorderColor(Qt::transparent);
         for (int j = 0; j < cats.size(); ++j)
-            *set << (j == i ? sets[i]->at(0) : 0);
+            *set << (j == i ? cnt : 0);
+
+        auto *series = new QBarSeries();
+        series->setLabelsVisible(true);
+        series->setLabelsPosition(QAbstractBarSeries::LabelsOutsideEnd);
+        series->setLabelsFormat("@value");
+        series->setBarWidth(0.5);
         series->append(set);
+
         bc->addSeries(series);
         series->attachAxis(axX);
         series->attachAxis(axY);
     }
+
     bc->legend()->setAlignment(Qt::AlignBottom);
     bc->legend()->setFont(QFont("Arial", 9));
     bc->legend()->setLabelColor(QColor(C_GRIS));
+    bc->legend()->setMarkerShape(QLegend::MarkerShapeRectangle);
+
     auto *bv = new QChartView(bc);
     bv->setRenderHint(QPainter::Antialiasing);
-    qDeleteAll(sets); // libérer les sets temporaires (les copies ont été faites dans chaque série)
+    bv->setMinimumHeight(300);
     chartsLay->addWidget(wrapChart(bv, "Répartition des priorités"), 1);
 
     lay->addWidget(chartsRow);
@@ -5951,5 +6009,111 @@ void MainWindow::logout()
                 QApplication::quit();
             }
         });
+    }
+}
+
+// ── Arduino : toggle boutons saisir/expédier ─────────────────────────────────
+void MainWindow::on_btnExpedier_clicked()
+{
+    ui->btnExpedier->setVisible(false);
+    ui->btnSaisir->setVisible(true);
+    ui->btnExpedierAction->setVisible(true);
+}
+
+// ── Arduino : expédier une commande (OUTPUT) ──────────────────────────────────
+void MainWindow::expedierActionArduino()
+{
+    int row = ui->productionTable->currentRow();
+    if (row < 0 || ui->productionTable->selectedItems().isEmpty()) {
+        QMessageBox::warning(this, "Attention",
+            "Veuillez sélectionner une commande dans le tableau !");
+        return;  // boutons restent visibles
+    }
+
+    // Fermer les boutons seulement si une ligne est sélectionnée
+    ui->btnSaisir->setVisible(false);
+    ui->btnExpedierAction->setVisible(false);
+    ui->btnExpedier->setVisible(true);
+
+    QString ref    = cellText(ui->productionTable, row, 1);
+    QString statut = cellText(ui->productionTable, row, 8);
+
+    // ── CAS 1 : commande Terminée ✅ ──────────────────────────────────────────
+    if (statut == "Terminé") {
+        if (A.connection()->getSerial()->isOpen())
+            A.write_to_arduino("1");
+        else
+            qDebug() << "⚠️ Arduino non connecté — envoi ignoré";
+
+        QSqlQuery update;
+        update.prepare("UPDATE COMMANDES SET STATUT = 'En livraison' WHERE REFERENCE = :ref");
+        update.bindValue(":ref", ref);
+        if (!update.exec())
+            qDebug() << "Erreur UPDATE:" << update.lastError().text();
+
+        QMessageBox::information(this, "Expédition lancée",
+            "Référence    : " + ref    + "\n"
+            "Statut avant : Terminé\n"
+            "Statut après : En livraison\n"
+            "Arduino reçoit : 1\n"
+            "Servos         : Démarrés !");
+
+        loadProductionData();
+
+    // ── CAS 2 : commande pas Terminée ❌ ──────────────────────────────────────
+    } else {
+        if (A.connection()->getSerial()->isOpen())
+            A.write_to_arduino("0");
+
+        QMessageBox::critical(this, "Expédition impossible",
+            "Référence     : " + ref    + "\n"
+            "Statut actuel : " + statut + "\n"
+            "Statut requis : Terminé\n"
+            "Arduino reçoit : 0\n"
+            "Servos         : Bloqués !");
+    }
+}
+
+// ── Arduino : recevoir une donnée (INPUT) ─────────────────────────────────────
+void MainWindow::recevoir_donnee()
+{
+    arduinoData = A.read_from_arduino();
+    QString msg = QString(arduinoData).trimmed();
+    qDebug() << "Reçu depuis Arduino :" << msg;
+
+    if (msg.startsWith("ID:")) {
+        QString id = msg.mid(3);  // extrait l'ID
+
+        QSqlQuery q;
+        q.prepare("SELECT STATUT FROM COMMANDES WHERE ID = :id");
+        q.bindValue(":id", id);
+        q.exec();
+
+        if (q.next()) {
+            QString statut = q.value(0).toString();
+            if (statut == "Terminé") {
+                A.connection()->getSerial()->write("1");
+
+                QSqlQuery update;
+                update.prepare("UPDATE COMMANDES SET STATUT = 'En livraison' WHERE ID = :id");
+                update.bindValue(":id", id);
+                update.exec();
+                loadProductionData();
+                qDebug() << "✅ Commande" << id << "→ En livraison";
+            } else {
+                A.connection()->getSerial()->write("0");
+                QMessageBox::warning(this, "Erreur",
+                    "Commande " + id + " — Statut : " + statut + "\nStatut requis : Terminé");
+            }
+        } else {
+            A.connection()->getSerial()->write("0");
+            QMessageBox::critical(this, "Erreur", "Commande introuvable : " + id);
+        }
+
+    } else if (msg.startsWith("INPUT:")) {
+        qDebug() << "Saisie en cours :" << msg.mid(6);
+
+    } else if (msg == "CLEAR") {
+        qDebug() << "Saisie effacée";
     }
 }
