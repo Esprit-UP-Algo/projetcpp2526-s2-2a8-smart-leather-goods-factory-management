@@ -160,3 +160,60 @@ CREATE TABLE Fournir (
         FOREIGN KEY (id_matiere)
         REFERENCES Matieres_premieres(id_matiere)
 );
+
+/* =========================
+   9. ARDUINO_TEMP_READINGS
+   Historique des lectures de température du stock cuir
+========================= */
+CREATE TABLE ARDUINO_TEMP_READINGS (
+    id_reading    NUMBER PRIMARY KEY,
+    temperature   NUMBER(5,2)   NOT NULL,
+    timestamp     TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+    is_alert      NUMBER(1)     DEFAULT 0
+);
+
+CREATE SEQUENCE seq_temp_readings START WITH 1 INCREMENT BY 1;
+
+CREATE OR REPLACE TRIGGER trg_temp_readings_id
+BEFORE INSERT ON ARDUINO_TEMP_READINGS
+FOR EACH ROW
+BEGIN
+    IF :NEW.id_reading IS NULL THEN
+        SELECT seq_temp_readings.NEXTVAL INTO :NEW.id_reading FROM DUAL;
+    END IF;
+END;
+/
+
+/* =========================
+   10. ARDUINO_DELIVERIES
+   Historique des livraisons validées par balance Arduino
+========================= */
+CREATE TABLE ARDUINO_DELIVERIES (
+    id_delivery       NUMBER PRIMARY KEY,
+    id_fournisseur    NUMBER,
+    id_matiere        NUMBER,
+    ordered_qty       NUMBER(10,3),
+    measured_weight   NUMBER(10,3),
+    validated         NUMBER(1)     DEFAULT 0,
+    operator_note     VARCHAR2(500),
+    timestamp         TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_delivery_fournisseur
+        FOREIGN KEY (id_fournisseur)
+        REFERENCES Fournisseurs(id_fournisseur),
+    CONSTRAINT fk_delivery_matiere
+        FOREIGN KEY (id_matiere)
+        REFERENCES Matieres_premieres(id_matiere)
+);
+
+CREATE SEQUENCE seq_deliveries START WITH 1 INCREMENT BY 1;
+
+CREATE OR REPLACE TRIGGER trg_deliveries_id
+BEFORE INSERT ON ARDUINO_DELIVERIES
+FOR EACH ROW
+BEGIN
+    IF :NEW.id_delivery IS NULL THEN
+        SELECT seq_deliveries.NEXTVAL INTO :NEW.id_delivery FROM DUAL;
+    END IF;
+END;
+/

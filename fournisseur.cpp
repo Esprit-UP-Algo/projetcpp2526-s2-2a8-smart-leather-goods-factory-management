@@ -27,8 +27,8 @@ FournisseurData::FournisseurData(const QString &id, const QString &nomEntreprise
 bool FournisseurData::ajouter()
 {
     QSqlQuery query(Connection::instance()->getDatabase());
-    query.prepare("INSERT INTO FOURNISSEURS (NOM_ENTREPRISE, EMAIL, TELEPHONE, "
-                  "MATRICULE_FISCAL, TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT, ADRESSE) "
+    query.prepare("INSERT INTO Fournisseurs (nom_entreprise, email, telephone, "
+                  "matricule_fiscal, type_produit, condition_paiement, statut, adresse) "
                   "VALUES (:nomEntreprise, :email, :telephone, :matriculeFiscal, "
                   ":typeProduit, :conditionPaiement, :statut, :adresse)");
 
@@ -53,12 +53,12 @@ bool FournisseurData::ajouter()
 bool FournisseurData::modifier()
 {
     QSqlQuery query(Connection::instance()->getDatabase());
-    query.prepare("UPDATE FOURNISSEURS SET "
-                  "NOM_ENTREPRISE = :nomEntreprise, EMAIL = :email, "
-                  "TELEPHONE = :telephone, MATRICULE_FISCAL = :matriculeFiscal, "
-                  "TYPE_PRODUIT = :typeProduit, CONDITION_PAIEMENT = :conditionPaiement, "
-                  "STATUT = :statut, ADRESSE = :adresse "
-                  "WHERE ID_FOURNISSEUR = :id");
+    query.prepare("UPDATE Fournisseurs SET "
+                  "nom_entreprise = :nomEntreprise, email = :email, "
+                  "telephone = :telephone, matricule_fiscal = :matriculeFiscal, "
+                  "type_produit = :typeProduit, condition_paiement = :conditionPaiement, "
+                  "statut = :statut, adresse = :adresse "
+                  "WHERE id_fournisseur = :id");
     
     query.bindValue(":id", id);
     query.bindValue(":nomEntreprise", nomEntreprise);
@@ -82,7 +82,7 @@ bool FournisseurData::modifier()
 bool FournisseurData::supprimer(const QString &id)
 {
     QSqlQuery query(Connection::instance()->getDatabase());
-    query.prepare("DELETE FROM FOURNISSEURS WHERE ID_FOURNISSEUR = :id");
+    query.prepare("DELETE FROM Fournisseurs WHERE id_fournisseur = :id");
     query.bindValue(":id", id);
     
     if (!query.exec()) {
@@ -97,9 +97,9 @@ bool FournisseurData::supprimer(const QString &id)
 QSqlQueryModel* FournisseurData::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
-    model->setQuery("SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
-                    "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT, ADRESSE "
-                    "FROM FOURNISSEURS ORDER BY NOM_ENTREPRISE",
+    model->setQuery("SELECT id_fournisseur, nom_entreprise, email, telephone, matricule_fiscal, "
+                    "type_produit, condition_paiement, statut, adresse "
+                    "FROM Fournisseurs ORDER BY nom_entreprise",
                     Connection::instance()->getDatabase());
 
     if (model->lastError().isValid()) {
@@ -125,15 +125,15 @@ QSqlQueryModel* FournisseurData::rechercher(const QString &terme)
     QSqlQueryModel* model = new QSqlQueryModel();
     
     QString queryStr = QString(
-        "SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
-        "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT "
-        "FROM FOURNISSEURS "
-        "WHERE UPPER(NOM_ENTREPRISE) LIKE UPPER('%%1%') "
-        "OR UPPER(EMAIL) LIKE UPPER('%%1%') "
-        "OR UPPER(TELEPHONE) LIKE UPPER('%%1%') "
-        "OR UPPER(MATRICULE_FISCAL) LIKE UPPER('%%1%') "
-        "OR UPPER(TYPE_PRODUIT) LIKE UPPER('%%1%') "
-        "ORDER BY NOM_ENTREPRISE"
+        "SELECT id_fournisseur, nom_entreprise, email, telephone, matricule_fiscal, "
+        "type_produit, condition_paiement, statut "
+        "FROM Fournisseurs "
+        "WHERE UPPER(nom_entreprise) LIKE UPPER('%%1%') "
+        "OR UPPER(email) LIKE UPPER('%%1%') "
+        "OR UPPER(telephone) LIKE UPPER('%%1%') "
+        "OR UPPER(matricule_fiscal) LIKE UPPER('%%1%') "
+        "OR UPPER(type_produit) LIKE UPPER('%%1%') "
+        "ORDER BY nom_entreprise"
     ).arg(terme);
     
     model->setQuery(queryStr, Connection::instance()->getDatabase());
@@ -160,9 +160,9 @@ QSqlQueryModel* FournisseurData::trierPar(const QString &colonne)
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     
-    QString queryStr = QString("SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
-                               "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT "
-                               "FROM FOURNISSEURS ORDER BY %1").arg(colonne);
+    QString queryStr = QString("SELECT id_fournisseur, nom_entreprise, email, telephone, matricule_fiscal, "
+                               "type_produit, condition_paiement, statut "
+                               "FROM Fournisseurs ORDER BY %1").arg(colonne);
     
     model->setQuery(queryStr, Connection::instance()->getDatabase());
     

@@ -1,0 +1,69 @@
+═══════════════════════════════════════════════════════════════════════════
+  INSTRUCTIONS DE COMPILATION - ARDUINO
+═══════════════════════════════════════════════════════════════════════════
+
+⚠️ PROBLÈME ACTUEL:
+Les erreurs que vous voyez sont dues au fait que le Makefile n'a pas été 
+régénéré après l'ajout des fichiers Arduino.
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ SOLUTION - 3 MÉTHODES:
+
+MÉTHODE 1: Script automatique (RECOMMANDÉ)
+-------------------------------------------
+Double-cliquez sur: rebuild_arduino.bat
+
+Ce script va:
+1. Nettoyer les anciens Makefiles
+2. Régénérer le Makefile avec qmake
+3. Compiler le projet
+
+
+MÉTHODE 2: Qt Creator (SI VOUS UTILISEZ L'IDE)
+-----------------------------------------------
+1. Ouvrir Qt Creator
+2. Clic droit sur le projet → "Exécuter qmake"
+3. Clic droit sur le projet → "Reconstruire"
+
+
+MÉTHODE 3: Ligne de commande manuelle
+--------------------------------------
+1. Ouvrir un terminal dans le dossier du projet
+2. Exécuter:
+   qmake
+   mingw32-make clean
+   mingw32-make
+
+═══════════════════════════════════════════════════════════════════════════
+
+📋 VÉRIFICATION:
+
+Après compilation, vous devriez voir:
+✅ Aucune erreur "Arduino was not declared"
+✅ Aucune erreur "unused parameter"
+✅ Le fichier .exe généré avec succès
+
+═══════════════════════════════════════════════════════════════════════════
+
+🔍 FICHIERS MODIFIÉS:
+
+✓ arduino.h              - Classe Arduino créée
+✓ arduino.cpp            - Implémentation créée
+✓ mainwindow.h           - Include arduino.h ajouté
+✓ mainwindow.cpp         - Fonction onTestArduino() ajoutée
+✓ matieredetection.cpp   - Paramètre materialType utilisé
+✓ sans_titre.pro         - serialport et fichiers Arduino ajoutés
+
+═══════════════════════════════════════════════════════════════════════════
+
+💡 POURQUOI CES ERREURS?
+
+Le compilateur utilise un Makefile généré par qmake. Quand vous ajoutez de
+nouveaux fichiers (.cpp/.h) ou modules Qt (serialport), le Makefile doit
+être régénéré pour inclure ces nouveaux éléments.
+
+Les erreurs actuelles sont NORMALES et seront résolues après avoir exécuté
+qmake pour régénérer le Makefile.
+
+═══════════════════════════════════════════════════════════════════════════

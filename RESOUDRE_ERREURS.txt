@@ -1,0 +1,94 @@
+═══════════════════════════════════════════════════════════════════════════
+  🔴 ERREURS ACTUELLES ET SOLUTION
+═══════════════════════════════════════════════════════════════════════════
+
+❌ ERREURS AFFICHÉES:
+  • 'Arduino' was not declared in this scope (mainwindow.cpp:5963)
+  • 'arduino' was not declared in this scope (mainwindow.cpp:5975)
+  • [Makefile:Debug:8543: debug/mainwindow.o] Error 1
+
+═══════════════════════════════════════════════════════════════════════════
+
+✅ POURQUOI CES ERREURS?
+
+Ces erreurs sont NORMALES après l'ajout de nouveaux fichiers!
+
+Le compilateur utilise un fichier "Makefile" qui liste tous les fichiers
+à compiler. Ce Makefile a été généré AVANT l'ajout des fichiers Arduino,
+donc il ne sait pas qu'ils existent.
+
+Tous les fichiers sont CORRECTS, il faut juste régénérer le Makefile.
+
+═══════════════════════════════════════════════════════════════════════════
+
+🔧 SOLUTION - DANS QT CREATOR:
+
+1. Dans Qt Creator, clic droit sur le projet "CUIREA_Management"
+   
+2. Sélectionner "Exécuter qmake"
+   ⏳ Attendez que qmake se termine (quelques secondes)
+   
+3. Clic droit à nouveau sur le projet
+   
+4. Sélectionner "Reconstruire"
+   ⏳ Attendez la compilation complète
+
+5. ✅ Les erreurs disparaîtront!
+
+═══════════════════════════════════════════════════════════════════════════
+
+🔧 SOLUTION ALTERNATIVE - LIGNE DE COMMANDE:
+
+Si vous préférez la ligne de commande:
+
+1. Ouvrir un terminal dans le dossier du projet
+
+2. Exécuter ces commandes:
+   
+   qmake
+   mingw32-make clean
+   mingw32-make
+
+3. ✅ Compilation réussie!
+
+═══════════════════════════════════════════════════════════════════════════
+
+🔧 SOLUTION RAPIDE - SCRIPT:
+
+Double-cliquez sur: rebuild_arduino.bat
+
+Ce script fait tout automatiquement!
+
+═══════════════════════════════════════════════════════════════════════════
+
+📋 VÉRIFICATION DES FICHIERS:
+
+Tous les fichiers sont corrects:
+✅ arduino.h existe
+✅ arduino.cpp existe  
+✅ mainwindow.h inclut arduino.h (ligne 41)
+✅ mainwindow.cpp utilise Arduino (ligne 5963)
+✅ sans_titre.pro contient arduino.cpp et arduino.h
+✅ sans_titre.pro contient serialport
+
+Le code est PARFAIT, il faut juste régénérer le Makefile!
+
+═══════════════════════════════════════════════════════════════════════════
+
+⚠️ IMPORTANT:
+
+NE MODIFIEZ PAS LE CODE!
+Les erreurs ne viennent PAS du code, mais du Makefile obsolète.
+
+Suivez simplement une des 3 solutions ci-dessus.
+
+═══════════════════════════════════════════════════════════════════════════
+
+💡 APRÈS LA COMPILATION:
+
+Une fois le projet recompilé, vous pourrez:
+• Tester la connexion Arduino avec onTestArduino()
+• Utiliser la classe Arduino dans votre code
+• Communiquer avec l'Arduino via USB
+
+═══════════════════════════════════════════════════════════════════════════

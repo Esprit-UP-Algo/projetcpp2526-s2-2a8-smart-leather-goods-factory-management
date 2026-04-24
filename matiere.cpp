@@ -44,9 +44,9 @@ bool Matiere::ajouter()
     }
     
     query.prepare("INSERT INTO MATIERES_PREMIERES (ID_MATIERE, NOM, TYPE_MATIERE, "
-                  "QUANTITE_ACTUELLE, SEUIL, DATE_EXPIRATION, REFERENCE, PHOTO_URL, ID_FOURNISSEUR) "
+                  "QUANTITE_ACTUELLE, SEUIL, DATE_EXPIRATION, REFERENCE, PHOTO_URL) "
                   "VALUES (:id, :nom, :type, :quantite, :seuil, "
-                  ":dateExpiration, :reference, :photoUrl, :idFournisseur)");
+                  ":dateExpiration, :reference, :photoUrl)");
     
     query.bindValue(":id", newId);
     query.bindValue(":nom", nom);
@@ -56,7 +56,6 @@ bool Matiere::ajouter()
     query.bindValue(":dateExpiration", dateExpiration);
     query.bindValue(":reference", reference);
     query.bindValue(":photoUrl", photoUrl);
-    query.bindValue(":idFournisseur", idFournisseur);
     
     if (!query.exec()) {
         qDebug() << "❌ Erreur ajout matière:" << query.lastError().text();

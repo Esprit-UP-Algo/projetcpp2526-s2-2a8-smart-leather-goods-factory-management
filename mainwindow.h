@@ -6,6 +6,10 @@
 #include <QMap>
 #include <QSet>
 #include <QPushButton>
+#include <QScrollArea>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QFrame>
 #include <QNetworkAccessManager>
 #include <QProcess>
 #include <QNetworkRequest>
@@ -39,6 +43,7 @@
 #include "matieredetection.h"
 #include "voicematieres.h"
 #include "arduino.h"
+#include "arduinomonitor.h"
 #include <QTimer>
 #include <QPainter>
 #include <QConicalGradient>
@@ -153,8 +158,12 @@ private slots:
     void onAddMatiere();
     void onEditMatiere();
     
-    // Arduino - Test connexion
-    void onTestArduino();
+    // Arduino Monitor - Scénarios température & livraison
+    void onArduinoTemperatureUpdated(double celsius);
+    void onArduinoTemperatureAlert(double celsius, const QString &message);
+    void onArduinoDeliveryValidated(int matiereId, double qty);
+    void onArduinoDeliveryRejected(double measuredKg, double orderedKg, double diffPct);
+    void onStartDeliveryCheck();
 
     // Suppliers
     void on_btnAddFournisseur_clicked();
@@ -199,6 +208,9 @@ private:
     // Classes extraites pour matières premières
     MatiereDetection *matiereDetection;
     VoiceMatieres *voiceMatieres;
+
+    // Arduino Monitor (température stock + balance livraison)
+    ArduinoMonitor *m_arduinoMonitor;
 
     // Voice recognition
     bool voiceListening;
@@ -265,6 +277,12 @@ private:
     NotificationAI      *m_ai      = nullptr;
     NotificationBell    *m_bell    = nullptr;
     NotificationWatcher *m_watcher = nullptr;
+    QPushButton         *m_tempAlertBtn = nullptr;
+    QWidget             *m_tempAlertPanel = nullptr;
+    QScrollArea         *m_tempAlertScroll = nullptr;
+    QWidget             *m_tempAlertContainer = nullptr;
+    QVBoxLayout         *m_tempAlertContainerLayout = nullptr;
+    int                  m_tempAlertCount = 0;
 };
 
 #endif // MAINWINDOW_H

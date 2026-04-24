@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "author": "CUIREA",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "wokwi-arduino-uno",
+      "id": "uno",
+      "top": 160,
+      "left": 200,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-breadboard",
+      "id": "bb1",
+      "top": 0,
+      "left": -120,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht1",
+      "top": -80,
+      "left": -300,
+      "attrs": { "temperature": "35", "humidity": "60" }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot1",
+      "top": -80,
+      "left": -160,
+      "attrs": { "value": "0.49", "label": "Balance" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledTempRed",
+      "top": -80,
+      "left": -40,
+      "attrs": { "color": "red", "label": "TEMP" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledWeightRed",
+      "top": -80,
+      "left": 20,
+      "attrs": { "color": "red", "label": "POIDS NOK" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "ledWeightGreen",
+      "top": -80,
+      "left": 70,
+      "attrs": { "color": "green", "label": "POIDS OK" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 20,
+      "left": -40,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r2",
+      "top": 20,
+      "left": 20,
+      "attrs": { "value": "220" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r3",
+      "top": 20,
+      "left": 70,
+      "attrs": { "value": "220" }
+    }
+  ],
+  "connections": [
+    [ "dht1:VCC", "uno:5V",  "red",    [ "v0" ] ],
+    [ "dht1:GND", "uno:GND", "black",  [ "v0" ] ],
+    [ "dht1:SDA", "uno:2",   "green",  [ "v0" ] ],
+
+    [ "pot1:VCC", "uno:5V",  "red",    [ "v0" ] ],
+    [ "pot1:GND", "uno:GND", "black",  [ "v0" ] ],
+    [ "pot1:SIG", "uno:A0",  "orange", [ "v0" ] ],
+
+    [ "ledTempRed:A",     "r1:1",   "red",   [ "v0" ] ],
+    [ "r1:2",             "uno:7",  "red",   [ "v0" ] ],
+    [ "ledTempRed:C",     "uno:GND","black", [ "v0" ] ],
+
+    [ "ledWeightRed:A",   "r2:1",   "red",   [ "v0" ] ],
+    [ "r2:2",             "uno:9",  "red",   [ "v0" ] ],
+    [ "ledWeightRed:C",   "uno:GND","black", [ "v0" ] ],
+
+    [ "ledWeightGreen:A", "r3:1",   "green", [ "v0" ] ],
+    [ "r3:2",             "uno:10", "green", [ "v0" ] ],
+    [ "ledWeightGreen:C", "uno:GND","black", [ "v0" ] ]
+  ]
+}

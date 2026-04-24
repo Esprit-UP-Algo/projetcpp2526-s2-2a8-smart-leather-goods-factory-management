@@ -1,32 +1,77 @@
-﻿#ifndef ARDUINO_H
+#ifndef ARDUINO_H
 #define ARDUINO_H
 
+#include <QObject>
 #include <QSerialPort>
 #include <QSerialPortInfo>
 #include <QString>
 #include <QByteArray>
+#include <QTimer>
 
-class Arduino
+// ─────────────────────────────────────────────────────────────────────────────
+//  Arduino — Gestion de la communication série avec la carte Arduino
+//  Protocole texte ligne par ligne :
+//    Arduino → Qt  :  "TEMP:25.3"  |  "WEIGHT:45.2"  |  "WEIGHT_STABLE:45.2"
+//    Qt → Arduino  :  "LED_RED\n"  |  "LED_GREEN\n"   |  "LED_OFF\n"
+//                     "READ_TEMP\n"|  "READ_WEIGHT\n"
+// ─────────────────────────────────────────────────────────────────────────────
+class Arduino : public QObject
 {
+    Q_OBJECT
+
 public:
-    Arduino();
+    explicit Arduino(QObject *parent = nullptr);
     ~Arduino();
-    
-    int connect_arduino();
+
+    // Connexion
+    int  connect_arduino();
     void close_arduino();
     bool isConnected() const;
-    
-    int write_to_arduino(const QByteArray &data);
+
+    // Communication bas niveau
+    int        write_to_arduino(const QByteArray &data);
     QByteArray read_from_arduino();
-    
+
+    // Commandes LED
+    void ledRed();
+    void ledGreen();
+    void ledOff();
+
+    // Demandes de lecture capteurs
+    void requestTemperature();
+    void requestWeight();
+
+    // Info
     QString getPortName() const;
 
+    // Démarrer/arrêter la lecture continue (signal readyRead)
+    void startContinuousRead();
+    void stopContinuousRead();
+
+signals:
+    // Émis quand une température valide est reçue
+    void temperatureReceived(double celsius);
+    // Émis quand un poids valide est reçu (lecture en cours)
+    void weightReceived(double kg);
+    // Émis quand le poids est stable (mesure finale)
+    void weightStable(double kg);
+    // Émis sur erreur de communication
+    void errorOccurred(const QString &message);
+
+private slots:
+    void onSerialDataReady();
+
 private:
-    QSerialPort *serial;
-    bool arduino_available;
-    QString arduino_port_name;
-    
     QString findArduinoPort();
+    void    parseLine(const QString &line);
+
+    QSerialPort *serial;
+    bool         arduino_available;
+    QString      arduino_port_name;
+    QByteArray   m_readBuffer;   // buffer pour les lignes incomplètes
+
+    static const quint16 ARDUINO_VENDOR_ID  = 9025;   // 0x2341
+    static const quint16 ARDUINO_PRODUCT_ID = 67;     // Uno
 };
 
-#endif
+#endif // ARDUINO_H

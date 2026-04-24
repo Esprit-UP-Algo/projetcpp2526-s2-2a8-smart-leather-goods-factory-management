@@ -6,6 +6,8 @@
 #include "statscharts.h"
 #include "usersession.h"
 #include "logindialog.h"
+#include "arduinomonitor.h"
+#include "emailalerte.h"
 #include <QStatusBar>
 #include <QRegularExpression>
 #include <QMouseEvent>
@@ -44,6 +46,8 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QProgressBar>
+#include <QLineEdit>
+#include <QDoubleValidator>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -248,6 +252,24 @@ MainWindow::MainWindow(QWidget *parent)
     // Initialiser les classes extraites pour matières premières
     matiereDetection = new MatiereDetection(this, ui->matiereTable, networkManager, apiUrl);
     voiceMatieres = new VoiceMatieres(this, ui->matiereTable);
+
+    // ── Arduino Monitor (Scénario 1 : température + Scénario 2 : balance) ──
+    m_arduinoMonitor = new ArduinoMonitor(this);
+    connect(m_arduinoMonitor, &ArduinoMonitor::temperatureUpdated,
+            this, &MainWindow::onArduinoTemperatureUpdated);
+    connect(m_arduinoMonitor, &ArduinoMonitor::temperatureAlert,
+            this, &MainWindow::onArduinoTemperatureAlert);
+    connect(m_arduinoMonitor, &ArduinoMonitor::deliveryValidated,
+            this, &MainWindow::onArduinoDeliveryValidated);
+    connect(m_arduinoMonitor, &ArduinoMonitor::deliveryRejected,
+            this, &MainWindow::onArduinoDeliveryRejected);
+    // Navigation depuis la notification température → onglet Matières Premières
+    connect(m_arduinoMonitor, &ArduinoMonitor::navigateToMatieres, this, [this](){
+        switchPage(2, ui->btnRawMaterials, "CUIREA - Matières Premières");
+    });
+    // Démarrer la surveillance température automatiquement si Arduino connecté
+    if (m_arduinoMonitor->isConnected())
+        m_arduinoMonitor->startTemperatureMonitoring();
     //=========================MAPFOURNISSEUR
     mapService = new Map(this);
 
@@ -441,6 +463,154 @@ MainWindow::MainWindow(QWidget *parent)
     m_bell = new NotificationBell(this);
     m_bell->raise();
 
+    // ── Indicateur alerte température Arduino ────────────────────────────────
+    m_tempAlertBtn = new QPushButton("🌡", this);
+    m_tempAlertBtn->setFixedSize(42, 42);
+    m_tempAlertBtn->setToolTip("Alertes Température Stock Cuir");
+    m_tempAlertBtn->setStyleSheet(
+        "QPushButton {"
+        "  background: #8D6E63;"
+        "  color: white;"
+        "  border: none;"
+        "  border-radius: 21px;"
+        "  font-size: 18px;"
+        "}"
+        "QPushButton:hover { background: #D32F2F; }");
+    m_tempAlertBtn->setVisible(false); // visible uniquement sur page Matières (index 2)
+    m_tempAlertBtn->raise();
+
+    // Panel d'historique des alertes température
+    m_tempAlertPanel = new QWidget(this);
+    m_tempAlertPanel->setFixedWidth(340);
+    m_tempAlertPanel->setStyleSheet(
+        "QWidget { background:#2B1A12; border-radius:10px; }"
+        "QLabel { color:white; }"
+        "QPushButton { background:#8D6E63; color:white; border:none; border-radius:4px; padding:4px 10px; }");
+    m_tempAlertPanel->setVisible(false);
+    m_tempAlertPanel->raise();
+
+    auto *panelLayout = new QVBoxLayout(m_tempAlertPanel);
+    panelLayout->setContentsMargins(12,12,12,12);
+    panelLayout->setSpacing(8);
+
+    auto *panelHeader = new QHBoxLayout();
+    auto *panelTitle = new QLabel("🌡 Alertes Température", m_tempAlertPanel);
+    panelTitle->setStyleSheet("font-size:14px;font-weight:bold;color:white;");
+    auto *btnClearAlerts = new QPushButton("Effacer", m_tempAlertPanel);
+    btnClearAlerts->setFixedHeight(24);
+    panelHeader->addWidget(panelTitle);
+    panelHeader->addStretch();
+    panelHeader->addWidget(btnClearAlerts);
+    panelLayout->addLayout(panelHeader);
+
+    auto *separator = new QFrame(m_tempAlertPanel);
+    separator->setFrameShape(QFrame::HLine);
+    separator->setStyleSheet("color:#5D4037;");
+    panelLayout->addWidget(separator);
+
+    m_tempAlertScroll = new QScrollArea(m_tempAlertPanel);
+    m_tempAlertScroll->setWidgetResizable(true);
+    m_tempAlertScroll->setStyleSheet("QScrollArea{border:none;background:transparent;}");
+    m_tempAlertContainer = new QWidget();
+    m_tempAlertContainer->setStyleSheet("background:transparent;");
+    m_tempAlertContainerLayout = new QVBoxLayout(m_tempAlertContainer);
+    m_tempAlertContainerLayout->setSpacing(6);
+    m_tempAlertContainerLayout->addStretch();
+    m_tempAlertScroll->setWidget(m_tempAlertContainer);
+    panelLayout->addWidget(m_tempAlertScroll);
+
+    // Ouvrir/fermer le panel au clic
+    connect(m_tempAlertBtn, &QPushButton::clicked, this, [this](){
+        if (m_tempAlertPanel->isVisible()) {
+            m_tempAlertPanel->setVisible(false);
+        } else {
+            m_tempAlertPanel->setFixedHeight(qMin(400, 80 + m_tempAlertCount * 70));
+            m_tempAlertPanel->move(
+                m_tempAlertBtn->x() - m_tempAlertPanel->width() + m_tempAlertBtn->width(),
+                m_tempAlertBtn->y() + m_tempAlertBtn->height() + 4);
+            m_tempAlertPanel->setVisible(true);
+            m_tempAlertPanel->raise();
+        }
+    });
+
+    // Effacer toutes les alertes
+    connect(btnClearAlerts, &QPushButton::clicked, this, [this](){
+        // Supprimer tous les widgets d'alerte sauf le stretch
+        QLayoutItem *item;
+        while ((item = m_tempAlertContainerLayout->takeAt(0)) != nullptr) {
+            if (item->widget()) item->widget()->deleteLater();
+            delete item;
+        }
+        m_tempAlertContainerLayout->addStretch();
+        m_tempAlertCount = 0;
+        m_tempAlertBtn->setStyleSheet(
+            "QPushButton { background:#8D6E63; color:white; border:none;"
+            "border-radius:21px; font-size:18px; }"
+            "QPushButton:hover { background:#D32F2F; }");
+        m_tempAlertPanel->setVisible(false);
+    });
+
+    // Connecter l'alerte température → ajouter une entrée dans le panel
+    connect(m_arduinoMonitor, &ArduinoMonitor::temperatureAlert,
+            this, [this](double celsius, const QString &msg){
+        // Naviguer vers Matières Premières
+        switchPage(2, ui->btnRawMaterials, "CUIREA - Matières Premières");
+
+        // Créer une carte d'alerte dans le panel
+        auto *card = new QWidget(m_tempAlertContainer);
+        card->setStyleSheet(
+            "QWidget { background:#4A1A0A; border-radius:6px; border-left:3px solid #D32F2F; }");
+        auto *cardLayout = new QHBoxLayout(card);
+        cardLayout->setContentsMargins(10,8,10,8);
+
+        auto *icon = new QLabel("🔴", card);
+        icon->setFixedWidth(24);
+        auto *textLayout = new QVBoxLayout();
+        auto *lblMsg = new QLabel(msg, card);
+        lblMsg->setStyleSheet("color:#FF8A80;font-size:11px;font-weight:bold;");
+        lblMsg->setWordWrap(true);
+        auto *lblTime = new QLabel(QDateTime::currentDateTime().toString("dd/MM/yyyy HH:mm:ss"), card);
+        lblTime->setStyleSheet("color:#BCAAA4;font-size:10px;");
+        textLayout->addWidget(lblMsg);
+        textLayout->addWidget(lblTime);
+        cardLayout->addWidget(icon);
+        cardLayout->addLayout(textLayout);
+
+        // Insérer avant le stretch
+        m_tempAlertContainerLayout->insertWidget(m_tempAlertContainerLayout->count()-1, card);
+        m_tempAlertCount++;
+
+        // Mettre à jour le bouton en rouge avec badge (visible seulement si on est sur Matières)
+        if (ui->stackedWidget->currentIndex() == 2)
+            m_tempAlertBtn->setVisible(true);
+        m_tempAlertBtn->setStyleSheet(
+            "QPushButton { background:#D32F2F; color:white; border:2px solid #FF5252;"
+            "border-radius:21px; font-size:18px; }"
+            "QPushButton:hover { background:#B71C1C; }");
+        m_tempAlertBtn->setToolTip(
+            QString("⚠ %1 alerte(s) température\nDernière : %2°C")
+                .arg(m_tempAlertCount).arg(celsius, 0, 'f', 1));
+        m_tempAlertBtn->raise();
+        m_tempAlertPanel->setFixedHeight(qMin(400, 80 + m_tempAlertCount * 70));
+    });
+
+    // Température normale → bouton vert
+    connect(m_arduinoMonitor, &ArduinoMonitor::temperatureUpdated,
+            this, [this](double celsius){
+        bool normal = (celsius >= ArduinoMonitor::TEMP_MIN_CELSIUS &&
+                       celsius <= ArduinoMonitor::TEMP_MAX_CELSIUS);
+        m_tempAlertBtn->setVisible(ui->stackedWidget->currentIndex() == 2);
+        if (normal && m_tempAlertCount == 0) {
+            m_tempAlertBtn->setStyleSheet(
+                "QPushButton { background:#2E7D32; color:white; border:none;"
+                "border-radius:21px; font-size:18px; }"
+                "QPushButton:hover { background:#388E3C; }");
+            m_tempAlertBtn->setToolTip(
+                QString("✅ Température normale : %1°C").arg(celsius, 0, 'f', 1));
+        }
+        m_tempAlertBtn->raise();
+    });
+
     m_watcher = new NotificationWatcher(QSqlDatabase::database(), this);
     if (m_ai) m_watcher->setAI(m_ai);
     m_watcher->start(120000);
@@ -476,6 +646,10 @@ MainWindow::MainWindow(QWidget *parent)
             m_bell->move(width() - m_bell->width() - 12, 6);
             m_bell->setVisible(false); // cachée par défaut, visible seulement en Production
             m_bell->raise();
+        }
+        if (m_tempAlertBtn) {
+            m_tempAlertBtn->move(width() - m_bell->width() - 62, 6);
+            m_tempAlertBtn->raise();
         }
     });
 }
@@ -518,6 +692,10 @@ void MainWindow::resizeEvent(QResizeEvent *event)
         m_bell->move(width() - m_bell->width() - 12, 6);
         m_bell->raise();
     }
+    if (m_tempAlertBtn) {
+        m_tempAlertBtn->move(width() - m_bell->width() - 62, 6);
+        m_tempAlertBtn->raise();
+    }
 }
 
 // ── Navigation helpers ────────────────────────────────────────────────────────
@@ -539,9 +717,22 @@ void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &ti
 
     // Cloche et toasts visibles uniquement sur la page Production (index 4)
     if (m_bell) m_bell->setVisible(index == 4);
-    NotificationWidget::setToastsEnabled(index == 4);
-    // Fermer les toasts actifs quand on quitte Production
-    if (index != 4) NotificationWidget::closeAll();
+    // Toasts activés sur Production (index 4) ET Matières Premières (index 2)
+    NotificationWidget::setToastsEnabled(index == 4 || index == 2);
+    // Fermer les toasts actifs quand on quitte ces pages
+    if (index != 4 && index != 2) NotificationWidget::closeAll();
+
+    // Bouton 🌡 alerte température — visible uniquement sur Matières Premières
+    if (m_tempAlertBtn) {
+        bool onMatieres = (index == 2);
+        m_tempAlertBtn->setVisible(onMatieres);
+        if (!onMatieres && m_tempAlertPanel)
+            m_tempAlertPanel->setVisible(false); // fermer le panel si on quitte
+        if (onMatieres) {
+            m_tempAlertBtn->move(width() - m_bell->width() - 62, 6);
+            m_tempAlertBtn->raise();
+        }
+    }
 }
 
 void MainWindow::on_btnEmployees_clicked()  
@@ -1317,7 +1508,6 @@ void MainWindow::onAddMatiere()
     matiere.setQuantite(dlg.getQuantite().split(" ").first().toDouble());
     matiere.setSeuil(dlg.getSeuil().toInt());
     matiere.setDateExpiration(QDate::fromString(dlg.getDateExpiration(), "yyyy-MM-dd"));
-    matiere.setIdFournisseur(1);
     matiere.setPhotoUrl(dlg.getPhotoUrl());
     
     if (matiere.ajouter()) {
@@ -1572,36 +1762,58 @@ void MainWindow::onExportMatiere()
       </div>
     </div>
     )";
-    //Liste détaillée
-    html += R"(<div class="section-title">LISTE DETAILLEE DES MATIERES</div>)";
+    //Liste des produits proches du seuil
+    html += R"(<div class="section-title">PRODUITS PROCHES DU SEUIL - REAPPROVISIONNEMENT</div>)";
     html += R"(
     <table class="detail-table">
       <tr>
         <th>Module</th><th>Reference</th><th>Type</th>
-        <th>Quantite</th><th>Seuil</th><th>Expiration</th><th>Statut</th>
+        <th>Quantite Actuelle</th><th>Seuil</th><th>Quantite a Commander</th><th>Statut</th>
       </tr>
     )";
+    
+    // Filtrer uniquement les produits proches du seuil (critique ou normal)
     for (int r = 0; r < total; ++r) {
         double qty   = cellText(ui->matiereTable, r, 3).remove(" m²").toDouble();
         int    seuil = cellText(ui->matiereTable, r, 4).toInt();
-        QString badge, label;
-        if      (qty < seuil * 0.5) { badge = "badge-critique"; label = "Critique"; }
-        else if (qty < seuil)       { badge = "badge-normal";   label = "Normal";   }
-        html += QString(R"(
-        <tr>
-          <td><span class="icon-leather">🐄</span>%1</td>
-          <td>%2</td><td>%3</td><td>%4</td><td>%5</td><td>%6</td>
-          <td><span class="%7">%8</span></td>
-        </tr>
-        )").arg(cellText(ui->matiereTable, r, 0))
-           .arg(cellText(ui->matiereTable, r, 1))
-           .arg(cellText(ui->matiereTable, r, 2))
-           .arg(cellText(ui->matiereTable, r, 3))
-           .arg(cellText(ui->matiereTable, r, 4))
-           .arg(cellText(ui->matiereTable, r, 5))
-           .arg(badge).arg(label);
+        
+        // Afficher seulement si quantité < seuil (critique ou normal)
+        if (qty < seuil) {
+            QString badge, label;
+            double quantiteACommander = seuil * 1.5 - qty; // Commander pour atteindre 150% du seuil
+            
+            if (qty < seuil * 0.5) { 
+                badge = "badge-critique"; 
+                label = "Critique"; 
+            } else { 
+                badge = "badge-normal";   
+                label = "Normal";   
+            }
+            
+            html += QString(R"(
+            <tr>
+              <td><span class="icon-leather">🐄</span>%1</td>
+              <td>%2</td><td>%3</td><td>%4</td><td>%5</td>
+              <td><strong>%6 m²</strong></td>
+              <td><span class="%7">%8</span></td>
+            </tr>
+            )").arg(cellText(ui->matiereTable, r, 0))
+               .arg(cellText(ui->matiereTable, r, 1))
+               .arg(cellText(ui->matiereTable, r, 2))
+               .arg(cellText(ui->matiereTable, r, 3))
+               .arg(cellText(ui->matiereTable, r, 4))
+               .arg(QString::number(quantiteACommander, 'f', 1))
+               .arg(badge).arg(label);
+        }
     }
     html += R"(</table>)";
+    
+    // Note explicative
+    html += R"(
+    <div style="margin-top: 15px; padding: 12px; background: #FFF3CD; border-left: 4px solid #FFC107; border-radius: 4px;">
+      <strong>📋 Note:</strong> La quantité à commander est calculée pour atteindre 150% du seuil de sécurité.
+    </div>
+    )";
     //Footer
     html += R"(
     <div class="footer">
@@ -1691,16 +1903,31 @@ void MainWindow::onStatistiquesMatiere()
     // Donut Chart - Répartition stock (CRITICITÉ) 
     auto *pieSeries = new QPieSeries();
     pieSeries->setHoleSize(0.5);  // Donut chart
+    
     auto *sliceCrit = pieSeries->append("Critique", critique);
     sliceCrit->setBrush(QColor("#B33A3A"));
-    sliceCrit->setLabelVisible(false);
+    sliceCrit->setLabelVisible(true);
+    sliceCrit->setLabelColor(Qt::white);
+    sliceCrit->setLabelPosition(QPieSlice::LabelInsideHorizontal);
+    
     auto *sliceElev = pieSeries->append("Élevé", eleve);
     sliceElev->setBrush(QColor("#E67E22"));
-    sliceElev->setLabelVisible(false);
+    sliceElev->setLabelVisible(true);
+    sliceElev->setLabelColor(Qt::white);
+    sliceElev->setLabelPosition(QPieSlice::LabelInsideHorizontal);
     
     auto *sliceNorm = pieSeries->append("Normal", normal);
     sliceNorm->setBrush(QColor("#95A472"));
-    sliceNorm->setLabelVisible(false);
+    sliceNorm->setLabelVisible(true);
+    sliceNorm->setLabelColor(Qt::white);
+    sliceNorm->setLabelPosition(QPieSlice::LabelInsideHorizontal);
+    
+    // Calculer et afficher les pourcentages
+    if (total > 0) {
+        sliceCrit->setLabel(QString("%1%").arg(QString::number(critique * 100.0 / total, 'f', 1)));
+        sliceElev->setLabel(QString("%1%").arg(QString::number(eleve * 100.0 / total, 'f', 1)));
+        sliceNorm->setLabel(QString("%1%").arg(QString::number(normal * 100.0 / total, 'f', 1)));
+    }
 
     auto *pieChart = new QChart();
     pieChart->addSeries(pieSeries);
@@ -2047,11 +2274,13 @@ void MainWindow::refreshFournisseurTable()
     QSqlQueryModel* model = f.afficher();
     
     if (!model) {
+        qDebug() << "❌ Erreur: model est NULL";
         return;
     }
     
     // Charger depuis le modèle BD
     int n = model->rowCount();
+    qDebug() << "✅ Nombre de fournisseurs:" << n;
     ui->fournisseurTable->setRowCount(n);
     
     for (int i = 0; i < n; ++i) {
@@ -5954,43 +6183,130 @@ void MainWindow::logout()
     }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ARDUINO - Test de connexion simple
-// ══════════════════════════════════════════════════════════════════════════════
-
-void MainWindow::onTestArduino()
+// ─────────────────────────────────────────────────────────────────────────────
+//  Slots Arduino Monitor — Scénario 1 : Température
+// ─────────────────────────────────────────────────────────────────────────────
+void MainWindow::onArduinoTemperatureUpdated(double celsius)
 {
-    Arduino arduino;
-    
-    QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Test Connexion Arduino");
-    msgBox.setStyleSheet(
-        "QMessageBox { background-color: #FAF5F0; }"
-        "QMessageBox QLabel { color: #291C0E; font-size: 12px; }"
-        "QPushButton { background-color: #8D6E63; color: white; border: none; "
-        "border-radius: 6px; padding: 8px 20px; font-size: 12px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #A0826D; }"
-    );
-    
-    int result = arduino.connect_arduino();
-    
-    if (result == 0) {
-        msgBox.setIcon(QMessageBox::Information);
-        msgBox.setText(QString("✅ Arduino connecté avec succès!\n\n"
-                               "Port: %1\n"
-                               "Baud Rate: 9600\n\n"
-                               "La connexion est fonctionnelle.")
-                       .arg(arduino.getPortName()));
-    } else {
-        msgBox.setIcon(QMessageBox::Warning);
-        msgBox.setText("❌ Aucun Arduino détecté!\n\n"
-                      "Vérifiez que:\n"
-                      "• L'Arduino est branché en USB\n"
-                      "• Les drivers sont installés\n"
-                      "• Le port COM est disponible\n\n"
-                      "Ports testés: COM3-COM8");
+    // Mettre à jour un label de statut dans l'onglet Matières Premières si disponible
+    // (chercher un widget nommé lblArduinoTemp dans l'UI)
+    QLabel *lbl = findChild<QLabel*>("lblArduinoTemp");
+    if (lbl) {
+        lbl->setText(QString("🌡 Stock: %1°C").arg(celsius, 0, 'f', 1));
+        bool alert = (celsius > ArduinoMonitor::TEMP_MAX_CELSIUS ||
+                      celsius < ArduinoMonitor::TEMP_MIN_CELSIUS);
+        lbl->setStyleSheet(alert
+            ? "color:#D32F2F;font-weight:bold;background:#FFEBEE;padding:4px;border-radius:4px;"
+            : "color:#2E7D32;font-weight:bold;background:#E8F5E9;padding:4px;border-radius:4px;");
     }
-    
-    msgBox.exec();
-    arduino.close_arduino();
 }
+
+void MainWindow::onArduinoTemperatureAlert(double celsius, const QString &message)
+{
+    Q_UNUSED(celsius)
+    // La notification toast est déjà affichée par ArduinoMonitor.
+    // Ici on peut naviguer vers l'onglet Matières si nécessaire.
+    qDebug() << "🌡 Alerte température dans MainWindow:" << message;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Slots Arduino Monitor — Scénario 2 : Livraison
+// ─────────────────────────────────────────────────────────────────────────────
+void MainWindow::onArduinoDeliveryValidated(int matiereId, double qty)
+{
+    // Mettre à jour la quantité de la matière dans la BD
+    QSqlQuery q(Connection::instance()->getDatabase());
+    q.prepare("UPDATE MATIERES_PREMIERES "
+              "SET QUANTITE_ACTUELLE = QUANTITE_ACTUELLE + :qty "
+              "WHERE ID_MATIERE = :id");
+    q.bindValue(":qty", qty);
+    q.bindValue(":id",  matiereId);
+    if (q.exec()) {
+        qDebug() << "✅ Quantité matière" << matiereId << "mise à jour (+%1 kg)" << qty;
+        setupMatiereTable();  // Rafraîchir le tableau
+    } else {
+        qDebug() << "❌ Erreur mise à jour quantité:" << q.lastError().text();
+    }
+}
+
+void MainWindow::onArduinoDeliveryRejected(double measuredKg, double orderedKg, double diffPct)
+{
+    // NOK : LED rouge déjà allumée par ArduinoMonitor, email envoyé.
+    // Juste log pour debug.
+    qDebug() << "🔴 Livraison NOK — mesuré:" << measuredKg
+             << "kg | commandé:" << orderedKg << "kg | écart:" << diffPct << "%";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Démarrer une vérification de livraison depuis l'onglet Fournisseurs
+// ─────────────────────────────────────────────────────────────────────────────
+void MainWindow::onStartDeliveryCheck()
+{
+    // Récupérer la ligne sélectionnée dans le tableau fournisseurs
+    QTableWidget *tbl = findChild<QTableWidget*>("fournisseurTable");
+    if (!tbl || tbl->currentRow() < 0) {
+        QMessageBox::warning(this, "Sélection requise",
+                             "Veuillez sélectionner un fournisseur dans la liste.");
+        return;
+    }
+
+    int row = tbl->currentRow();
+    QString fournisseurId  = tbl->item(row, 0) ? tbl->item(row, 0)->text() : "";
+    QString fournisseurEmail = tbl->item(row, 2) ? tbl->item(row, 2)->text() : "";
+
+    // Demander la matière et la quantité commandée
+    QDialog dlg(this);
+    dlg.setWindowTitle("Vérification Livraison Balance");
+    dlg.setStyleSheet("QDialog{background:#FAF5F0;} QLabel{color:#291C0E;font-weight:bold;}"
+                      "QLineEdit,QComboBox{background:white;border:2px solid #BCAAA4;"
+                      "border-radius:6px;padding:8px;} "
+                      "QPushButton{background:#8D6E63;color:white;border:none;border-radius:6px;"
+                      "padding:8px 20px;font-weight:bold;}"
+                      "QPushButton:hover{background:#A0826D;}");
+
+    auto *lay = new QVBoxLayout(&dlg);
+    lay->setSpacing(12); lay->setContentsMargins(20,20,20,20);
+
+    lay->addWidget(new QLabel("Fournisseur ID : " + fournisseurId, &dlg));
+
+    auto *cmbMatiere = new QComboBox(&dlg);
+    // Charger les matières depuis la BD
+    QSqlQuery qm(Connection::instance()->getDatabase());
+    qm.exec("SELECT ID_MATIERE, NOM FROM MATIERES_PREMIERES ORDER BY NOM");
+    while (qm.next())
+        cmbMatiere->addItem(qm.value(1).toString(), qm.value(0).toInt());
+    lay->addWidget(new QLabel("Matière livrée :", &dlg));
+    lay->addWidget(cmbMatiere);
+
+    auto *txtQty = new QLineEdit(&dlg);
+    txtQty->setPlaceholderText("Quantité commandée (kg)");
+    txtQty->setValidator(new QDoubleValidator(0.01, 99999.99, 2, &dlg));
+    lay->addWidget(new QLabel("Quantité commandée (kg) :", &dlg));
+    lay->addWidget(txtQty);
+
+    auto *btnRow = new QHBoxLayout();
+    auto *btnOk  = new QPushButton("⚖ Lancer la pesée", &dlg);
+    auto *btnAnn = new QPushButton("Annuler", &dlg);
+    btnAnn->setStyleSheet("QPushButton{background:#BCAAA4;color:white;border:none;"
+                          "border-radius:6px;padding:8px 20px;font-weight:bold;}");
+    btnRow->addStretch(); btnRow->addWidget(btnOk); btnRow->addWidget(btnAnn);
+    lay->addLayout(btnRow);
+
+    connect(btnOk,  &QPushButton::clicked, &dlg, &QDialog::accept);
+    connect(btnAnn, &QPushButton::clicked, &dlg, &QDialog::reject);
+
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    bool ok;
+    double orderedQty = txtQty->text().toDouble(&ok);
+    if (!ok || orderedQty <= 0) {
+        QMessageBox::warning(this, "Valeur invalide", "Entrez une quantité valide.");
+        return;
+    }
+
+    int matiereId = cmbMatiere->currentData().toInt();
+
+    m_arduinoMonitor->startDeliveryCheck(
+        fournisseurId.toInt(), matiereId, orderedQty);
+}
+
