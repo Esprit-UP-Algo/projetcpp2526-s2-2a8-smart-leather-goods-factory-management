@@ -16,14 +16,36 @@ ArduinoConnection::~ArduinoConnection()
 // ─── Connexion ──────────────────────────
 int ArduinoConnection::connect_arduino()
 {
+    // 7 VID/PID connus : Uno officiel, clones CH340, CP2102, FTDI
+    static const QList<QPair<quint16,quint16>> knownIds = {
+        {0x2341, 0x0043},  // Arduino Uno officiel
+        {0x2341, 0x0001},  // Arduino Uno officiel (ancien)
+        {0x1A86, 0x7523},  // Clone CH340
+        {0x1A86, 0x5523},  // Clone CH340G
+        {0x10C4, 0xEA60},  // Clone CP2102
+        {0x0403, 0x6001},  // FTDI FT232RL
+        {0x0403, 0x6015},  // FTDI FT231X
+    };
+
+    qDebug() << "=== Ports série disponibles ===";
     foreach (const QSerialPortInfo &port, QSerialPortInfo::availablePorts()) {
+        qDebug() << " Port:" << port.portName()
+                 << "VID:" << QString("0x%1").arg(port.vendorIdentifier(), 4, 16, QChar('0')).toUpper()
+                 << "PID:" << QString("0x%1").arg(port.productIdentifier(), 4, 16, QChar('0')).toUpper()
+                 << "Desc:" << port.description();
+
         if (port.hasVendorIdentifier() && port.hasProductIdentifier()) {
-            if (port.vendorIdentifier()  == arduino_uno_vendor_id &&
-                port.productIdentifier() == arduino_uno_product_id) {
-                arduino_is_available = true;
-                arduino_port_name = port.portName();
+            for (const auto &id : knownIds) {
+                if (port.vendorIdentifier()  == id.first &&
+                    port.productIdentifier() == id.second) {
+                    arduino_is_available = true;
+                    arduino_port_name = port.portName();
+                    qDebug() << "✅ Arduino détecté sur" << arduino_port_name;
+                    break;
+                }
             }
         }
+        if (arduino_is_available) break;
     }
 
     if (arduino_is_available) {
@@ -36,8 +58,10 @@ int ArduinoConnection::connect_arduino()
             serial->setFlowControl(QSerialPort::NoFlowControl);
             return 0;   // ✅ connecté
         }
+        qDebug() << "⚠️ Port trouvé mais impossible à ouvrir:" << serial->errorString();
         return 1;       // ❌ port trouvé mais pas ouvert
     }
+    qDebug() << "❌ Aucun Arduino détecté";
     return -1;          // ❌ Arduino non trouvé
 }
 

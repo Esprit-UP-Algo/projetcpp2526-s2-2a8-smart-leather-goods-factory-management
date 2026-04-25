@@ -166,9 +166,10 @@ private slots:
     void on_btnmap_clicked();
 
     // Arduino
-    void on_btnExpedier_clicked();       // toggle → affiche saisir/expédier
-    void expedierActionArduino();        // OUTPUT → envoyer "1" ou "0"
+    void expedierActionArduino();        // OUTPUT → envoyer "1" à l'Arduino
     void recevoir_donnee();              // INPUT  ← données Arduino
+    void setupKeypadSimulator();         // crée le keypad simulateur Qt
+    void traiterMessageArduino(const QString &msg); // logique partagée
 
     // Articles
     void on_btnAddArticle_clicked();
@@ -258,6 +259,10 @@ private:
     // Arduino
     Arduino A;
     QByteArray arduinoData;
+    QLabel *m_arduinoIndicator = nullptr; // indicateur connexion vert/rouge
+    QString m_keypadBuffer;               // buffer saisie simulateur
+    QLabel *m_lcdLigne1 = nullptr;        // miroir LCD ligne 1
+    QLabel *m_lcdLigne2 = nullptr;        // miroir LCD ligne 2
 
     // Production sort state
     int  m_productionSortCol;

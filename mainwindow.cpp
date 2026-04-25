@@ -422,26 +422,31 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnExcelProduction,       &QPushButton::clicked, this, &MainWindow::onExcelProduction);
     connect(ui->btnTrierProduction,       &QPushButton::clicked, this, &MainWindow::onTrierProduction);
     connect(ui->btnStatistiquesProduction,&QPushButton::clicked, this, &MainWindow::onStatistiquesProduction);
-    connect(ui->btnExpedier,              &QPushButton::clicked, this, &MainWindow::on_btnExpedier_clicked);
-    connect(ui->btnSaisir, &QPushButton::clicked, this, [this]() {
-        // Saisie uniquement via keypad Arduino — ce bouton est juste un indicateur
-        QMessageBox::information(this, "Saisie Arduino",
-            "Utilisez le clavier 16 touches connecté à l'Arduino\n"
-            "pour saisir l'ID de la commande.\n\n"
-            "Appuyez sur # pour confirmer.");
-        ui->btnSaisir->setVisible(false);
-        ui->btnExpedierAction->setVisible(false);
-        ui->btnExpedier->setVisible(true);
-    });
-    connect(ui->btnExpedierAction, &QPushButton::clicked, this, &MainWindow::expedierActionArduino);
+    connect(ui->btnExpedier,              &QPushButton::clicked, this, &MainWindow::expedierActionArduino);
     connect(ui->searchBoxProduction, &QLineEdit::textChanged, this, &MainWindow::onRechercherProduction);
 
     // ── Arduino ──────────────────────────────────────────────────────────────
     {
+        // Indicateur de connexion (overlay coin supérieur droit, visible sur page Production)
+        m_arduinoIndicator = new QLabel(this);
+        m_arduinoIndicator->setFixedSize(160, 24);
+        m_arduinoIndicator->setAlignment(Qt::AlignCenter);
+        m_arduinoIndicator->setStyleSheet(
+            "QLabel { border-radius: 12px; font-size: 11px; font-weight: bold; "
+            "background-color: #E74C3C; color: white; }");
+        m_arduinoIndicator->setText("● Non connecté");
+        m_arduinoIndicator->setVisible(false);
+        m_arduinoIndicator->raise();
+
         int ret = A.connection()->connect_arduino();
         switch (ret) {
         case 0:
             qDebug() << "✅ Arduino connecté :" << A.connection()->getPortName();
+            m_arduinoIndicator->setText("● Arduino connecté");
+            m_arduinoIndicator->setStyleSheet(
+                "QLabel { border-radius: 12px; font-size: 11px; font-weight: bold; "
+                "background-color: #27AE60; color: white; }");
+            ui->btnExpedier->setText("🚚 Expédier");
             QObject::connect(A.connection()->getSerial(), SIGNAL(readyRead()),
                              this, SLOT(recevoir_donnee()));
             break;
@@ -452,6 +457,9 @@ MainWindow::MainWindow(QWidget *parent)
             qDebug() << "❌ Arduino non trouvé";
             break;
         }
+
+        // Simulateur keypad Qt (inséré dans la page Production)
+        setupKeypadSimulator();
     }
 
     // ── Timer retard notifications ───────────────────────────────────────────
@@ -548,6 +556,10 @@ void MainWindow::resizeEvent(QResizeEvent *event)
         m_bell->move(width() - m_bell->width() - 12, 6);
         m_bell->raise();
     }
+    if (m_arduinoIndicator) {
+        m_arduinoIndicator->move(width() - m_arduinoIndicator->width() - 12, 70);
+        m_arduinoIndicator->raise();
+    }
 }
 
 // ── Navigation helpers ────────────────────────────────────────────────────────
@@ -569,6 +581,8 @@ void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &ti
 
     // Cloche visible uniquement sur la page Production (index 4)
     if (m_bell) m_bell->setVisible(index == 4);
+    // Indicateur Arduino visible uniquement sur la page Production (index 4)
+    if (m_arduinoIndicator) m_arduinoIndicator->setVisible(index == 4);
     // Fermer les toasts actifs si présents
     if (index != 4) NotificationWidget::closeAll();
 }
@@ -6012,108 +6026,222 @@ void MainWindow::logout()
     }
 }
 
-// ── Arduino : toggle boutons saisir/expédier ─────────────────────────────────
-void MainWindow::on_btnExpedier_clicked()
-{
-    ui->btnExpedier->setVisible(false);
-    ui->btnSaisir->setVisible(true);
-    ui->btnExpedierAction->setVisible(true);
-}
 
-// ── Arduino : expédier une commande (OUTPUT) ──────────────────────────────────
+// ── Arduino : expédier une commande (OUTPUT) — 4 cas ─────────────────────────
 void MainWindow::expedierActionArduino()
 {
+    // CAS 1 : Arduino non connecté → tentative reconnexion
+    if (!A.connection()->getSerial()->isOpen()) {
+        int ret = A.connection()->connect_arduino();
+        if (ret == 0) {
+            if (m_arduinoIndicator) {
+                m_arduinoIndicator->setText("● Arduino connecté");
+                m_arduinoIndicator->setStyleSheet(
+                    "QLabel { border-radius: 12px; font-size: 11px; font-weight: bold; "
+                    "background-color: #27AE60; color: white; }");
+            }
+            QObject::connect(A.connection()->getSerial(), SIGNAL(readyRead()),
+                             this, SLOT(recevoir_donnee()));
+        } else {
+            QMessageBox::warning(this, "Arduino non connecté",
+                "Impossible d'expédier. Vérifiez la connexion série.");
+            return;
+        }
+    }
+
+    // CAS 2 : aucune ligne sélectionnée
     int row = ui->productionTable->currentRow();
     if (row < 0 || ui->productionTable->selectedItems().isEmpty()) {
-        QMessageBox::warning(this, "Attention",
-            "Veuillez sélectionner une commande dans le tableau !");
-        return;  // boutons restent visibles
+        QMessageBox::warning(this, "Attention", "Veuillez sélectionner une commande.");
+        return;
     }
-
-    // Fermer les boutons seulement si une ligne est sélectionnée
-    ui->btnSaisir->setVisible(false);
-    ui->btnExpedierAction->setVisible(false);
-    ui->btnExpedier->setVisible(true);
 
     QString ref    = cellText(ui->productionTable, row, 1);
+    QString client = cellText(ui->productionTable, row, 2);
     QString statut = cellText(ui->productionTable, row, 8);
 
-    // ── CAS 1 : commande Terminée ✅ ──────────────────────────────────────────
-    if (statut == "Terminé") {
-        if (A.connection()->getSerial()->isOpen())
-            A.write_to_arduino("1");
-        else
-            qDebug() << "⚠️ Arduino non connecté — envoi ignoré";
-
-        QSqlQuery update;
-        update.prepare("UPDATE COMMANDES SET STATUT = 'En livraison' WHERE REFERENCE = :ref");
-        update.bindValue(":ref", ref);
-        if (!update.exec())
-            qDebug() << "Erreur UPDATE:" << update.lastError().text();
-
-        QMessageBox::information(this, "Expédition lancée",
-            "Référence    : " + ref    + "\n"
-            "Statut avant : Terminé\n"
-            "Statut après : En livraison\n"
-            "Arduino reçoit : 1\n"
-            "Servos         : Démarrés !");
-
-        loadProductionData();
-
-    // ── CAS 2 : commande pas Terminée ❌ ──────────────────────────────────────
-    } else {
-        if (A.connection()->getSerial()->isOpen())
-            A.write_to_arduino("0");
-
+    // CAS 3 : statut != "Terminé"
+    if (statut != "Terminé") {
         QMessageBox::critical(this, "Expédition impossible",
             "Référence     : " + ref    + "\n"
-            "Statut actuel : " + statut + "\n"
-            "Statut requis : Terminé\n"
-            "Arduino reçoit : 0\n"
-            "Servos         : Bloqués !");
+            "Statut actuel : " + statut + "\n\n"
+            "La commande doit être Terminé.");
+        return;
     }
+
+    // CAS 4 : statut == "Terminé" → expédier
+    A.write_to_arduino("1");
+
+    QString dateStr = QDate::currentDate().toString("dd/MM/yyyy");
+    QSqlQuery update;
+    update.prepare(
+        "UPDATE COMMANDES SET STATUT = 'En livraison', "
+        "DATE_LIVRAISON = TO_DATE(:date, 'DD/MM/YYYY') "
+        "WHERE REFERENCE = :ref");
+    update.bindValue(":date", dateStr);
+    update.bindValue(":ref",  ref);
+    if (!update.exec())
+        qDebug() << "Erreur UPDATE:" << update.lastError().text();
+
+    loadProductionData();
+
+    QMessageBox::information(this, "Expédition lancée",
+        "Référence  : " + ref    + "\n"
+        "Client     : " + client + "\n"
+        "Statut     : En livraison\n"
+        "Date       : " + dateStr);
 }
 
 // ── Arduino : recevoir une donnée (INPUT) ─────────────────────────────────────
 void MainWindow::recevoir_donnee()
 {
     arduinoData = A.read_from_arduino();
-    QString msg = QString(arduinoData).trimmed();
-    qDebug() << "Reçu depuis Arduino :" << msg;
+    traiterMessageArduino(QString(arduinoData).trimmed());
+}
 
-    if (msg.startsWith("ID:")) {
-        QString id = msg.mid(3);  // extrait l'ID
+// ── Arduino : logique partagée (vrai Arduino + simulateur) ───────────────────
+void MainWindow::traiterMessageArduino(const QString &msg)
+{
+    qDebug() << "Arduino msg:" << msg;
 
+    if (msg.startsWith("INPUT:")) {
+        // Saisie en cours — mettre à jour miroir LCD ligne 2
+        if (m_lcdLigne2) m_lcdLigne2->setText(msg.mid(6));
+
+    } else if (msg == "CLEAR") {
+        if (m_lcdLigne1) m_lcdLigne1->setText("Systeme pret");
+        if (m_lcdLigne2) m_lcdLigne2->setText("Saisir ID + #");
+        m_keypadBuffer.clear();
+
+    } else if (msg == "1") {
+        // Confirmation servos — ignoré
+        qDebug() << "✅ Confirmation servos reçue";
+
+    } else if (msg.startsWith("ID:")) {
+        QString id = msg.mid(3).trimmed();
+
+        // Cherche par REFERENCE ou ID_COMMANDE numérique
         QSqlQuery q;
-        q.prepare("SELECT STATUT FROM COMMANDES WHERE ID = :id");
-        q.bindValue(":id", id);
+        q.prepare("SELECT ID_COMMANDE FROM COMMANDES "
+                  "WHERE REFERENCE = :id OR TO_CHAR(ID_COMMANDE) = :id2");
+        q.bindValue(":id",  id);
+        q.bindValue(":id2", id);
         q.exec();
 
         if (q.next()) {
-            QString statut = q.value(0).toString();
-            if (statut == "Terminé") {
+            QString idCommande = q.value(0).toString();
+
+            QSqlQuery update;
+            update.prepare("UPDATE COMMANDES SET STATUT = 'Terminé' "
+                           "WHERE REFERENCE = :id OR TO_CHAR(ID_COMMANDE) = :id2");
+            update.bindValue(":id",  id);
+            update.bindValue(":id2", id);
+            update.exec();
+
+            loadProductionData();
+
+            // Envoyer '1' à l'Arduino (déclenche servos)
+            if (A.connection()->getSerial()->isOpen())
                 A.connection()->getSerial()->write("1");
 
-                QSqlQuery update;
-                update.prepare("UPDATE COMMANDES SET STATUT = 'En livraison' WHERE ID = :id");
-                update.bindValue(":id", id);
-                update.exec();
-                loadProductionData();
-                qDebug() << "✅ Commande" << id << "→ En livraison";
-            } else {
-                A.connection()->getSerial()->write("0");
-                QMessageBox::warning(this, "Erreur",
-                    "Commande " + id + " — Statut : " + statut + "\nStatut requis : Terminé");
-            }
+            if (m_lcdLigne1) m_lcdLigne1->setText("Commande terminee");
+            if (m_lcdLigne2) m_lcdLigne2->setText(idCommande);
+
+            qDebug() << "✅ Commande" << id << "→ Terminé";
         } else {
-            A.connection()->getSerial()->write("0");
-            QMessageBox::critical(this, "Erreur", "Commande introuvable : " + id);
+            // ID invalide → '2' (Arduino reste en attente, pas de retour accueil)
+            if (A.connection()->getSerial()->isOpen())
+                A.connection()->getSerial()->write("2");
+
+            if (m_lcdLigne1) m_lcdLigne1->setText("ID invalide");
+            if (m_lcdLigne2) m_lcdLigne2->setText("Ressaisir + #");
+
+            qDebug() << "❌ ID invalide:" << id;
         }
-
-    } else if (msg.startsWith("INPUT:")) {
-        qDebug() << "Saisie en cours :" << msg.mid(6);
-
-    } else if (msg == "CLEAR") {
-        qDebug() << "Saisie effacée";
     }
+}
+
+// ── Arduino : simulateur keypad Qt ───────────────────────────────────────────
+void MainWindow::setupKeypadSimulator()
+{
+    // Guard anti-doublon
+    if (m_lcdLigne1 != nullptr) return;
+
+    QWidget *productionPage = ui->stackedWidget->widget(4);
+    if (!productionPage) return;
+    QVBoxLayout *pageLayout = qobject_cast<QVBoxLayout*>(productionPage->layout());
+    if (!pageLayout) return;
+
+    QGroupBox *simBox = new QGroupBox("Simulateur Keypad Arduino", productionPage);
+    simBox->setStyleSheet(
+        "QGroupBox { font-weight: bold; color: #291C0E; border: 1px solid #BCAAA4; "
+        "border-radius: 8px; margin-top: 6px; padding: 6px; }"
+        "QGroupBox::title { subcontrol-origin: margin; left: 10px; }");
+
+    QHBoxLayout *simLayout = new QHBoxLayout(simBox);
+    simLayout->setSpacing(10);
+
+    // Miroir LCD (fond noir, texte vert Courier New)
+    QFrame *lcdFrame = new QFrame(simBox);
+    lcdFrame->setFixedSize(200, 60);
+    lcdFrame->setStyleSheet("background-color: #001800; border: 2px solid #333; border-radius: 4px;");
+    QVBoxLayout *lcdLayout = new QVBoxLayout(lcdFrame);
+    lcdLayout->setContentsMargins(6, 4, 6, 4);
+    lcdLayout->setSpacing(2);
+
+    m_lcdLigne1 = new QLabel("Systeme pret", lcdFrame);
+    m_lcdLigne1->setStyleSheet(
+        "color: #00FF00; font-family: 'Courier New'; font-size: 11px; "
+        "font-weight: bold; background: transparent;");
+    m_lcdLigne2 = new QLabel("Saisir ID + #", lcdFrame);
+    m_lcdLigne2->setStyleSheet(
+        "color: #00FF00; font-family: 'Courier New'; font-size: 11px; background: transparent;");
+
+    lcdLayout->addWidget(m_lcdLigne1);
+    lcdLayout->addWidget(m_lcdLigne2);
+    simLayout->addWidget(lcdFrame);
+
+    // Grille keypad 4x4
+    QGridLayout *grid = new QGridLayout();
+    grid->setSpacing(4);
+    const char keyLabels[4][4] = {
+        {'1','2','3','A'},
+        {'4','5','6','B'},
+        {'7','8','9','C'},
+        {'*','0','#','D'}
+    };
+    for (int r = 0; r < 4; ++r) {
+        for (int c = 0; c < 4; ++c) {
+            QString label = QString(keyLabels[r][c]);
+            QPushButton *btn = new QPushButton(label, simBox);
+            btn->setFixedSize(36, 30);
+            btn->setStyleSheet(
+                "QPushButton { background-color: #5D4037; color: white; border-radius: 4px; "
+                "font-weight: bold; font-size: 12px; }"
+                "QPushButton:hover { background-color: #795548; }"
+                "QPushButton:pressed { background-color: #3E2723; }");
+            connect(btn, &QPushButton::clicked, this, [this, label]() {
+                char k = label[0].toLatin1();
+                if (k == '#') {
+                    if (!m_keypadBuffer.isEmpty()) {
+                        traiterMessageArduino("ID:" + m_keypadBuffer);
+                        m_keypadBuffer.clear();
+                    }
+                } else if (k == '*') {
+                    m_keypadBuffer.clear();
+                    traiterMessageArduino("CLEAR");
+                } else {
+                    m_keypadBuffer += label;
+                    traiterMessageArduino("INPUT:" + m_keypadBuffer);
+                }
+            });
+            grid->addWidget(btn, r, c);
+        }
+    }
+    simLayout->addLayout(grid);
+    simLayout->addStretch();
+
+    // Insérer avant productionTable (avant-dernier item du layout)
+    int insertPos = pageLayout->count() > 1 ? pageLayout->count() - 1 : pageLayout->count();
+    pageLayout->insertWidget(insertPos, simBox);
 }

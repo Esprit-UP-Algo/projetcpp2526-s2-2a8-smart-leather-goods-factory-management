@@ -2937,91 +2937,15 @@ QPushButton:hover {
                   <widget class="QPushButton" name="btnExpedier">
                    <property name="minimumSize">
                     <size>
-                     <width>48</width>
-                     <height>32</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>48</width>
+                     <width>120</width>
                      <height>32</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>🚗</string>
+                    <string>🚚 Expédier</string>
                    </property>
                    <property name="toolTip">
-                    <string>Expédition Arduino</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnSaisir">
-                   <property name="minimumSize">
-                    <size>
-                     <width>120</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>⌨  Saisir</string>
-                   </property>
-                   <property name="visible">
-                    <bool>false</bool>
-                   </property>
-                   <property name="styleSheet">
-                    <string notr="true">
-QPushButton {
-    background-color: #1A6B8A;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 6px 16px;
-    font-size: 13px;
-    font-weight: bold;
-}
-QPushButton:hover {
-    background-color: #1E85AD;
-}
-QPushButton:pressed {
-    background-color: #145570;
-}
-                    </string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnExpedierAction">
-                   <property name="minimumSize">
-                    <size>
-                     <width>120</width>
-                     <height>36</height>
-                    </size>
-                   </property>
-                   <property name="text">
-                    <string>🚚  Expédier</string>
-                   </property>
-                   <property name="visible">
-                    <bool>false</bool>
-                   </property>
-                   <property name="styleSheet">
-                    <string notr="true">
-QPushButton {
-    background-color: #2E7D32;
-    color: white;
-    border: none;
-    border-radius: 8px;
-    padding: 6px 16px;
-    font-size: 13px;
-    font-weight: bold;
-}
-QPushButton:hover {
-    background-color: #388E3C;
-}
-QPushButton:pressed {
-    background-color: #1B5E20;
-}
-                    </string>
+                    <string>Expédier la commande sélectionnée</string>
                    </property>
                   </widget>
                  </item>
