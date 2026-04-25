@@ -196,15 +196,14 @@ CREATE TABLE ARDUINO_DELIVERIES (
     measured_weight   NUMBER(10,3),
     validated         NUMBER(1)     DEFAULT 0,
     operator_note     VARCHAR2(500),
-    timestamp         TIMESTAMP     DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT fk_delivery_fournisseur
-        FOREIGN KEY (id_fournisseur)
-        REFERENCES Fournisseurs(id_fournisseur),
-    CONSTRAINT fk_delivery_matiere
-        FOREIGN KEY (id_matiere)
-        REFERENCES Matieres_premieres(id_matiere)
+    timestamp         TIMESTAMP     DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE ARDUINO_DELIVERIES ADD CONSTRAINT fk_delivery_fournisseur
+    FOREIGN KEY (id_fournisseur) REFERENCES Fournisseurs(id_fournisseur);
+
+ALTER TABLE ARDUINO_DELIVERIES ADD CONSTRAINT fk_delivery_matiere
+    FOREIGN KEY (id_matiere) REFERENCES Matieres_premieres(id_matiere);
 
 CREATE SEQUENCE seq_deliveries START WITH 1 INCREMENT BY 1;
 
