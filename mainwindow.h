@@ -38,10 +38,12 @@
 #include "notification.h"
 #include "matieredetection.h"
 #include "voicematieres.h"
+#include "pointage.h"
 #include "arduino.h"
 #include <QTimer>
 #include <QPainter>
 #include <QConicalGradient>
+#include <QSerialPort>
 
 // ── Bouton flottant style Meta AI ─────────────────────────────────────────────
 class FloatingAIButton : public QWidget
@@ -109,6 +111,7 @@ private slots:
     void on_btnExport_clicked();
     void on_btnSort_clicked();
     void on_btnStatistics_clicked();
+    void on_btnPointage_clicked();
 
     // Client
     void on_btnAddClient_clicked();
@@ -164,12 +167,6 @@ private slots:
     void on_btnQrFournisseur_clicked();
     void on_searchBoxFournisseur_textChanged(const QString &text);
     void on_btnmap_clicked();
-
-    // Arduino
-    void expedierActionArduino();        // OUTPUT → envoyer "1" à l'Arduino
-    void recevoir_donnee();              // INPUT  ← données Arduino
-    void setupKeypadSimulator();         // crée le keypad simulateur Qt
-    void traiterMessageArduino(const QString &msg); // logique partagée
 
     // Articles
     void on_btnAddArticle_clicked();
@@ -256,14 +253,6 @@ private:
     AIChatWidget     *m_aiWidget;
     FloatingAIButton *m_floatingBtn;
 
-    // Arduino
-    Arduino A;
-    QByteArray arduinoData;
-    QLabel *m_arduinoIndicator = nullptr; // indicateur connexion vert/rouge
-    QString m_keypadBuffer;               // buffer saisie simulateur
-    QLabel *m_lcdLigne1 = nullptr;        // miroir LCD ligne 1
-    QLabel *m_lcdLigne2 = nullptr;        // miroir LCD ligne 2
-
     // Production sort state
     int  m_productionSortCol;
     bool m_productionSortAsc;
@@ -276,6 +265,27 @@ private:
     NotificationAI      *m_ai      = nullptr;
     NotificationBell    *m_bell    = nullptr;
     NotificationWatcher *m_watcher = nullptr;
+
+    // === POINTAGE RFID ===
+    Pointage      m_pointage;
+
+    // === ARDUINO ===
+    Arduino       m_arduino;
+    QByteArray    arduinoData;
+    QSerialPort  *m_serialArduino      = nullptr;
+    QTimer       *m_timerAbsences      = nullptr;
+    QLabel       *m_arduinoIndicator   = nullptr;
+    QString       m_keypadBuffer;
+    QLabel       *m_lcdLigne1          = nullptr;
+    QLabel       *m_lcdLigne2          = nullptr;
+
+    void setupArduinoPointage();
+    void onArduinoDataReceived();
+    void expedierActionArduino();
+    void recevoir_donnee();
+    void setupKeypadSimulator();
+    void traiterMessageArduino(const QString &msg);
+    void ouvrirCalendrierPointage(int idEmploye, const QString &nom);
 };
 
 #endif // MAINWINDOW_H

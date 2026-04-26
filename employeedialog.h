@@ -40,6 +40,7 @@ public:
     QString getSexe() const;
     QString getAdresse() const;
     QString getTelephone() const;
+    QString getRfidUid() const;
     QString getEmail() const;
     QString getPoste() const;
     QString getRole() const;
@@ -74,6 +75,7 @@ private:
     QComboBox *sexeCombo;
     QLineEdit *adresseEdit;
     QLineEdit *telephoneEdit;
+    QLineEdit *rfidUidEdit;
     QLineEdit *emailEdit;
     QComboBox *posteCombo;
     QComboBox *departementCombo;

@@ -157,6 +157,7 @@ public:
     QDate   dateExpeditionPrevue;
     QDate   dateExpeditionReelle;
     QString statutLivraison; ///< "Non expédiée", "En livraison", "Livrée"
+    QString mailClient;      ///< Email du client associé
 
     AlerteRetard alerteRetard; ///< Calculé par calculerAlerteRetard()
 

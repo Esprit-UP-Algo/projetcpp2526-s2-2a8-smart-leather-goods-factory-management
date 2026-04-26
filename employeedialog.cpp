@@ -103,6 +103,11 @@ void EmployeeDialog::setupAddEditUI()
     telephoneEdit->setPlaceholderText("0612345678");
     telephoneEdit->setMaximumWidth(180);
 
+    rfidUidEdit = new QLineEdit();
+    rfidUidEdit->setPlaceholderText("A1 B2 C3 D4 (Badge RFID)");
+    rfidUidEdit->setMaximumWidth(180);
+    rfidUidEdit->setToolTip("UID du badge RFID pour le pointage automatique");
+
     leftForm->addRow("Matricule *:", matriculeEdit);
     leftForm->addRow("Nom *:", nomEdit);
     leftForm->addRow("Prénom *:", prenomEdit);
@@ -111,6 +116,7 @@ void EmployeeDialog::setupAddEditUI()
     leftForm->addRow("Sexe *:", sexeCombo);
     leftForm->addRow("Adresse:", adresseEdit);
     leftForm->addRow("Téléphone *:", telephoneEdit);
+    leftForm->addRow("Badge RFID:", rfidUidEdit);
 
     // PHOTO SECTION (Center)
     QVBoxLayout *photoLayout = new QVBoxLayout();
@@ -326,6 +332,7 @@ void EmployeeDialog::setEmployeeData(const QString &id, const QString &matricule
                                     const QString &email, const QString &poste, const QString &role,
                                     const QString &departement, const QString &dateEmbauche, const QString &photoPath)
 {
+    Q_UNUSED(role);
     if (mode == DeleteMode) {
         deleteId = id;
         deleteMatricule = matricule;
@@ -396,6 +403,18 @@ void EmployeeDialog::setEmployeeData(const QString &id, const QString &matricule
             else if (roleSysteme == "ADMIN") roleIndex = 7;
             
             roleSystemeCombo->setCurrentIndex(roleIndex);
+        }
+        
+        // Charger RFID_UID depuis la base de données
+        QSqlQuery queryRfid(Connection::instance()->getDatabase());
+        queryRfid.prepare("SELECT RFID_UID FROM CUIREA.EMPLOYES WHERE ID_EMPLOYE = :id");
+        queryRfid.bindValue(":id", id.toInt());
+        
+        if (queryRfid.exec() && queryRfid.next()) {
+            QString rfidUid = queryRfid.value(0).toString();
+            if (rfidUidEdit && !rfidUid.isEmpty()) {
+                rfidUidEdit->setText(rfidUid);
+            }
         }
     }
 }
@@ -622,6 +641,11 @@ QString EmployeeDialog::getAdresse() const
 QString EmployeeDialog::getTelephone() const
 {
     return telephoneEdit ? telephoneEdit->text().trimmed() : QString();
+}
+
+QString EmployeeDialog::getRfidUid() const
+{
+    return rfidUidEdit ? rfidUidEdit->text().trimmed().toUpper() : QString();
 }
 
 QString EmployeeDialog::getEmail() const

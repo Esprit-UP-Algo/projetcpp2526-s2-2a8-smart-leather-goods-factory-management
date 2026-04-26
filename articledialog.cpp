@@ -11,6 +11,7 @@
 #include <QRegularExpressionValidator>
 #include <QPixmap>
 #include <QScrollArea>
+#include <cmath>
 
 ArticleDialog::ArticleDialog(QWidget *parent, Mode mode)
     : QDialog(parent), dialogMode(mode)
@@ -65,7 +66,7 @@ void ArticleDialog::setupUI()
 
     // Nom : uniquement lettres, espaces, tirets, apostrophes
     lineEditNom->setValidator(new QRegularExpressionValidator(
-        QRegularExpression("[A-Za-z├Ç-├┐\\s\\-']+"), this));
+        QRegularExpression("[A-Za-z\\s\\-']+"), this));
     lineEditNom->setPlaceholderText("Lettres uniquement");
 
     // Validation temps r├®el : bordure rouge si vide
@@ -80,22 +81,22 @@ void ArticleDialog::setupUI()
     comboBoxCategorie = new QComboBox();
     comboBoxCategorie->addItems({"Sacs","Portefeuilles","Ceintures","Accessoires","Chaussures"});
     comboBoxType = new QComboBox();
-    comboBoxType->addItems({"Sac ├á main","Sac bandouli├¿re","Tote bag","Sac ├á dos",
+    comboBoxType->addItems({"Sac a main","Sac bandouliere","Tote bag","Sac a dos",
                             "Portefeuille long","Portefeuille compact","Porte-cartes",
                             "Ceinture classique","Ceinture fashion","Ceinture luxe",
-                            "Porte-monnaie","Pochette","Bandouli├¿re","Porte-cl├®s"});
+                            "Porte-monnaie","Pochette","Bandouliere","Porte-cles"});
     lineEditModele3D = new QLineEdit();
     lineEditModele3D->setReadOnly(true);
-    lineEditModele3D->setPlaceholderText("G├®n├®r├® automatiquement selon le type");
+    lineEditModele3D->setPlaceholderText("Genere automatiquement selon le type");
 
     connect(comboBoxType, &QComboBox::currentTextChanged, this, &ArticleDialog::onTypeChanged);
     onTypeChanged(comboBoxType->currentText());
 
-    infoForm->addRow("R├®f├®rence *:", lineEditReference);
+    infoForm->addRow("Reference *:", lineEditReference);
     infoForm->addRow("Nom *:", lineEditNom);
-    infoForm->addRow("Cat├®gorie:", comboBoxCategorie);
+    infoForm->addRow("Categorie:", comboBoxCategorie);
     infoForm->addRow("Type:", comboBoxType);
-    infoForm->addRow("Mod├¿le 3D:", lineEditModele3D);
+    infoForm->addRow("Modele 3D:", lineEditModele3D);
     mainLayout->addWidget(infoBox);
 
     // ÔöÇÔöÇ Couleur RGB ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
@@ -161,22 +162,27 @@ void ArticleDialog::setupUI()
     comboBoxStatut->addItems({"disponible","en_production","obsolete"});
 
     prixForm->addRow("Prix Unitaire:", spinBoxPrix);
-    prixForm->addRow("Co├╗t Fabrication:", spinBoxCout);
+    prixForm->addRow("Cout Fabrication:", spinBoxCout);
     prixForm->addRow("Statut:", comboBoxStatut);
     mainLayout->addWidget(prixBox);
 
-    // ÔöÇÔöÇ Generation 3D (Tripo3D) ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    // -- Generation 3D (Tripo3D) ou Apercu Image (ViewMode) --
     if (dialogMode == AddMode || dialogMode == EditMode) {
         auto *tripoBox = new QGroupBox("Generation 3D IA");
         auto *tripoLay = new QVBoxLayout(tripoBox);
 
         QHBoxLayout *tripoRow = new QHBoxLayout();
-        btnGenerate3D = new QPushButton("Generer image 3D");
-        btnGenerate3D->setStyleSheet("QPushButton{background:#4A148C;color:white;}QPushButton:hover{background:#6A1B9A;}");
+        btnGenerate3D = new QPushButton("Generer image IA");
+        btnGenerate3D->setStyleSheet(
+            "QPushButton{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #4A148C,stop:1 #7B1FA2);"
+            "color:white;border:none;border-radius:8px;padding:10px 16px;font-weight:bold;}"
+            "QPushButton:hover{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #6A1B9A,stop:1 #9C27B0);}"
+            "QPushButton:disabled{background:#9E9E9E;}");
         progress3D = new QProgressBar(); progress3D->setRange(0, 100); progress3D->setValue(0);
-        progress3D->setFixedHeight(18);
-        progress3D->setStyleSheet("QProgressBar{border:1px solid #BCAAA4;border-radius:4px;background:#FAF5F0;}"
-                                  "QProgressBar::chunk{background:#8D6E63;border-radius:3px;}");
+        progress3D->setFixedHeight(20);
+        progress3D->setStyleSheet(
+            "QProgressBar{border:2px solid #7B1FA2;border-radius:6px;background:#F3E5F5;text-align:center;}"
+            "QProgressBar::chunk{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #7B1FA2,stop:1 #9C27B0);border-radius:4px;}");
         tripoRow->addWidget(btnGenerate3D);
         tripoRow->addWidget(progress3D);
         tripoLay->addLayout(tripoRow);
@@ -210,14 +216,37 @@ void ArticleDialog::setupUI()
                     lblPreview3D->setPixmap(px.scaled(100, 100, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             }
             lblStatus3D->setText("Generation terminee !");
+            lblStatus3D->setStyleSheet("color:#2E7D32;font-size:10px;font-weight:bold;");
             btnGenerate3D->setEnabled(true);
+            btnGenerate3D->setText("Regenerer image");
         });
         connect(m_tripoGen, &Tripo3DGenerator::error, this, [this](const QString &msg) {
             lblStatus3D->setText("Erreur: " + msg);
+            lblStatus3D->setStyleSheet("color:#C62828;font-size:10px;");
             btnGenerate3D->setEnabled(true);
+            btnGenerate3D->setText("Generer image IA");
+            progress3D->setValue(0);
         });
 
         mainLayout->addWidget(tripoBox);
+    } else if (dialogMode == ViewMode) {
+        // Section apercu image pour ViewMode
+        auto *imageBox = new QGroupBox("Image du Produit");
+        auto *imageLay = new QVBoxLayout(imageBox);
+
+        lblPreview3D = new QLabel();
+        lblPreview3D->setFixedSize(200, 200);
+        lblPreview3D->setAlignment(Qt::AlignCenter);
+        lblPreview3D->setStyleSheet("border:2px solid #BCAAA4;border-radius:8px;background:#FFF8F0;font-size:11px;color:#888;");
+        lblPreview3D->setText("Aucune image generee");
+
+        imageLay->addWidget(lblPreview3D, 0, Qt::AlignCenter);
+        mainLayout->addWidget(imageBox);
+
+        btnGenerate3D = nullptr;
+        progress3D = nullptr;
+        lblStatus3D = nullptr;
+        m_tripoGen = nullptr;
     } else {
         btnGenerate3D = nullptr;
         progress3D = nullptr;
@@ -226,10 +255,14 @@ void ArticleDialog::setupUI()
         m_tripoGen = nullptr;
     }
 
-    // ÔöÇÔöÇ Boutons ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+    // -- Boutons --
     auto *btnLayout = new QHBoxLayout(); btnLayout->addStretch();
     auto *btnSave = new QPushButton(dialogMode == DeleteMode ? "Confirmer Suppression" : "Enregistrer");
     auto *btnCancel = new QPushButton("Annuler");
+    if (dialogMode == DeleteMode) {
+        btnSave->setStyleSheet("QPushButton{background:#C62828;color:#FFFFFF;border:none;border-radius:8px;padding:12px 24px;font-size:13px;font-weight:bold;min-width:180px;}"
+                               "QPushButton:hover{background:#E53935;}");
+    }
     if (dialogMode == ViewMode) { btnSave->setVisible(false); btnCancel->setText("Fermer"); }
     connect(btnSave, &QPushButton::clicked, this, &ArticleDialog::onSave);
     connect(btnCancel, &QPushButton::clicked, this, &ArticleDialog::onCancel);
@@ -244,8 +277,13 @@ void ArticleDialog::setupUI()
     bottomBtnLayout->addStretch();
     auto *btnSave2 = new QPushButton(dialogMode == DeleteMode ? "Confirmer Suppression" : "Enregistrer");
     auto *btnCancel2 = new QPushButton("Annuler");
-    btnSave2->setStyleSheet("QPushButton{background:#8D6E63;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:bold;min-width:100px;}QPushButton:hover{background:#A0826D;}");
-    btnCancel2->setStyleSheet("QPushButton{background:#BCAAA4;color:white;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:bold;min-width:100px;}QPushButton:hover{background:#A0826D;}");
+    if (dialogMode == DeleteMode) {
+        btnSave2->setStyleSheet("QPushButton{background:#C62828;color:#FFFFFF;border:none;border-radius:8px;padding:12px 24px;font-size:13px;font-weight:bold;min-width:180px;}"
+                                "QPushButton:hover{background:#E53935;}");
+    } else {
+        btnSave2->setStyleSheet("QPushButton{background:#8D6E63;color:#FFFFFF;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:bold;min-width:100px;}QPushButton:hover{background:#A0826D;}");
+    }
+    btnCancel2->setStyleSheet("QPushButton{background:#BCAAA4;color:#3E2723;border:none;border-radius:8px;padding:10px 20px;font-size:12px;font-weight:bold;min-width:100px;}QPushButton:hover{background:#A0826D;color:#FFFFFF;}");
     if (dialogMode == ViewMode) { btnSave2->setVisible(false); btnCancel2->setText("Fermer"); }
     connect(btnSave2, &QPushButton::clicked, this, &ArticleDialog::onSave);
     connect(btnCancel2, &QPushButton::clicked, this, &ArticleDialog::onCancel);
@@ -286,9 +324,9 @@ void ArticleDialog::applyStyles()
 
 void ArticleDialog::onTypeChanged(const QString &type)
 {
-    // G├®n├®rer automatiquement le nom du mod├¿le 3D
+    // Generer automatiquement le nom du modele 3D
     QString modele = type.toLower()
-        .replace("├á","a").replace("├®","e").replace(" ","_")
+        .replace("a","a").replace("e","e").replace(" ","_")
         .replace("-","_") + ".obj";
     lineEditModele3D->setText(modele);
 }
@@ -316,6 +354,19 @@ void ArticleDialog::setArticleData(const QString &ref, const QString &nom, const
     spinBoxPrix->setValue(prix); spinBoxCout->setValue(cout);
     comboBoxStatut->setCurrentText(statut);
     updateColorPreview();
+}
+
+void ArticleDialog::setImagePath(const QString &path)
+{
+    m_photoPath = path;
+    if (lblPreview3D && !path.isEmpty()) {
+        QPixmap px(path);
+        if (!px.isNull()) {
+            lblPreview3D->setPixmap(px.scaled(lblPreview3D->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        } else {
+            lblPreview3D->setText("Image non trouvee");
+        }
+    }
 }
 
 // Getters
@@ -385,24 +436,62 @@ void ArticleDialog::onCancel() { reject(); }
 
 void ArticleDialog::onGenerate3D()
 {
+    QString nom = lineEditNom->text().trimmed();
     QString type = comboBoxType->currentText();
     QString cat = comboBoxCategorie->currentText();
+    QString ref = lineEditReference->text().trimmed();
+    double largeur = spinLargeur->value();
+    double hauteur = spinHauteur->value();
+    double prix = spinBoxPrix->value();
+    
+    // Déterminer le nom de la couleur à partir des valeurs RGB
     int r = sliderR->value(), g = sliderG->value(), b = sliderB->value();
-    QString couleur;
-    if (r > 150 && g < 80 && b < 80) couleur = "red";
-    else if (r < 60 && g < 60 && b < 60) couleur = "black";
-    else if (r > 180 && g > 150 && b > 100) couleur = "beige";
-    else if (r > 120 && g > 80 && b < 70) couleur = "brown";
-    else couleur = "leather colored";
+    QString couleurNom;
+    
+    // Analyse des composantes RGB pour déterminer la couleur
+    if (r < 60 && g < 60 && b < 60) {
+        couleurNom = "Noir";
+    } else if (r > 200 && g > 200 && b > 200) {
+        couleurNom = "Blanc";
+    } else if (r > 150 && g < 100 && b < 100) {
+        couleurNom = "Rouge";
+    } else if (r > 180 && g > 140 && b < 100) {
+        couleurNom = "Camel";
+    } else if (r > 160 && g > 100 && b < 80) {
+        couleurNom = "Cognac";
+    } else if (r > 120 && g > 80 && b > 50 && r > g && g > b) {
+        couleurNom = "Marron";
+    } else if (r > 180 && g > 160 && b > 130) {
+        couleurNom = "Beige";
+    } else if (b > r && b > g) {
+        couleurNom = "Bleu Marine";
+    } else if (g > r && g > b) {
+        couleurNom = "Vert";
+    } else if (r > 100 && g > 100 && b > 100 && abs(r-g) < 30 && abs(g-b) < 30) {
+        couleurNom = "Gris";
+    } else {
+        couleurNom = "Marron";
+    }
 
-    QString prompt = QString("A realistic %1, %2 %3 leather, luxury maroquinerie, studio lighting, product photography")
-        .arg(type, couleur, cat.toLower());
-
-    qDebug() << "[Tripo3D] Prompt:" << prompt;
+    qDebug() << "[ImageGen] Generation pour:" << nom << type << cat << couleurNom;
+    
     btnGenerate3D->setEnabled(false);
-    lblStatus3D->setText("Envoi a Tripo3D...");
+    btnGenerate3D->setText("⏳ Generation...");
+    lblStatus3D->setText("Preparation de la generation IA...");
     progress3D->setValue(0);
-    m_tripoGen->generate(prompt);
+    progress3D->setRange(0, 100); // Mode déterminé
+    
+    // Utiliser la nouvelle méthode avec toutes les infos de l'article
+    m_tripoGen->generateForArticle(
+        nom.isEmpty() ? type : nom,  // Utiliser le type si pas de nom
+        type,
+        cat,
+        couleurNom,
+        largeur,
+        hauteur,
+        prix,
+        ref
+    );
 }
 
 QString ArticleDialog::getPhotoPath() const { return m_photoPath; }

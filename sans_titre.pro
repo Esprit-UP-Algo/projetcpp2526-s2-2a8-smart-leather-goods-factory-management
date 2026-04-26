@@ -42,7 +42,9 @@ SOURCES += \
     articledialog.cpp \
     tripo3dgenerator.cpp \
     logindialog.cpp \
-    notification.cpp
+    notification.cpp \
+    pointage.cpp \
+    pointagedialog.cpp
 
 HEADERS += \
     arduino.h \
@@ -77,7 +79,9 @@ HEADERS += \
     articledialog.h \
     tripo3dgenerator.h \
     logindialog.h \
-    notification.h
+    notification.h \
+    pointage.h \
+    pointagedialog.h
 
 FORMS += \
     mainwindow.ui

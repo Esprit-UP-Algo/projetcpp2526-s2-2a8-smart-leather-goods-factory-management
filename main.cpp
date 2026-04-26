@@ -3,19 +3,14 @@
 #include "connection.h"
 #include "envloader.h"
 #include "usersession.h"
-#include "notification.h"
 #include <QApplication>
 #include <QMessageBox>
 #include <QFile>
 #include <QCoreApplication>
-#include <QStyle>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-
-    // Icône tray système (notifications Windows même app minimisée)
-    NotificationWidget::initTray(QApplication::style()->standardIcon(QStyle::SP_ComputerIcon));
 
     // Charger les variables d'environnement depuis .env
     // Cherche d'abord à côté de l'exécutable, puis dans le répertoire source

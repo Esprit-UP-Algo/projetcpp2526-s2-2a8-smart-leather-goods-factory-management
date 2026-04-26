@@ -69,12 +69,19 @@ CREATE TABLE Articles (
     cout_fabrication   NUMBER(10,2),
     statut             VARCHAR2(50),
     date_creation      DATE,
+    
+    -- Colonnes pour les images générées par IA
+    image_path         VARCHAR2(500),
+    image_generated_at DATE,
+    
     id_commande        NUMBER,
 
     CONSTRAINT fk_articles_commandes
         FOREIGN KEY (id_commande)
         REFERENCES Commandes(id_commande)
 );
+/*ALTER TABLE ARTICLES ADD (IMAGE_PATH VARCHAR2(500));
+ALTER TABLE ARTICLES ADD (IMAGE_GENERATED_AT DATE);*/
 
 /* =========================
    4. FOURNISSEURS

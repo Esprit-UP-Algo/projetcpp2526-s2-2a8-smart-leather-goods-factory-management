@@ -1,4 +1,5 @@
 #include "fichepaie.h"
+#include "connection.h"  // ✅ Ajouté pour accéder à la BD
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -17,12 +18,38 @@
 #include <QComboBox>
 #include <QScrollArea>
 #include <QFrame>
+#include <QSqlQuery>  // ✅ Ajouté pour les requêtes SQL
+#include <QSqlError>  // ✅ Ajouté pour les erreurs SQL
+#include <QDebug>     // ✅ Ajouté pour les logs
 
 FichePaieDialog::FichePaieDialog(const QString &matricule, const QString &nom,
                                  const QString &prenom, const QString &cin,
                                  const QString &poste, const QString &departement,
                                  const QDate &dateEmbauche, QWidget *parent)
     : QDialog(parent)
+    , m_idEmploye(0)  // ✅ Par défaut 0 si non fourni
+    , m_matricule(matricule)
+    , m_nom(nom)
+    , m_prenom(prenom)
+    , m_cin(cin)
+    , m_poste(poste)
+    , m_departement(departement)
+    , m_dateEmbauche(dateEmbauche)
+{
+    setupUI();
+    applyStyles();
+    setWindowTitle("Fiche de Paie - " + nom + " " + prenom);
+    setMinimumSize(850, 700);
+    resize(900, 750);
+}
+
+// ✅ Nouveau constructeur avec ID employé
+FichePaieDialog::FichePaieDialog(int idEmploye, const QString &matricule, const QString &nom,
+                                 const QString &prenom, const QString &cin,
+                                 const QString &poste, const QString &departement,
+                                 const QDate &dateEmbauche, QWidget *parent)
+    : QDialog(parent)
+    , m_idEmploye(idEmploye)
     , m_matricule(matricule)
     , m_nom(nom)
     , m_prenom(prenom)
@@ -199,6 +226,17 @@ void FichePaieDialog::setupUI()
     irppEdit->setStyleSheet("background-color: #F5F5F5; font-weight: bold;");
     irppEdit->setMinimumWidth(150);
     
+    // ✅ Champs pour les absences
+    absencesEdit = new QLineEdit();
+    absencesEdit->setReadOnly(true);
+    absencesEdit->setStyleSheet("background-color: #FFF9C4; font-weight: bold; color: #F57C00;");
+    absencesEdit->setMinimumWidth(150);
+    
+    deductionAbsencesEdit = new QLineEdit();
+    deductionAbsencesEdit->setReadOnly(true);
+    deductionAbsencesEdit->setStyleSheet("background-color: #FFEBEE; font-weight: bold; color: #C62828;");
+    deductionAbsencesEdit->setMinimumWidth(150);
+    
     totalGainsEdit = new QLineEdit();
     totalGainsEdit->setReadOnly(true);
     totalGainsEdit->setStyleSheet("background-color: #E8F5E9; font-weight: bold; color: #2E7D32;");
@@ -216,6 +254,8 @@ void FichePaieDialog::setupUI()
     
     calculsLayout->addRow("CNSS Salarié (9.18%):", cnssEdit);
     calculsLayout->addRow("IRPP:", irppEdit);
+    calculsLayout->addRow("Jours d'absence:", absencesEdit);  // ✅ Ajouté
+    calculsLayout->addRow("Déduction absences:", deductionAbsencesEdit);  // ✅ Ajouté
     calculsLayout->addRow("Total Gains:", totalGainsEdit);
     calculsLayout->addRow("Total Retenues:", totalRetenuesEdit);
     calculsLayout->addRow("NET À PAYER:", netAPayerEdit);
@@ -284,16 +324,27 @@ void FichePaieDialog::calculerSalaire()
     double retenues = retenuesSpin->value();
     double avances = avancesSpin->value();
     
+    // ✅ Calculer les absences du mois sélectionné
+    QComboBox *moisCombo = findChild<QComboBox*>("moisCombo");
+    QComboBox *anneeCombo = findChild<QComboBox*>("anneeCombo");
+    int mois = moisCombo ? moisCombo->currentIndex() + 1 : QDate::currentDate().month();
+    int annee = anneeCombo ? anneeCombo->currentText().toInt() : QDate::currentDate().year();
+    
+    int nbAbsences = calculerNombreAbsences(mois, annee);
+    double deductionAbsences = (salaireBrut / 30.0) * nbAbsences;
+    
     double cnss = calculerCNSS(salaireBrut);
     double salaireImposable = salaireBrut - cnss;
     double irpp = calculerIRPP(salaireImposable);
     
     double totalGains = salaireBrut + primeRendement + primeAnciennete + primeAutres;
-    double totalRetenues = cnss + irpp + retenues + avances;
+    double totalRetenues = cnss + irpp + retenues + avances + deductionAbsences;  // ✅ Ajout déduction absences
     double netAPayer = totalGains - totalRetenues;
     
     cnssEdit->setText(QString::number(cnss, 'f', 3) + " TND");
     irppEdit->setText(QString::number(irpp, 'f', 3) + " TND");
+    absencesEdit->setText(QString::number(nbAbsences) + " jour(s)");  // ✅ Afficher nombre d'absences
+    deductionAbsencesEdit->setText(QString::number(deductionAbsences, 'f', 3) + " TND");  // ✅ Afficher déduction
     totalGainsEdit->setText(QString::number(totalGains, 'f', 3) + " TND");
     totalRetenuesEdit->setText(QString::number(totalRetenues, 'f', 3) + " TND");
     netAPayerEdit->setText(QString::number(netAPayer, 'f', 3) + " TND");
@@ -321,6 +372,38 @@ double FichePaieDialog::calculerIRPP(double salaireImposable) const
     return irpp;
 }
 
+// ✅ Nouvelle fonction pour calculer le nombre d'absences
+int FichePaieDialog::calculerNombreAbsences(int mois, int annee) const
+{
+    if (m_idEmploye == 0) {
+        qDebug() << "⚠️ ID employé non défini, impossible de calculer les absences";
+        return 0;
+    }
+    
+    QSqlDatabase &db = Connection::instance()->getDatabase();
+    QSqlQuery q(db);
+    q.prepare(
+        "SELECT COUNT(*) FROM CUIREA.POINTAGE "
+        "WHERE ID_EMPLOYE = :id AND STATUT = 'ABSENT' "
+        "AND EXTRACT(MONTH FROM DATE_POINTAGE) = :m "
+        "AND EXTRACT(YEAR FROM DATE_POINTAGE) = :y"
+    );
+    q.bindValue(":id", m_idEmploye);
+    q.bindValue(":m", mois);
+    q.bindValue(":y", annee);
+    
+    int absences = 0;
+    if (q.exec() && q.next()) {
+        absences = q.value(0).toInt();
+        qDebug() << "✅ Absences calculées pour employé" << m_idEmploye 
+                 << "mois" << mois << "année" << annee << ":" << absences << "jour(s)";
+    } else {
+        qDebug() << "❌ Erreur calcul absences:" << q.lastError().text();
+    }
+    
+    return absences;
+}
+
 DonneesPaie FichePaieDialog::getDonneesPaie() const
 {
     DonneesPaie donnees;
@@ -331,6 +414,7 @@ DonneesPaie FichePaieDialog::getDonneesPaie() const
     donnees.poste = m_poste;
     donnees.departement = m_departement;
     donnees.dateEmbauche = m_dateEmbauche;
+    donnees.idEmploye = m_idEmploye;  // ✅ Ajouté
     donnees.salaireBrut = salaireBrutSpin->value();
     donnees.primeRendement = primeRendementSpin->value();
     donnees.primeAnciennete = primeAncienneteSpin->value();
@@ -346,6 +430,13 @@ DonneesPaie FichePaieDialog::getDonneesPaie() const
     if (anneeCombo) {
         donnees.annee = anneeCombo->currentText().toInt();
     }
+    
+    // ✅ Calculer la déduction pour absences
+    int mois = moisCombo ? moisCombo->currentIndex() + 1 : QDate::currentDate().month();
+    int annee = anneeCombo ? anneeCombo->currentText().toInt() : QDate::currentDate().year();
+    int nbAbsences = calculerNombreAbsences(mois, annee);
+    donnees.deductionAbsences = (donnees.salaireBrut / 30.0) * nbAbsences;
+    
     return donnees;
 }
 
@@ -633,7 +724,7 @@ bool FichePaiePDF::genererPDF(const DonneesPaie &donnees, const QString &cheminF
     double irpp = calculerIRPP(salaireImposable);
     double totalGains = donnees.salaireBrut + donnees.primeRendement +
                        donnees.primeAnciennete + donnees.primeAutres;
-    double totalRetenues = cnss + irpp + donnees.retenues + donnees.avances;
+    double totalRetenues = cnss + irpp + donnees.retenues + donnees.avances + donnees.deductionAbsences;  // ✅ Ajout déduction absences
     double netAPayer = totalGains - totalRetenues;
     
     // === SECTION GAINS ===
@@ -746,6 +837,17 @@ bool FichePaiePDF::genererPDF(const DonneesPaie &donnees, const QString &cheminF
     painter.drawText(pageWidth - margin - 200, y + 21, QString::number(irpp, 'f', 3));
     y += rowH;
     alternate = !alternate;
+    
+    // ✅ Déduction pour absences
+    if (donnees.deductionAbsences > 0) {
+        painter.fillRect(margin, y, tableW, rowH, alternate ? QBrush(QColor(250, 245, 240)) : QBrush(Qt::white));
+        painter.drawRect(margin, y, tableW, rowH);
+        int nbJours = (int)((donnees.deductionAbsences / donnees.salaireBrut) * 30.0 + 0.5);
+        painter.drawText(margin + 15, y + 21, QString("Déduction Absences (%1 jour(s))").arg(nbJours));
+        painter.drawText(pageWidth - margin - 200, y + 21, QString::number(donnees.deductionAbsences, 'f', 3));
+        y += rowH;
+        alternate = !alternate;
+    }
     
     if (donnees.retenues > 0) {
         painter.fillRect(margin, y, tableW, rowH, alternate ? QBrush(QColor(250, 245, 240)) : QBrush(Qt::white));

@@ -20,7 +20,6 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QSystemTrayIcon>
-#include <QMenu>
 #include <functional>
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -49,14 +48,6 @@ public:
     static void repositionAll();
     static void setToastsEnabled(bool enabled) { s_toastsEnabled = enabled; }
 
-    // ── Notifications système Windows (tray) ──────────────────────
-    // Appeler UNE SEULE FOIS au démarrage dans main.cpp :
-    //   NotificationWidget::initTray(QIcon(":/icons/cuirea.ico"));
-    static void initTray(const QIcon &icon);
-    static void showTray(const QString &title,
-                         const QString &message,
-                         Type type = Info);
-
 signals:
     void clicked();
 
@@ -83,8 +74,6 @@ private:
     QLabel       *m_title;
     QLabel       *m_message;
     QPushButton  *m_closeBtn;
-    QPushButton  *m_action1Btn;
-    QPushButton  *m_action2Btn;
     QProgressBar *m_progress;
 
     QTimer             *m_autoClose;
@@ -97,10 +86,36 @@ private:
     int  m_elapsed;
     bool m_paused;
 
+    QPushButton  *m_action1Btn;
+    QPushButton  *m_action2Btn;
+
     static constexpr int MAX_TOASTS = 5;
     static QList<NotificationWidget*> s_active;
     static bool s_toastsEnabled;
-    static QSystemTrayIcon *s_tray;
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  SystemNotification — Notifications natives OS via QSystemTrayIcon
+// ═══════════════════════════════════════════════════════════════════════════════
+class SystemNotification : public QObject
+{
+    Q_OBJECT
+
+public:
+    static SystemNotification &instance();
+
+    void initialize(QWidget *parent = nullptr);
+    bool isAvailable() const;
+
+    void show(const QString &title,
+              const QString &message,
+              NotificationWidget::Type type = NotificationWidget::Info,
+              int durationMs = 5000);
+
+private:
+    explicit SystemNotification(QObject *parent = nullptr);
+    QSystemTrayIcon *m_tray = nullptr;
+    bool m_initialized = false;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

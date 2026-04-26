@@ -70,7 +70,7 @@ public:
     QList<Client> getAll();//this
     QMap<QString, int> statistiquesParVille();//this
     QMap<QString, int> statistiquesParMois();//me
-    static bool exporterListe(QTableWidget* table, const QString& fileName);
+    bool exporterCommandesParClient(const QString& mailClient, const QString& fileName);
 
 };
 

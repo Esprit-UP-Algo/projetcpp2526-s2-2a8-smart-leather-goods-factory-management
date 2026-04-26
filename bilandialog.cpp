@@ -412,9 +412,7 @@ void BilanDialog::onPeriodChanged()
     }
     m_totalCA = ca;
     m_lblCA->setText(fmt(ca));
-    double pctAttente = total > 0 ? 100.0 * enAttente / total : 0.0;
-    m_lblCommandes->setText(QString("%1\n(%2 en attente — %3%)")
-        .arg(total).arg(enAttente).arg(pctAttente, 0, 'f', 1));
+    m_lblCommandes->setText(QString("%1\n(%2 en attente)").arg(total).arg(enAttente));
 
     // Bénéfice net depuis Articles
     q.exec(QString(
@@ -430,9 +428,7 @@ void BilanDialog::onPeriodChanged()
     if (totalPrix <= 0 && ca > 0) { benefice = ca * 0.30; totalPrix = ca; }
     m_totalBenefice = benefice;
     m_lblBenefice->setText(fmt(benefice));
-    double margePct = totalPrix > 0 ? benefice / totalPrix * 100.0 : 0.0;
-    m_lblMarge->setText(QString::number(margePct, 'f', 1) + " %"
-        + (ca > 0 ? "\n(" + fmt(benefice) + " / " + fmt(ca) + ")" : ""));
+    m_lblMarge->setText(QString::number(totalPrix > 0 ? benefice / totalPrix * 100.0 : 0.0, 'f', 1) + " %");
 
     q.exec("SELECT produit FROM Commandes" + whereMonth +
            (allPeriods ? " WHERE " : " AND ") +
@@ -463,15 +459,11 @@ void BilanDialog::onPeriodChanged()
             {"Basse", QColor(ACCENT)}, {"Normale", QColor("#A0485A")}, {"Urgente", QColor(PRIMARY)}
         };
         auto *series = new QPieSeries();
-        double totalPrio = 0;
-        for (auto v : prio) totalPrio += v;
         for (auto it = prio.cbegin(); it != prio.cend(); ++it) {
-            double pct = totalPrio > 0 ? 100.0 * it.value() / totalPrio : 0.0;
-            auto *slice = series->append(
-                QString("%1\n%2 (%3%)").arg(it.key()).arg((int)it.value()).arg(pct,'0','f',1),
-                it.value());
+            auto *slice = series->append(it.key(), it.value());
             slice->setColor(colors.value(it.key(), QColor(ACCENT)));
             slice->setLabelVisible(true);
+            slice->setLabel(QString("%1\n%2").arg(it.key()).arg((int)it.value()));
         }
         cv->chart()->addSeries(series);
     }
@@ -486,24 +478,13 @@ void BilanDialog::onPeriodChanged()
         while (q.next()) prio[q.value(0).toString()] = q.value(1).toDouble();
 
         auto *set = new QBarSet("CA"); set->setColor(QColor(ACCENT));
-        double totalPrioCa = 0;
-        for (const QString &p : {"Basse", "Normale", "Urgente"}) totalPrioCa += prio.value(p, 0.0);
-        for (const QString &p : {"Basse", "Normale", "Urgente"}) *set << prio.value(p, 0.0);
+        for (const QString p : {"Basse", "Normale", "Urgente"}) *set << prio.value(p, 0.0);
 
         auto *series = new QBarSeries(); series->append(set);
-        series->setLabelsVisible(true);
-        series->setLabelsPosition(QAbstractBarSeries::LabelsOutsideEnd);
         chart->addSeries(series);
 
-        // Catégories avec pourcentage
-        QStringList catsWithPct;
-        for (const QString &p : {"Basse", "Normale", "Urgente"}) {
-            double pct = totalPrioCa > 0 ? 100.0 * prio.value(p, 0.0) / totalPrioCa : 0.0;
-            catsWithPct << QString("%1\n(%2%)").arg(p).arg(pct,'0','f',1);
-        }
         auto *axisX = new QBarCategoryAxis();
-        axisX->append(catsWithPct);
-        axisX->setLabelsFont(QFont("Arial", 8));
+        axisX->append({"Basse", "Normale", "Urgente"});
         chart->addAxis(axisX, Qt::AlignBottom); series->attachAxis(axisX);
 
         double maxVal = prio.isEmpty() ? 100.0 : *std::max_element(prio.cbegin(), prio.cend());

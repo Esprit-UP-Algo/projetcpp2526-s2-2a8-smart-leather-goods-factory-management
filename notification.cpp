@@ -23,14 +23,81 @@
 #include <QtMath>
 #include <QPointer>
 #include <QRegularExpression>
-#include <QSystemTrayIcon>
 #include <QMenu>
+#include <QAction>
 
 // ── Statics ──────────────────────────────────────────────────────────────────
 QList<NotificationWidget*> NotificationWidget::s_active;
 bool                       NotificationWidget::s_toastsEnabled = false;
 NotificationAI*            NotificationAI::s_instance          = nullptr;
-QSystemTrayIcon*           NotificationWidget::s_tray           = nullptr;
+
+// ===============================================================
+//  SystemNotification
+// ===============================================================
+
+SystemNotification &SystemNotification::instance()
+{
+    static SystemNotification inst;
+    return inst;
+}
+
+SystemNotification::SystemNotification(QObject *parent)
+    : QObject(parent)
+{
+}
+
+void SystemNotification::initialize(QWidget *parent)
+{
+    if (m_initialized) return;
+
+    m_tray = new QSystemTrayIcon(parent);
+    m_tray->setIcon(QApplication::windowIcon().isNull()
+                        ? QIcon(":/logo.png")
+                        : QApplication::windowIcon());
+    m_tray->setToolTip("CUIREA Management");
+
+    // Menu contextuel de la tray icon
+    auto *menu = new QMenu(parent);
+    auto *showAction = menu->addAction("Afficher");
+    auto *quitAction = menu->addAction("Quitter");
+
+    connect(showAction, &QAction::triggered, this, [parent]() {
+        if (parent) {
+            parent->showNormal();
+            parent->raise();
+            parent->activateWindow();
+        }
+    });
+    connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
+
+    m_tray->setContextMenu(menu);
+    m_tray->show();
+
+    m_initialized = true;
+}
+
+bool SystemNotification::isAvailable() const
+{
+    return m_initialized && m_tray && QSystemTrayIcon::supportsMessages();
+}
+
+void SystemNotification::show(const QString &title,
+                              const QString &message,
+                              NotificationWidget::Type type,
+                              int durationMs)
+{
+    if (!isAvailable()) return;
+
+    QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information;
+    switch (type) {
+    case NotificationWidget::Warning:  icon = QSystemTrayIcon::Warning;  break;
+    case NotificationWidget::Critical: icon = QSystemTrayIcon::Critical; break;
+    case NotificationWidget::Success:  icon = QSystemTrayIcon::Information; break;
+    default: break;
+    }
+
+    m_tray->showMessage(title, message, icon, durationMs);
+}
 
 // ===============================================================
 //  NotificationWidget
@@ -48,50 +115,6 @@ void NotificationWidget::repositionAll()
     }
 }
 
-// ── Tray : initialisation ─────────────────────────────────────────────────────
-void NotificationWidget::initTray(const QIcon &icon)
-{
-    if (s_tray) return; // déjà initialisé
-    s_tray = new QSystemTrayIcon(icon, qApp);
-
-    auto *menu = new QMenu();
-    auto *actionOuvrir  = menu->addAction("Ouvrir CUIREA");
-    menu->addSeparator();
-    auto *actionQuitter = menu->addAction("Quitter");
-
-    QObject::connect(actionOuvrir, &QAction::triggered, []() {
-        if (qApp->activeWindow()) qApp->activeWindow()->showNormal();
-    });
-    QObject::connect(actionQuitter, &QAction::triggered, qApp, &QApplication::quit);
-
-    s_tray->setContextMenu(menu);
-    s_tray->setToolTip("CUIREA Management");
-    s_tray->show();
-
-    QObject::connect(s_tray, &QSystemTrayIcon::activated,
-                     [](QSystemTrayIcon::ActivationReason reason) {
-        if (reason == QSystemTrayIcon::Trigger && qApp->activeWindow())
-            qApp->activeWindow()->showNormal();
-    });
-    qDebug() << "[Tray] Icone systeme CUIREA initialisee";
-}
-
-// ── Tray : notification système Windows ──────────────────────────────────────
-void NotificationWidget::showTray(const QString &title, const QString &message, Type type)
-{
-    if (!s_tray) {
-        qWarning() << "[Tray] Non initialise — appeler initTray() au demarrage";
-        return;
-    }
-    QSystemTrayIcon::MessageIcon icon;
-    switch (type) {
-    case Critical: icon = QSystemTrayIcon::Critical;    break;
-    case Warning:  icon = QSystemTrayIcon::Warning;     break;
-    default:       icon = QSystemTrayIcon::Information; break;
-    }
-    s_tray->showMessage(title, message, icon, 6000);
-}
-
 void NotificationWidget::show(const QString &title, const QString &message, Type type,
                                const QString &action1Label, std::function<void()> action1,
                                const QString &action2Label, std::function<void()> action2,
@@ -100,8 +123,8 @@ void NotificationWidget::show(const QString &title, const QString &message, Type
     NotificationHistory::instance().add({title, message, type,
                                          QDateTime::currentDateTime(), false, aiGenerated});
 
-    // ── Notification système Windows (toujours, même app minimisée) ───────────
-    showTray(title, message, type);
+    // Notification systeme native OS
+    SystemNotification::instance().show(title, message, type, durationMs);
 
     if (!s_toastsEnabled) return;
 

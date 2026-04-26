@@ -531,6 +531,7 @@ bool MatiereDetection::isCuirMaterial(const QJsonObject &results)
 
 void MatiereDetection::showNonCuirResult(const QString &materialType)
 {
+    Q_UNUSED(materialType);
     // Créer le dialogue pour "NON CUIR"
     QDialog *resultDialog = new QDialog(mainWindow);
     resultDialog->setWindowTitle("Résultats de Détection");

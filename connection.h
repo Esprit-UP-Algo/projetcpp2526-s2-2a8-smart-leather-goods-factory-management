@@ -10,7 +10,7 @@ public:
     static Connection* instance(); // Accès à l'instance unique
     bool createConnect(); // Méthode pour créer la connexion
     void closeConnection(); // Fermer la connexion
-    QSqlDatabase getDatabase() { return db; } // Obtenir la base de données
+    QSqlDatabase& getDatabase() { return db; } // Obtenir la base de données (référence !)
 
 private:
     Connection(); // Constructeur privé
