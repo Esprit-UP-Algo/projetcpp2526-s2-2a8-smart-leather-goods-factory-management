@@ -6140,19 +6140,21 @@ void MainWindow::traiterMessageArduino(const QString &msg)
 
             loadProductionData();
 
-            // Envoyer '1' à l'Arduino (déclenche servos)
+            // Envoyer '3' au vrai Arduino : ID valide, attendre bouton Expédier
             if (A.connection()->getSerial()->isOpen())
-                A.connection()->getSerial()->write("1");
+                A.connection()->getSerial()->write("3");
 
-            if (m_lcdLigne1) m_lcdLigne1->setText("Commande terminee");
-            if (m_lcdLigne2) m_lcdLigne2->setText(idCommande);
+            // Simulateur LCD : ID OK, attendre bouton Expédier
+            if (m_lcdLigne1) m_lcdLigne1->setText("ID OK");
+            if (m_lcdLigne2) m_lcdLigne2->setText("Attente expedit.");
 
-            qDebug() << "✅ Commande" << id << "→ Terminé";
+            qDebug() << "✅ Commande" << id << "→ Terminé, attente bouton Expédier";
         } else {
             // ID invalide → '2' (Arduino reste en attente, pas de retour accueil)
             if (A.connection()->getSerial()->isOpen())
                 A.connection()->getSerial()->write("2");
 
+            // Simulateur LCD : ID invalide
             if (m_lcdLigne1) m_lcdLigne1->setText("ID invalide");
             if (m_lcdLigne2) m_lcdLigne2->setText("Ressaisir + #");
 

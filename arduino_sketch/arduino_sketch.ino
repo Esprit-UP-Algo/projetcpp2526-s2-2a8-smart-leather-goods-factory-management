@@ -83,6 +83,13 @@ void loop() {
             lcd.setCursor(0, 1);
             lcd.print("Ressaisir + #");
             inputBuffer = "";
+        } else if (rep == '3') {
+            // ID valide trouvé — attendre bouton Expédier dans Qt
+            lcd.clear();
+            lcd.setCursor(0, 0);
+            lcd.print("ID OK");
+            lcd.setCursor(0, 1);
+            lcd.print("Attente expedit.");
         }
     }
 
