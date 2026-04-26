@@ -13,6 +13,7 @@ SOURCES += \
     arduino.cpp \
     arduinoconnection.cpp \
     aichatwidget.cpp \
+    rfidoutput.cpp \
     articleviewer3d.cpp \
     bilandialog.cpp \
     client.cpp \
@@ -50,6 +51,7 @@ HEADERS += \
     arduino.h \
     arduinoconnection.h \
     aichatwidget.h \
+    rfidoutput.h \
     articleviewer3d.h \
     bilandialog.h \
     email.h \

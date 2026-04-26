@@ -403,10 +403,10 @@ MainWindow::MainWindow(QWidget *parent)
                 if (widget && (widget->objectName() == "btnAdd" || 
                               widget->objectName() == "btnStatistics" ||
                               widget->objectName() == "btnExport")) {
-                    // On a trouvé le bon layout, ajouter le bouton
+                    // On a trouvé le bon layout, ajouter le bouton Pointage
                     layout->addWidget(btnPointage);
-                    qDebug() << "✅ Bouton Pointage ajouté au layout des employés";
-                    goto button_added; // Sortir des boucles imbriquées
+                    qDebug() << "Bouton Pointage ajoute";
+                    goto button_added;
                 }
             }
         }
@@ -416,6 +416,8 @@ MainWindow::MainWindow(QWidget *parent)
     // Connecter le signal
     connect(btnPointage, &QPushButton::clicked, 
             this, &MainWindow::on_btnPointage_clicked);
+
+
 
     // -- Raw materials -------------------------------------------------------
     ui->matiereTable->verticalHeader()->setVisible(false);
@@ -536,6 +538,36 @@ MainWindow::MainWindow(QWidget *parent)
     
     // === POINTAGE RFID - Initialisation ===
     setupArduinoPointage();
+    
+    // === BOUTON TEST NOTIFICATION RFID (flottant) ===
+    QPushButton *btnTestRFID = new QPushButton("TEST NOTIF", this);
+    btnTestRFID->setFixedSize(100, 40);
+    btnTestRFID->setStyleSheet(
+        "QPushButton { background-color: #E74C3C; color: white; font-weight: bold; "
+        "border-radius: 8px; font-size: 12px; }"
+        "QPushButton:hover { background-color: #C0392B; }");
+    btnTestRFID->move(300, 10);
+    btnTestRFID->show();
+    btnTestRFID->raise();
+    connect(btnTestRFID, &QPushButton::clicked, this, [this]() {
+        qDebug() << "=== CLIC TEST NOTIFICATION ===";
+        
+        // Test si tray icon disponible
+        bool available = SystemNotification::instance().isAvailable();
+        qDebug() << "Tray disponible:" << available;
+        
+        if (available) {
+            SystemNotification::instance().show(
+                "Pointage CUIREA",
+                QString("Ali Ben Salem est arrive a %1").arg(QTime::currentTime().toString("HH:mm")),
+                NotificationWidget::Success,
+                5000
+            );
+            QMessageBox::information(this, "Test", "Notification envoyee! Regarde en bas a droite de Windows.");
+        } else {
+            QMessageBox::warning(this, "Erreur", "QSystemTrayIcon non disponible sur ce systeme!");
+        }
+    });
 }
 
 MainWindow::~MainWindow() 
@@ -658,7 +690,7 @@ void MainWindow::on_btnProduction_clicked()
     ui->employeeProfilePanel->setVisible(false);
     m_notifiedIds.clear();
     QTimer::singleShot(3000, this, &MainWindow::checkRetards);
-    setupKeypadSimulator(); // guard interne — ne crée qu'une seule fois
+    // setupKeypadSimulator(); // Désactivé - simulateur keypad non nécessaire
 }
 
 // -- Employee CRUD -------------------------------------------------------------
@@ -4393,8 +4425,8 @@ void MainWindow::setupArticleTable()
 {
     ui->articleTable->setColumnCount(11);
     ui->articleTable->setHorizontalHeaderLabels({
-        "ID","R�f�rence","Nom","Cat�gorie","Type","Couleur",
-        "Dimensions","Prix Unitaire","Co�t Fabrication","Statut","Date Cr�ation"
+        "ID","Reference","Nom","Categorie","Type","Couleur",
+        "Dimensions","Prix Unitaire","Cout Fabrication","Statut","Date Creation"
     });
     ui->articleTable->setColumnHidden(0, true);
     ui->articleTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -4423,8 +4455,8 @@ void MainWindow::loadArticlesFromDB()
         ui->articleTable->setItem(i, 4, new QTableWidgetItem(a.getType()));
         ui->articleTable->setItem(i, 5, new QTableWidgetItem(a.getCouleur()));
         ui->articleTable->setItem(i, 6, new QTableWidgetItem(a.getDimensions()));
-        ui->articleTable->setItem(i, 7, new QTableWidgetItem(QString::number(a.getPrixUnitaire(), 'f', 2) + " �"));
-        ui->articleTable->setItem(i, 8, new QTableWidgetItem(QString::number(a.getCoutFabrication(), 'f', 2) + " �"));
+        ui->articleTable->setItem(i, 7, new QTableWidgetItem(QString::number(a.getPrixUnitaire(), 'f', 2) + " DT"));
+        ui->articleTable->setItem(i, 8, new QTableWidgetItem(QString::number(a.getCoutFabrication(), 'f', 2) + " DT"));
         ui->articleTable->setItem(i, 9, new QTableWidgetItem(a.getStatut()));
         ui->articleTable->setItem(i, 10, new QTableWidgetItem(a.getDateCreation().toString("yyyy-MM-dd")));
     }
@@ -4495,9 +4527,9 @@ void MainWindow::on_btnAddArticle_clicked()
 void MainWindow::on_btnEditArticle_clicked()
 {
     int row = ui->articleTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"Attention","S�lectionnez un article."); return; }
+    if (row < 0) { QMessageBox::warning(this,"Attention","Selectionnez un article."); return; }
     
-    // R�cup�rer l'ID de l'article s�lectionn�
+    // Recuperer l'ID de l'article selectionne
     int idArticle = ui->articleTable->item(row, 0)->text().toInt();
     Article article = Article::rechercherParId(idArticle);
     
@@ -4547,9 +4579,9 @@ void MainWindow::on_btnEditArticle_clicked()
 void MainWindow::on_btnDeleteArticle_clicked()
 {
     int row = ui->articleTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"Attention","S�lectionnez un article."); return; }
+    if (row < 0) { QMessageBox::warning(this,"Attention","Selectionnez un article."); return; }
     
-    // R�cup�rer l'ID de l'article s�lectionn�
+    // Recuperer l'ID de l'article selectionne
     int idArticle = ui->articleTable->item(row, 0)->text().toInt();
     Article article = Article::rechercherParId(idArticle);
     
@@ -4579,7 +4611,7 @@ void MainWindow::on_btnDeleteArticle_clicked()
 void MainWindow::on_btnViewArticle_clicked()
 {
     int row = ui->articleTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","S�lectionnez un article."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Selectionnez un article."); return; }
     
     int idArticle = ui->articleTable->item(row, 0)->text().toInt();
     Article article = Article::rechercherParId(idArticle);
@@ -4598,7 +4630,7 @@ void MainWindow::on_btnViewArticle_clicked()
 void MainWindow::on_btnView3DArticle_clicked()
 {
     int row = ui->articleTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","S�lectionnez un article pour la vue 3D."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Selectionnez un article pour la vue 3D."); return; }
 
     QString nom     = ui->articleTable->item(row, 2)->text();
     QString type    = ui->articleTable->item(row, 4)->text();
@@ -4861,20 +4893,30 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
 
     // Camembert statut
     {
-        QGroupBox *gb = new QGroupBox("  🥧  Répartition par Statut");
+        QGroupBox *gb = new QGroupBox("  Repartition par Statut");
         QVBoxLayout *l = new QVBoxLayout(gb);
         auto *pie = new QPieSeries();
         if (dispo>0) pie->append("Disponible", dispo)->setBrush(QColor("#558B2F"));
         if (enProd>0) pie->append("En Production", enProd)->setBrush(QColor("#EF6C00"));
-        if (obs>0) pie->append("Obsolète", obs)->setBrush(QColor("#C62828"));
+        if (obs>0) pie->append("Obsolete", obs)->setBrush(QColor("#C62828"));
         for (auto *sl : pie->slices()) {
-            sl->setLabelVisible(true); sl->setLabelColor(QColor("#3E2723"));
-            sl->setLabel(QString("%1\n%2%").arg(sl->label()).arg(sl->percentage()*100,0,'f',1));
+            sl->setLabelVisible(true);
+            sl->setLabelColor(QColor("#3E2723"));
+            // Afficher seulement le pourcentage sur le graphique
+            sl->setLabel(QString("%1%").arg(sl->percentage()*100, 0, 'f', 1));
         }
         auto *chart = new QChart(); chart->addSeries(pie);
         chart->setBackgroundBrush(QBrush(QColor("#FFFFFF")));
         chart->legend()->setLabelColor(QColor("#3E2723"));
         chart->legend()->setAlignment(Qt::AlignBottom);
+        // Afficher les noms complets avec pourcentages dans la légende
+        int idx = 0;
+        QStringList legendLabels = {"Disponible", "En Production", "Obsolete"};
+        QList<int> values = {dispo, enProd, obs};
+        for (auto *sl : pie->slices()) {
+            QString name = sl->label();
+            // La légende affiche automatiquement le nom de la slice
+        }
         chart->setAnimationOptions(QChart::SeriesAnimations);
         auto *cv = new QChartView(chart); cv->setRenderHint(QPainter::Antialiasing);
         l->addWidget(cv); t1Lay->addWidget(gb);
@@ -4882,7 +4924,7 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
 
     // Barres articles par catégorie
     {
-        QGroupBox *gb = new QGroupBox("  📊  Articles par Catégorie");
+        QGroupBox *gb = new QGroupBox("  Articles par Categorie");
         QVBoxLayout *l = new QVBoxLayout(gb);
         auto *bs = new QBarSet("Nb Articles"); bs->setColor(QColor("#8D6E63"));
         QStringList cats;
@@ -4902,10 +4944,10 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
 
     // Barres groupées prix vs coût par catégorie
     {
-        QGroupBox *gb = new QGroupBox("  💰  Prix vs Coût par Catégorie");
+        QGroupBox *gb = new QGroupBox("  Prix vs Cout par Categorie");
         QVBoxLayout *l = new QVBoxLayout(gb);
         auto *sPrix = new QBarSet("Prix Moyen"); sPrix->setColor(QColor("#8D6E63"));
-        auto *sCout = new QBarSet("Coût Moyen"); sCout->setColor(QColor("#D7CCC8"));
+        auto *sCout = new QBarSet("Cout Moyen"); sCout->setColor(QColor("#D7CCC8"));
         QStringList cats;
         for (auto it=nbParCat.begin(); it!=nbParCat.end(); ++it) {
             cats << it.key();
@@ -4973,7 +5015,7 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
 
     // Camembert rentabilité
     {
-        QGroupBox *gb = new QGroupBox("  🥧  Répartition Rentabilité");
+        QGroupBox *gb = new QGroupBox("  Repartition Rentabilite");
         QVBoxLayout *l = new QVBoxLayout(gb);
         auto *pie = new QPieSeries();
         if (excRent>0) pie->append("Excellente ≥50%", excRent)->setBrush(QColor("#2E7D32"));
@@ -5546,7 +5588,7 @@ void MainWindow::on_btnAnalyseRentabilite_clicked()
     QVBoxLayout *tblLay = new QVBoxLayout(tblBox);
     auto *tbl = new QTableWidget();
     tbl->setColumnCount(7);
-    tbl->setHorizontalHeaderLabels({"Nom","Cat�gorie","Co�t (DT)","Prix (DT)","Marge (DT)","Marge (%)","Niveau"});
+    tbl->setHorizontalHeaderLabels({"Nom","Categorie","Cout (DT)","Prix (DT)","Marge (DT)","Marge (%)","Niveau"});
     tbl->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tbl->setAlternatingRowColors(true);
     tbl->verticalHeader()->setVisible(false);
@@ -6341,8 +6383,8 @@ void MainWindow::setupArduinoPointage()
     });
     m_timerAbsences->start(60000);
 
-    // Simulateur keypad Qt (inséré dans la page Production)
-    setupKeypadSimulator();
+    // Simulateur keypad Qt désactivé
+    // setupKeypadSimulator();
 }
 
 // ── Réception données Arduino (RFID pointage) ────────────────────────────
@@ -6446,20 +6488,48 @@ void MainWindow::traiterMessageArduino(const QString &msg)
     if (msg.contains("UID:")) {
         QString uid = msg.section("UID:", -1).trimmed();
         bool ok = m_pointage.marquerPresent(uid);
+        
         if (ok && !m_pointage.estDejaPointe()) {
-            QMessageBox::information(this, "✅ Pointage",
-                QString("Bonjour %1 %2 !\nPointage enregistré.")
-                    .arg(m_pointage.getDernierPrenom())
-                    .arg(m_pointage.getDernierNom()));
+            // Pointage reussi - Notification Windows systeme
+            QString prenom = m_pointage.getDernierPrenom();
+            QString nom = m_pointage.getDernierNom();
+            QString heure = QTime::currentTime().toString("HH:mm");
+            
+            // Notification Windows native
+            SystemNotification::instance().show(
+                "Pointage CUIREA",
+                QString("%1 %2 est arrive(e) a %3").arg(prenom).arg(nom).arg(heure),
+                NotificationWidget::Success,
+                5000
+            );
+            
             populateEmployeeTable();
+            
         } else if (ok && m_pointage.estDejaPointe()) {
-            QMessageBox::information(this, "ℹ️ Déjà pointé",
-                QString("%1 %2 a déjà pointé aujourd'hui.")
-                    .arg(m_pointage.getDernierPrenom())
-                    .arg(m_pointage.getDernierNom()));
+            // Deja pointe aujourd'hui - c'est une sortie
+            QString prenom = m_pointage.getDernierPrenom();
+            QString nom = m_pointage.getDernierNom();
+            QString heure = QTime::currentTime().toString("HH:mm");
+            
+            // Notification Windows native
+            SystemNotification::instance().show(
+                "Pointage CUIREA",
+                QString("%1 %2 a quitte a %3").arg(prenom).arg(nom).arg(heure),
+                NotificationWidget::Info,
+                5000
+            );
+            
         } else {
-            QMessageBox::warning(this, "❌ Badge inconnu",
-                "Badge non reconnu dans le système.");
+            // Badge inconnu - Alerte Windows
+            QString heure = QTime::currentTime().toString("HH:mm");
+            
+            // Notification Windows native - Alerte
+            SystemNotification::instance().show(
+                "Alerte Securite CUIREA",
+                QString("Tentative d'acces refusee a %1 - Carte inconnue (UID: %2)").arg(heure).arg(uid),
+                NotificationWidget::Critical,
+                8000
+            );
         }
     }
 }

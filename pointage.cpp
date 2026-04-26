@@ -30,7 +30,7 @@ int Pointage::trouverEmployeParRfid(const QString &uid)
     query.prepare(
         "SELECT ID_EMPLOYE, NOM, PRENOM "
         "FROM CUIREA.EMPLOYES "
-        "WHERE REPLACE(UPPER(RFID_UID),' ','') = :uid "
+        "WHERE REPLACE(UPPER(UID_CARTE),' ','') = :uid "
         "AND ACTIF = 1"
     );
     query.bindValue(":uid", uidNorm);
