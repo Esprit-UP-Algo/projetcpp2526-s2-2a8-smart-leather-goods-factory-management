@@ -19,6 +19,7 @@
 #include <QScrollArea>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QSystemTrayIcon>
 #include <functional>
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -91,6 +92,30 @@ private:
     static constexpr int MAX_TOASTS = 5;
     static QList<NotificationWidget*> s_active;
     static bool s_toastsEnabled;
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  SystemNotification — Notifications natives OS via QSystemTrayIcon
+// ═══════════════════════════════════════════════════════════════════════════════
+class SystemNotification : public QObject
+{
+    Q_OBJECT
+
+public:
+    static SystemNotification &instance();
+
+    void initialize(QWidget *parent = nullptr);
+    bool isAvailable() const;
+
+    void show(const QString &title,
+              const QString &message,
+              NotificationWidget::Type type = NotificationWidget::Info,
+              int durationMs = 5000);
+
+private:
+    explicit SystemNotification(QObject *parent = nullptr);
+    QSystemTrayIcon *m_tray = nullptr;
+    bool m_initialized = false;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

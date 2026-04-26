@@ -140,6 +140,7 @@ public:
         COL_PRIORITE,
         COL_MONTANT,
         COL_ETAT_PAIEMENT,
+        COL_STATUT_LIVRAISON,
         COL_COUNT  ///< Nombre total de colonnes (sentinelle)
     };
 

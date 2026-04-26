@@ -23,11 +23,81 @@
 #include <QtMath>
 #include <QPointer>
 #include <QRegularExpression>
+#include <QMenu>
+#include <QAction>
 
 // ── Statics ──────────────────────────────────────────────────────────────────
 QList<NotificationWidget*> NotificationWidget::s_active;
 bool                       NotificationWidget::s_toastsEnabled = false;
 NotificationAI*            NotificationAI::s_instance          = nullptr;
+
+// ===============================================================
+//  SystemNotification
+// ===============================================================
+
+SystemNotification &SystemNotification::instance()
+{
+    static SystemNotification inst;
+    return inst;
+}
+
+SystemNotification::SystemNotification(QObject *parent)
+    : QObject(parent)
+{
+}
+
+void SystemNotification::initialize(QWidget *parent)
+{
+    if (m_initialized) return;
+
+    m_tray = new QSystemTrayIcon(parent);
+    m_tray->setIcon(QApplication::windowIcon().isNull()
+                        ? QIcon(":/logo.png")
+                        : QApplication::windowIcon());
+    m_tray->setToolTip("CUIREA Management");
+
+    // Menu contextuel de la tray icon
+    auto *menu = new QMenu(parent);
+    auto *showAction = menu->addAction("Afficher");
+    auto *quitAction = menu->addAction("Quitter");
+
+    connect(showAction, &QAction::triggered, this, [parent]() {
+        if (parent) {
+            parent->showNormal();
+            parent->raise();
+            parent->activateWindow();
+        }
+    });
+    connect(quitAction, &QAction::triggered, qApp, &QApplication::quit);
+
+    m_tray->setContextMenu(menu);
+    m_tray->show();
+
+    m_initialized = true;
+}
+
+bool SystemNotification::isAvailable() const
+{
+    return m_initialized && m_tray && QSystemTrayIcon::supportsMessages();
+}
+
+void SystemNotification::show(const QString &title,
+                              const QString &message,
+                              NotificationWidget::Type type,
+                              int durationMs)
+{
+    if (!isAvailable()) return;
+
+    QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information;
+    switch (type) {
+    case NotificationWidget::Warning:  icon = QSystemTrayIcon::Warning;  break;
+    case NotificationWidget::Critical: icon = QSystemTrayIcon::Critical; break;
+    case NotificationWidget::Success:  icon = QSystemTrayIcon::Information; break;
+    default: break;
+    }
+
+    m_tray->showMessage(title, message, icon, durationMs);
+}
 
 // ===============================================================
 //  NotificationWidget
@@ -52,6 +122,10 @@ void NotificationWidget::show(const QString &title, const QString &message, Type
 {
     NotificationHistory::instance().add({title, message, type,
                                          QDateTime::currentDateTime(), false, aiGenerated});
+
+    // Notification systeme native OS
+    SystemNotification::instance().show(title, message, type, durationMs);
+
     if (!s_toastsEnabled) return;
 
     if (s_active.size() >= MAX_TOASTS && !s_active.isEmpty())

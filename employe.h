@@ -25,6 +25,7 @@ private:
     QDate dateEmbauche;
     QString statut;
     QString photoPath;  // Chemin vers la photo de l'employé
+    QString rfidUid;    // UID du badge RFID pour le pointage
     
     // Champs d'authentification
     QString roleSysteme;
@@ -51,6 +52,7 @@ public:
     QDate getDateEmbauche() const { return dateEmbauche; }
     QString getStatut() const { return statut; }
     QString getPhotoPath() const { return photoPath; }
+    QString getRfidUid() const { return rfidUid; }
     QString getMotDePasse() const { return motDePasse; }
     QString getRoleSysteme() const { return roleSysteme; }
     bool isActif() const { return actif; }
@@ -72,6 +74,7 @@ public:
     void setDateEmbauche(const QDate &value) { dateEmbauche = value; }
     void setStatut(const QString &value) { statut = value; }
     void setPhotoPath(const QString &value) { photoPath = value; }
+    void setRfidUid(const QString &value) { rfidUid = value; }
     void setMotDePasse(const QString &value) { motDePasse = value; }
     void setRoleSysteme(const QString &value) { roleSysteme = value; }
     void setActif(bool value) { actif = value; }

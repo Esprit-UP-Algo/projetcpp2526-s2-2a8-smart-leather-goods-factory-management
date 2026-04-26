@@ -367,6 +367,55 @@ MainWindow::MainWindow(QWidget *parent)
         
         delete model;
     });
+    
+    // === BOUTON POINTAGE - Création dynamique ===
+    QPushButton *btnPointage = new QPushButton("📅 Pointage", this);
+    btnPointage->setObjectName("btnPointage");
+    btnPointage->setMinimumSize(120, 35);
+    btnPointage->setStyleSheet(
+        "QPushButton {"
+        "  background-color: #8D6E63;"
+        "  color: white;"
+        "  border: none;"
+        "  border-radius: 10px;"
+        "  padding: 10px 20px;"
+        "  font-family: Arial, sans-serif;"
+        "  font-size: 12px;"
+        "  font-weight: bold;"
+        "}"
+        "QPushButton:hover {"
+        "  background-color: #A0826D;"
+        "}"
+        "QPushButton:pressed {"
+        "  background-color: #6E473B;"
+        "}"
+    );
+    
+    // Trouver le layout des boutons employés et ajouter le bouton
+    QWidget *employeePage = ui->stackedWidget->widget(0); // Page Employés (index 0)
+    if (employeePage) {
+        // Chercher tous les layouts horizontaux dans la page
+        QList<QHBoxLayout*> layouts = employeePage->findChildren<QHBoxLayout*>();
+        for (QHBoxLayout *layout : layouts) {
+            // Vérifier si ce layout contient les boutons d'action (btnAdd, btnEdit, etc.)
+            for (int i = 0; i < layout->count(); ++i) {
+                QWidget *widget = layout->itemAt(i)->widget();
+                if (widget && (widget->objectName() == "btnAdd" || 
+                              widget->objectName() == "btnStatistics" ||
+                              widget->objectName() == "btnExport")) {
+                    // On a trouvé le bon layout, ajouter le bouton
+                    layout->addWidget(btnPointage);
+                    qDebug() << "✅ Bouton Pointage ajouté au layout des employés";
+                    goto button_added; // Sortir des boucles imbriquées
+                }
+            }
+        }
+    }
+    button_added:
+    
+    // Connecter le signal
+    connect(btnPointage, &QPushButton::clicked, 
+            this, &MainWindow::on_btnPointage_clicked);
 
     // -- Raw materials -------------------------------------------------------
     ui->matiereTable->verticalHeader()->setVisible(false);
@@ -423,6 +472,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnExcelProduction,       &QPushButton::clicked, this, &MainWindow::onExcelProduction);
     connect(ui->btnTrierProduction,       &QPushButton::clicked, this, &MainWindow::onTrierProduction);
     connect(ui->btnStatistiquesProduction,&QPushButton::clicked, this, &MainWindow::onStatistiquesProduction);
+    connect(ui->btnExpedier,              &QPushButton::clicked, this, &MainWindow::expedierActionArduino);
     connect(ui->searchBoxProduction, &QLineEdit::textChanged, this, &MainWindow::onRechercherProduction);
 
     // -- Timer retard notifications -------------------------------------------
@@ -438,13 +488,17 @@ MainWindow::MainWindow(QWidget *parent)
         NotificationAI::setGlobalInstance(m_ai);
     }
 
-    // Cloche positionn�e en overlay coin sup�rieur droit
+    // Cloche positionnee en overlay coin superieur droit
     m_bell = new NotificationBell(this);
     m_bell->raise();
 
     m_watcher = new NotificationWatcher(QSqlDatabase::database(), this);
     if (m_ai) m_watcher->setAI(m_ai);
     m_watcher->start(120000);
+
+    // -- Notifications systeme natives (tray icon OS) ---------------------------
+    SystemNotification::instance().initialize(this);
+    NotificationWidget::setToastsEnabled(false);
 
     // -- Articles ------------------------------------------------------------
     setupArticleTable();
@@ -475,10 +529,13 @@ MainWindow::MainWindow(QWidget *parent)
 
         if (m_bell) {
             m_bell->move(width() - m_bell->width() - 12, 6);
-            m_bell->setVisible(false); // cach�e par d�faut, visible seulement en Production
+            m_bell->setVisible(true); // visible sur toutes les pages
             m_bell->raise();
         }
     });
+    
+    // === POINTAGE RFID - Initialisation ===
+    setupArduinoPointage();
 }
 
 MainWindow::~MainWindow() 
@@ -519,6 +576,11 @@ void MainWindow::resizeEvent(QResizeEvent *event)
         m_bell->move(width() - m_bell->width() - 12, 6);
         m_bell->raise();
     }
+    if (m_arduinoIndicator) {
+        m_arduinoIndicator->move(width() - m_arduinoIndicator->width() - 12,
+                                  m_bell ? m_bell->height() + 10 : 6);
+        m_arduinoIndicator->raise();
+    }
 }
 
 // -- Navigation helpers --------------------------------------------------------
@@ -539,10 +601,11 @@ void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &ti
     if (m_floatingBtn) m_floatingBtn->raise();
 
     // Cloche et toasts visibles uniquement sur la page Production (index 4)
-    if (m_bell) m_bell->setVisible(index == 4);
-    NotificationWidget::setToastsEnabled(index == 4);
+    if (m_bell) m_bell->setVisible(true); // visible sur toutes les pages
+    if (m_arduinoIndicator) m_arduinoIndicator->setVisible(index == 4);
+    NotificationWidget::setToastsEnabled(true); // toasts actifs sur toutes les pages
     // Fermer les toasts actifs quand on quitte Production
-    if (index != 4) NotificationWidget::closeAll();
+    // (on garde les toasts actifs partout, on ferme juste si on le souhaite)
 }
 
 void MainWindow::on_btnEmployees_clicked()  
@@ -591,11 +654,11 @@ void MainWindow::on_btnProduction_clicked()
     switchPage(4, ui->btnProduction, "CUIREA - Gestion de la Production");
     updateProductionStatsCards();
     m_aiWidget->setContext("Gestion de la Production");
-    // Masquer le panneau de profil employ� quand on change de page
+    // Masquer le panneau de profil employe quand on change de page
     ui->employeeProfilePanel->setVisible(false);
-    // R�initialiser pour re-notifier � chaque visite de l'onglet
     m_notifiedIds.clear();
     QTimer::singleShot(3000, this, &MainWindow::checkRetards);
+    setupKeypadSimulator(); // guard interne — ne crée qu'une seule fois
 }
 
 // -- Employee CRUD -------------------------------------------------------------
@@ -614,6 +677,7 @@ void MainWindow::on_btnAdd_clicked()
         e.setSexe(dlg.getSexe());
         e.setAdresse(dlg.getAdresse());
         e.setTelephone(dlg.getTelephone());
+        e.setRfidUid(dlg.getRfidUid());
         e.setEmail(dlg.getEmail());
         e.setPoste(dlg.getPoste());
         e.setDepartement(dlg.getDepartement());
@@ -627,8 +691,12 @@ void MainWindow::on_btnAdd_clicked()
         
         if (e.ajouter()) {
             populateEmployeeTable();
-            QMessageBox::information(this, "Succ�s", 
-                QString("Employ� ajout� avec succ�s !\n\n"
+            NotificationWidget::show("Employe ajoute",
+                dlg.getNom() + " " + dlg.getPrenom() + " - " + dlg.getRoleSysteme(),
+                NotificationWidget::Success);
+            QMessageBox::information(this, "Succes", 
+                QString("Employé ajouté avec succès !\n\n"
+>>>>>>> 46737d0e9c95515ba163a0b5fb61db1749ce4f10
                        "Identifiants de connexion:\n"
                        "Matricule: %1\n"
                        "R�le: %2\n"
@@ -637,6 +705,9 @@ void MainWindow::on_btnAdd_clicked()
                 .arg(dlg.getRoleSysteme())
                 .arg(dlg.isActif() ? "Oui" : "Non"));
         } else {
+            NotificationWidget::show("Erreur ajout employé",
+                "Impossible d'ajouter l'employé dans la base.",
+                NotificationWidget::Critical);
             QMessageBox::critical(this, "Erreur", 
                 "Impossible d'ajouter l'employ�.\n"
                 "V�rifiez que la table EMPLOYES existe dans la base de donn�es.");
@@ -653,7 +724,8 @@ void MainWindow::on_btnExport_clicked()
         return;
     }
     
-    // R�cup�rer les donn�es de l'employ� s�lectionn�
+    // Recuperer les donnees de l'employe selectionne
+    int idEmploye = cellText(ui->employeeTable, row, 13).toInt();  // Colonne 13 = ID_EMPLOYE
     QString matricule = cellText(ui->employeeTable, row, 0);
     QString nom = cellText(ui->employeeTable, row, 1);
     QString prenom = cellText(ui->employeeTable, row, 2);
@@ -663,8 +735,8 @@ void MainWindow::on_btnExport_clicked()
     QString dateEmbaucheStr = cellText(ui->employeeTable, row, 11);
     QDate dateEmbauche = QDate::fromString(dateEmbaucheStr, "dd/MM/yyyy");
     
-    // Ouvrir le dialog de fiche de paie
-    FichePaieDialog dlg(matricule, nom, prenom, cin, poste, departement, dateEmbauche, this);
+    // ✅ Utiliser le nouveau constructeur avec ID employé pour calculer les absences
+    FichePaieDialog dlg(idEmploye, matricule, nom, prenom, cin, poste, departement, dateEmbauche, this);
     dlg.exec();
 }
 
@@ -701,6 +773,7 @@ void MainWindow::on_btnEdit_clicked()
         e.setSexe(dlg.getSexe());
         e.setAdresse(dlg.getAdresse());
         e.setTelephone(dlg.getTelephone());
+        e.setRfidUid(dlg.getRfidUid());
         e.setEmail(dlg.getEmail());
         e.setPoste(dlg.getPoste());
         e.setDepartement(dlg.getDepartement());
@@ -714,7 +787,8 @@ void MainWindow::on_btnEdit_clicked()
         
         if (e.modifier()) {
             populateEmployeeTable();
-            QMessageBox::information(this, "Succ�s", "Employ� modifi� avec succ�s !");
+            NotificationWidget::show("Employe modifie", "Modifications enregistrees.", NotificationWidget::Success);
+            QMessageBox::information(this, "Succes", "Employe modifie avec succes !");
         } else {
             QMessageBox::critical(this, "Erreur", 
                 "Impossible de modifier l'employ�.\n"
@@ -747,7 +821,8 @@ void MainWindow::on_btnDelete_clicked()
         Employe e;
         if (e.supprimer(id)) {
             populateEmployeeTable();
-            QMessageBox::information(this, "Succ�s", "Employ� supprim� avec succ�s !");
+            NotificationWidget::show("Employe supprime", "L'employe a ete supprime.", NotificationWidget::Warning);
+            QMessageBox::information(this, "Succes", "Employe supprime avec succes !");
         } else {
             QMessageBox::critical(this, "Erreur", 
                 QString("Impossible de supprimer l'employ�.\n"
@@ -1184,9 +1259,31 @@ void MainWindow::on_btnTriClient_clicked() {}
 
 void MainWindow::on_btnExportClient_clicked()
 {
+    int row = ui->productionTable->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Erreur", "Sélectionnez une commande !");
+        return;
+    }
+
+    // 🔹 Find mail column
+    int mailColumn = -1;
+    for (int c = 0; c < ui->productionTable->columnCount(); ++c) {
+        if (ui->productionTable->horizontalHeaderItem(c)->text().toLower().contains("mail client")) {
+            mailColumn = c;
+            break;
+        }
+    }
+
+    if (mailColumn == -1) {
+        QMessageBox::critical(this, "Erreur", "Colonne mail_client introuvable !");
+        return;
+    }
+
+    QString mailClient = ui->productionTable->item(row, mailColumn)->text();
+
     QString filePath = QFileDialog::getSaveFileName(
         this,
-        "Exporter les clients",
+        "Exporter les commandes du client",
         "",
         "CSV (*.csv);;PDF (*.pdf);"
     );
@@ -1194,10 +1291,11 @@ void MainWindow::on_btnExportClient_clicked()
     if (filePath.isEmpty())
         return;
 
-    if (Client::exporterListe(ui->clientTable, filePath)) {
-        QMessageBox::information(this, "Succ�s", "Export r�ussi !");
+    Client c;
+    if (c.exporterCommandesParClient(mailClient, filePath)) {
+        QMessageBox::information(this, "Succes", "Export reussi !");
     } else {
-        QMessageBox::critical(this, "Erreur", "�chec de l'export !");
+        QMessageBox::critical(this, "Erreur", "Echec de l'export !");
     }
 }
 //historique client
@@ -2103,7 +2201,8 @@ void MainWindow::on_btnAddFournisseur_clicked()
         
         if (f.ajouter()) {
             refreshFournisseurTable();
-            QMessageBox::information(this, "Succ�s", "Fournisseur ajout� avec succ�s dans la base de donn�es!");
+            NotificationWidget::show("Fournisseur ajoute", "Nouveau fournisseur enregistre.", NotificationWidget::Success);
+            QMessageBox::information(this, "Succes", "Fournisseur ajoute avec succes dans la base de donnees!");
         } else {
             QMessageBox::critical(this, "Erreur", 
                 "Impossible d'ajouter le fournisseur.\n"
@@ -3004,9 +3103,11 @@ void MainWindow::onCreerProduction()
         
         ProductionDAO dao;
         if (dao.ajouter(prod)) {
-            qDebug() << "? Commande ajout�e avec succ�s";
-            QMessageBox::information(this, "Succ�s", "Commande ajout�e avec succ�s!");
+            qDebug() << "Commande ajoutee avec succes";
+            NotificationWidget::show("Commande creee", prod.getReference() + " enregistree.", NotificationWidget::Success);
+            QMessageBox::information(this, "Succes", "Commande ajoutee avec succes!");
             loadProductionData();
+        } else {
         } else {
             qDebug() << "? �chec de l'ajout";
             QMessageBox::critical(this, "Erreur", "Erreur lors de l'ajout de la commande.");
@@ -3189,8 +3290,10 @@ void MainWindow::onModifierProduction()
         
         ProductionDAO dao;
         if (dao.modifier(prod)) {
-            QMessageBox::information(this, "Succ�s", "Commande modifi�e avec succ�s!");
+            NotificationWidget::show("Commande modifiee", prod.getReference() + " mise a jour.", NotificationWidget::Success);
+            QMessageBox::information(this, "Succes", "Commande modifiee avec succes!");
             loadProductionData(); // Actualiser l'affichage
+        } else {
         } else {
             QMessageBox::critical(this, "Erreur", "Erreur lors de la modification de la commande.");
         }
@@ -3971,8 +4074,10 @@ void MainWindow::onSupprimerProduction()
         
         ProductionDAO dao;
         if (dao.supprimer(id)) {
-            QMessageBox::information(this, "Succ�s", "Commande supprim�e avec succ�s!");
+            NotificationWidget::show("Commande supprimee", "La commande a ete supprimee.", NotificationWidget::Warning);
+            QMessageBox::information(this, "Succes", "Commande supprimee avec succes!");
             loadProductionData(); // Actualiser l'affichage
+        } else {
         } else {
             QMessageBox::critical(this, "Erreur", "Erreur lors de la suppression de la commande.");
         }
@@ -6183,4 +6288,357 @@ void MainWindow::logout()
             }
         });
     }
+}
+
+
+// ══════════════════════════════════════════════════════════════════════════
+// SYSTÈME DE POINTAGE RFID - Intégration complète
+// ══════════════════════════════════════════════════════════════════════════
+
+#include "pointagedialog.h"
+#include <QSerialPort>
+#include <QTime>
+
+// ── Configuration Arduino et Timer ────────────────────────────────────────
+void MainWindow::setupArduinoPointage()
+{
+    // Indicateur connexion — overlay coin supérieur droit, visible sur page Production
+    m_arduinoIndicator = new QLabel(this);
+    m_arduinoIndicator->setFixedSize(160, 24);
+    m_arduinoIndicator->setAlignment(Qt::AlignCenter);
+    m_arduinoIndicator->setStyleSheet(
+        "QLabel { border-radius:12px; font-size:11px; font-weight:bold; color:white; }");
+    m_arduinoIndicator->setVisible(false);
+    m_arduinoIndicator->raise();
+
+    // Utilise ArduinoConnection pour détecter automatiquement le port (VID/PID)
+    int result = m_arduino.connection()->connect_arduino();
+
+    if (result == 0) {
+        m_serialArduino = m_arduino.connection()->getSerial();
+        connect(m_serialArduino, &QSerialPort::readyRead,
+                this, &MainWindow::recevoir_donnee);
+        m_arduinoIndicator->setText("● Arduino connecté");
+        m_arduinoIndicator->setStyleSheet(
+            "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
+            "color:white; background:#27AE60; }");
+        qDebug() << "✅ Arduino connecté sur" << m_arduino.connection()->getPortName();
+    } else {
+        m_serialArduino = nullptr;
+        m_arduinoIndicator->setText("● Non connecté");
+        m_arduinoIndicator->setStyleSheet(
+            "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
+            "color:white; background:#E74C3C; }");
+        qDebug() << "⚠️ Arduino non connecté (code:" << result << ")";
+    }
+
+    // Timer fin de journée → marquer absents à 23h59
+    m_timerAbsences = new QTimer(this);
+    connect(m_timerAbsences, &QTimer::timeout, [this]() {
+        QTime now = QTime::currentTime();
+        if (now.hour() == 23 && now.minute() == 59)
+            m_pointage.marquerAbsentsJournee();
+    });
+    m_timerAbsences->start(60000);
+
+    // Simulateur keypad Qt (inséré dans la page Production)
+    setupKeypadSimulator();
+}
+
+// ── Réception données Arduino (RFID pointage) ────────────────────────────
+// ── Réception données Arduino (buffer ligne par ligne) ───────────────────
+void MainWindow::recevoir_donnee()
+{
+    if (!m_serialArduino) return;
+    static QByteArray buffer;
+    buffer += m_arduino.read_from_arduino();
+
+    // Traiter chaque ligne complète (terminée par \n)
+    while (buffer.contains('\n')) {
+        int idx = buffer.indexOf('\n');
+        QString msg = QString::fromUtf8(buffer.left(idx)).trimmed();
+        buffer.remove(0, idx + 1);
+        if (!msg.isEmpty())
+            traiterMessageArduino(msg);
+    }
+}
+
+// ── Logique partagée Arduino + Simulateur ────────────────────────────────
+void MainWindow::traiterMessageArduino(const QString &msg)
+{
+    qDebug() << "Arduino msg:" << msg;
+
+    // ── INPUT:xxx — saisie en cours, miroir LCD ──────────────────────────
+    if (msg.startsWith("INPUT:")) {
+        QString saisi = msg.mid(6);
+        m_keypadBuffer = saisi;
+        if (m_lcdLigne2) m_lcdLigne2->setText("Saisie: " + saisi);
+        return;
+    }
+
+    // ── CLEAR — réinitialiser LCD ────────────────────────────────────────
+    if (msg == "CLEAR") {
+        m_keypadBuffer.clear();
+        if (m_lcdLigne1) m_lcdLigne1->setText("Systeme pret");
+        if (m_lcdLigne2) m_lcdLigne2->setText("Saisir ID + #");
+        return;
+    }
+
+    // ── '1' — confirmation servos (ignorer) ─────────────────────────────
+    if (msg == "1") return;
+
+    // ── ID:xxx — chercher en BDD et mettre à jour statut ────────────────
+    if (msg.startsWith("ID:")) {
+        QString id = msg.mid(3).trimmed();
+        if (m_lcdLigne1) m_lcdLigne1->setText("Recherche...");
+        if (m_lcdLigne2) m_lcdLigne2->setText(id);
+
+        QSqlQuery q(Connection::instance()->getDatabase());
+        q.prepare("SELECT ID_COMMANDE FROM COMMANDES "
+                  "WHERE REFERENCE = :id OR TO_CHAR(ID_COMMANDE) = :id2");
+        q.bindValue(":id",  id);
+        q.bindValue(":id2", id);
+
+        if (q.exec() && q.next()) {
+            // Trouvé → marquer Terminé + date livraison + envoyer '1' aux servos
+            QString dateAuj = QDate::currentDate().toString("dd/MM/yyyy");
+            QSqlQuery upd(Connection::instance()->getDatabase());
+            upd.prepare("UPDATE COMMANDES SET STATUT = 'Terminé', "
+                        "DATE_LIVRAISON = TO_DATE(:dl, 'DD/MM/YYYY') "
+                        "WHERE REFERENCE = :id OR TO_CHAR(ID_COMMANDE) = :id2");
+            upd.bindValue(":dl",  dateAuj);
+            upd.bindValue(":id",  id);
+            upd.bindValue(":id2", id);
+            upd.exec();
+
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino("1");
+
+            loadProductionData();
+            m_keypadBuffer.clear();
+
+            // ID valide → LCD "Commande terminee" → retour home après 3s
+            if (m_lcdLigne1) m_lcdLigne1->setText("Commande terminee");
+            if (m_lcdLigne2) m_lcdLigne2->setText(id);
+
+            QTimer::singleShot(3000, this, [this]() {
+                if (m_lcdLigne1) m_lcdLigne1->setText("Systeme pret");
+                if (m_lcdLigne2) m_lcdLigne2->setText("Saisir ID + #");
+            });
+
+            NotificationWidget::show(
+                "✅ Commande terminée",
+                "Référence " + id + " marquée Terminé — " + dateAuj,
+                NotificationWidget::Success
+            );
+        } else {
+            // Invalide → envoyer '2', rester en attente
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino("2");
+
+            if (m_lcdLigne1) m_lcdLigne1->setText("ID invalide");
+            if (m_lcdLigne2) m_lcdLigne2->setText("Ressaisir + #");
+        }
+        return;
+    }
+
+    // ── UID: — pointage RFID employé ────────────────────────────────────
+    if (msg.contains("UID:")) {
+        QString uid = msg.section("UID:", -1).trimmed();
+        bool ok = m_pointage.marquerPresent(uid);
+        if (ok && !m_pointage.estDejaPointe()) {
+            QMessageBox::information(this, "✅ Pointage",
+                QString("Bonjour %1 %2 !\nPointage enregistré.")
+                    .arg(m_pointage.getDernierPrenom())
+                    .arg(m_pointage.getDernierNom()));
+            populateEmployeeTable();
+        } else if (ok && m_pointage.estDejaPointe()) {
+            QMessageBox::information(this, "ℹ️ Déjà pointé",
+                QString("%1 %2 a déjà pointé aujourd'hui.")
+                    .arg(m_pointage.getDernierPrenom())
+                    .arg(m_pointage.getDernierNom()));
+        } else {
+            QMessageBox::warning(this, "❌ Badge inconnu",
+                "Badge non reconnu dans le système.");
+        }
+    }
+}
+
+// ── Expédier via bouton Qt ────────────────────────────────────────────────
+void MainWindow::expedierActionArduino()
+{
+    // CAS 1 : Arduino non connecté → tentative reconnexion
+    if (!m_serialArduino || !m_serialArduino->isOpen()) {
+        int ret = m_arduino.connection()->connect_arduino();
+        if (ret == 0) {
+            m_serialArduino = m_arduino.connection()->getSerial();
+            connect(m_serialArduino, &QSerialPort::readyRead,
+                    this, &MainWindow::recevoir_donnee);
+            m_arduinoIndicator->setText("● Arduino connecté");
+            m_arduinoIndicator->setStyleSheet(
+                "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
+                "color:white; background:#27AE60; }");
+        } else {
+            QMessageBox::warning(this, "Expédition impossible",
+                "Impossible d'expédier. Vérifiez la connexion série.");
+            return;
+        }
+    }
+
+    // CAS 2 : aucune ligne sélectionnée
+    int row = ui->productionTable->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Attention", "Veuillez sélectionner une commande.");
+        return;
+    }
+
+    QString ref    = cellText(ui->productionTable, row, 1);
+    QString statut = cellText(ui->productionTable, row, 8);
+    QString mail   = cellText(ui->productionTable, row, 10);
+
+    // CAS 3 : statut != Terminé
+    if (statut != "Terminé") {
+        QMessageBox::critical(this, "Expédition impossible",
+            QString("Référence     : %1\nStatut actuel : %2\n"
+                    "La commande doit être Terminé.").arg(ref, statut));
+        return;
+    }
+
+    // CAS 4 : statut == Terminé → expédier
+    m_arduino.write_to_arduino("1");
+
+    QString dateAujourdhui = QDate::currentDate().toString("dd/MM/yyyy");
+    QSqlQuery upd(Connection::instance()->getDatabase());
+    upd.prepare("UPDATE COMMANDES SET STATUT = 'En livraison', "
+                "DATE_LIVRAISON = TO_DATE(:dl, 'DD/MM/YYYY') "
+                "WHERE REFERENCE = :ref");
+    upd.bindValue(":dl",  dateAujourdhui);
+    upd.bindValue(":ref", ref);
+    if (!upd.exec())
+        qDebug() << "Erreur UPDATE expédition:" << upd.lastError().text();
+
+    loadProductionData();
+
+    // Expedition via bouton → LCD "Expedition OK" → retour home après 2s
+    if (m_lcdLigne1) m_lcdLigne1->setText("Expedition OK");
+    if (m_lcdLigne2) m_lcdLigne2->setText(ref);
+
+    QTimer::singleShot(2000, this, [this]() {
+        if (m_lcdLigne1) m_lcdLigne1->setText("Systeme pret");
+        if (m_lcdLigne2) m_lcdLigne2->setText("Saisir ID + #");
+    });
+
+    QMessageBox::information(this, "Expédition lancée",
+        QString("Référence : %1\nClient    : %2\n"
+                "Statut    : En livraison\nDate      : %3")
+            .arg(ref, mail.isEmpty() ? "—" : mail, dateAujourdhui));
+}
+
+// ── Simulateur Keypad Qt ──────────────────────────────────────────────────
+void MainWindow::setupKeypadSimulator()
+{
+    if (m_lcdLigne1 != nullptr) return; // guard anti-doublon
+
+    // Trouver le parent direct du productionTable pour insérer le simulateur juste au-dessus
+    QWidget *prodTable = ui->productionTable;
+    QWidget *parent = prodTable->parentWidget();
+    if (!parent) return;
+    QVBoxLayout *pageLayout = qobject_cast<QVBoxLayout*>(parent->layout());
+    if (!pageLayout) return;
+
+    // GroupBox conteneur
+    QGroupBox *grp = new QGroupBox("Simulateur Keypad Arduino", parent);
+    grp->setStyleSheet(
+        "QGroupBox { border:2px solid #8D6E63; border-radius:8px; margin-top:8px; "
+        "font-weight:bold; color:#8D6E63; }"
+        "QGroupBox::title { subcontrol-origin:margin; left:10px; padding:0 4px; }");
+    QHBoxLayout *grpLay = new QHBoxLayout(grp);
+    grpLay->setSpacing(12);
+
+    // Miroir LCD (fond noir, texte vert)
+    QFrame *lcd = new QFrame(grp);
+    lcd->setFixedSize(220, 56);
+    lcd->setStyleSheet("background:#000; border:2px solid #333; border-radius:4px;");
+    QVBoxLayout *lcdLay = new QVBoxLayout(lcd);
+    lcdLay->setContentsMargins(8, 4, 8, 4);
+    lcdLay->setSpacing(2);
+
+    m_lcdLigne1 = new QLabel("Systeme pret", lcd);
+    m_lcdLigne1->setStyleSheet(
+        "color:#00FF00; font-family:'Courier New'; font-size:12px; font-weight:bold;");
+    m_lcdLigne2 = new QLabel("Saisir ID + #", lcd);
+    m_lcdLigne2->setStyleSheet(
+        "color:#00FF00; font-family:'Courier New'; font-size:12px;");
+    lcdLay->addWidget(m_lcdLigne1);
+    lcdLay->addWidget(m_lcdLigne2);
+    grpLay->addWidget(lcd);
+
+    // Grille 4x4 keypad
+    QGridLayout *grid = new QGridLayout();
+    grid->setSpacing(4);
+    const QStringList keys = {"1","2","3","A","4","5","6","B",
+                               "7","8","9","C","*","0","#","D"};
+    QString btnStyle =
+        "QPushButton { background:#5D4037; color:white; border:none; border-radius:4px; "
+        "font-size:13px; font-weight:bold; min-width:32px; min-height:32px; }"
+        "QPushButton:hover { background:#8D6E63; }"
+        "QPushButton:pressed { background:#3E2723; }";
+
+    for (int i = 0; i < 16; ++i) {
+        QPushButton *btn = new QPushButton(keys[i], grp);
+        btn->setStyleSheet(btnStyle);
+        const QString key = keys[i];
+        connect(btn, &QPushButton::clicked, this, [this, key]() {
+            if (key == "#") {
+                traiterMessageArduino("ID:" + m_keypadBuffer);
+                m_keypadBuffer.clear();
+            } else if (key == "*") {
+                traiterMessageArduino("CLEAR");
+            } else {
+                m_keypadBuffer += key;
+                traiterMessageArduino("INPUT:" + m_keypadBuffer);
+            }
+        });
+        grid->addWidget(btn, i / 4, i % 4);
+    }
+    grpLay->addLayout(grid);
+    grpLay->addStretch();
+
+    // Trouver l'index de productionTable dans le layout et insérer juste avant
+    int insertPos = 0;
+    for (int i = 0; i < pageLayout->count(); ++i) {
+        QLayoutItem *item = pageLayout->itemAt(i);
+        if (item && item->widget() == ui->productionTable) {
+            insertPos = i;
+            break;
+        }
+    }
+    pageLayout->insertWidget(insertPos, grp);
+}
+
+// ── Ouvrir calendrier pointage ────────────────────────────────────────────
+void MainWindow::ouvrirCalendrierPointage(int idEmploye, const QString &nom)
+{
+    PointageDialog dlg(idEmploye, nom, this);
+    dlg.exec();
+}
+
+// ── Slot bouton Pointage (dans module Employés) ──────────────────────────
+void MainWindow::on_btnPointage_clicked()
+{
+    QModelIndex idx = ui->employeeTable->currentIndex();
+    if (!idx.isValid()) {
+        QMessageBox::warning(this, "⚠️ Attention",
+            "Veuillez sélectionner un employé.");
+        return;
+    }
+    
+    // Récupérer ID et Nom depuis le modèle
+    auto *model = ui->employeeTable->model();
+    int   id    = model->index(idx.row(), 13).data().toInt();  // colonne ID
+    QString nom = model->index(idx.row(), 1).data().toString()  // NOM
+                + " "
+                + model->index(idx.row(), 2).data().toString(); // PRENOM
+    
+    ouvrirCalendrierPointage(id, nom);
 }

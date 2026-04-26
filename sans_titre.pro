@@ -1,4 +1,4 @@
-QT       += core gui charts printsupport sql network multimedia
+QT       += core gui charts printsupport sql network multimedia serialport
 QT += charts
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 CONFIG += c++17
@@ -10,6 +10,8 @@ TARGET = CUIREA_Management
 TEMPLATE = app
 
 SOURCES += \
+    arduino.cpp \
+    arduinoconnection.cpp \
     aichatwidget.cpp \
     articleviewer3d.cpp \
     bilandialog.cpp \
@@ -40,9 +42,13 @@ SOURCES += \
     articledialog.cpp \
     tripo3dgenerator.cpp \
     logindialog.cpp \
-    notification.cpp
+    notification.cpp \
+    pointage.cpp \
+    pointagedialog.cpp
 
 HEADERS += \
+    arduino.h \
+    arduinoconnection.h \
     aichatwidget.h \
     articleviewer3d.h \
     bilandialog.h \
@@ -73,7 +79,9 @@ HEADERS += \
     articledialog.h \
     tripo3dgenerator.h \
     logindialog.h \
-    notification.h
+    notification.h \
+    pointage.h \
+    pointagedialog.h
 
 FORMS += \
     mainwindow.ui

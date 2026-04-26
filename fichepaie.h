@@ -16,6 +16,7 @@ struct DonneesPaie {
     QString poste;
     QString departement;
     QDate dateEmbauche;
+    int idEmploye;  // ✅ Ajouté pour calculer les absences
     
     // Salaire et primes
     double salaireBrut;
@@ -26,6 +27,7 @@ struct DonneesPaie {
     // Retenues et avances
     double retenues;
     double avances;
+    double deductionAbsences;  // ✅ Ajouté pour les absences
     
     // Période
     QString mois;
@@ -42,6 +44,12 @@ public:
                             const QString &poste, const QString &departement,
                             const QDate &dateEmbauche, QWidget *parent = nullptr);
     
+    // ✅ Nouveau constructeur avec ID employé
+    explicit FichePaieDialog(int idEmploye, const QString &matricule, const QString &nom, 
+                            const QString &prenom, const QString &cin,
+                            const QString &poste, const QString &departement,
+                            const QDate &dateEmbauche, QWidget *parent = nullptr);
+    
     DonneesPaie getDonneesPaie() const;
 
 private slots:
@@ -53,8 +61,10 @@ private:
     void applyStyles();
     double calculerCNSS(double salaireBrut) const;
     double calculerIRPP(double salaireImposable) const;
+    int calculerNombreAbsences(int mois, int annee) const;  // ✅ Nouvelle fonction
     
     // Données employé
+    int m_idEmploye;  // ✅ Ajouté
     QString m_matricule;
     QString m_nom;
     QString m_prenom;
@@ -74,6 +84,8 @@ private:
     // Widgets d'affichage
     QLineEdit *cnssEdit;
     QLineEdit *irppEdit;
+    QLineEdit *absencesEdit;  // ✅ Ajouté pour afficher les absences
+    QLineEdit *deductionAbsencesEdit;  // ✅ Ajouté pour afficher la déduction
     QLineEdit *totalGainsEdit;
     QLineEdit *totalRetenuesEdit;
     QLineEdit *netAPayerEdit;

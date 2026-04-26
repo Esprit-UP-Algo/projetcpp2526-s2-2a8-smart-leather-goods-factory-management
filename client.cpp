@@ -330,34 +330,53 @@ QMap<QString, int> Client::statistiquesParVille()
 
 
 
-bool Client::exporterListe(QTableWidget* table, const QString& fileName)
+bool Client::exporterCommandesParClient(const QString& mailClient, const QString& fileName)
 {
-    if (!table || fileName.isEmpty()) return false;
+    if (mailClient.isEmpty() || fileName.isEmpty())
+        return false;
 
+    // 🔹 SQL Query
+    QSqlQuery query;
+    query.prepare("SELECT ID_COMMANDE, DATE_CREATION, MONTANT, STATUT "
+                  "FROM CUIREA.COMMANDES WHERE MAIL_CLIENT = :mail");
+    query.bindValue(":mail", mailClient);
+
+    if (!query.exec()) {
+        qDebug() << "Erreur SQL:" << query.lastError();
+        return false;
+    }
+
+    // 🔹 Build HTML
     QString html;
-    html += "<h2>Liste des Clients</h2>";
-    html += "<table border='1' cellspacing='0' cellpadding='4'>";
+    html += "<h2>Liste des Commandes du client: " + mailClient + "</h2>";
+    html += "<table border='1' cellspacing='0' cellpadding='6' style='border-collapse:collapse;'>";
 
     // Headers
-    html += "<tr>";
-    for (int c = 0; c < table->columnCount(); ++c)
-        html += "<th>" + table->horizontalHeaderItem(c)->text() + "</th>";
+    html += "<tr style='background-color:#f2f2f2;'>";
+    html += "<th>ID</th><th>Date</th><th>Montant</th><th>Statut</th>";
     html += "</tr>";
 
-    // Data rows
-    for (int r = 0; r < table->rowCount(); ++r) {
+    // Data
+    bool hasData = false;
+    while (query.next()) {
+        hasData = true;
         html += "<tr>";
-        for (int c = 0; c < table->columnCount(); ++c) {
-            QTableWidgetItem *item = table->item(r, c);
-            html += "<td>" + QString(item ? item->text() : "") + "</td>";
-        }
+        html += "<td>" + query.value(0).toString() + "</td>";
+        html += "<td>" + query.value(1).toString() + "</td>";
+        html += "<td>" + query.value(2).toString() + "</td>";
+        html += "<td>" + query.value(3).toString() + "</td>";
         html += "</tr>";
     }
 
     html += "</table>";
 
-    // ===== PDF EXPORT =====
-    if (fileName.endsWith(".pdf")) {
+    if (!hasData) {
+        qDebug() << "Aucune commande trouvée pour ce client.";
+        return false;
+    }
+
+    // 🔹 EXPORT PDF
+    if (fileName.endsWith(".pdf", Qt::CaseInsensitive)) {
         QPrinter printer(QPrinter::HighResolution);
         printer.setOutputFormat(QPrinter::PdfFormat);
         printer.setOutputFileName(fileName);
@@ -367,8 +386,8 @@ bool Client::exporterListe(QTableWidget* table, const QString& fileName)
         doc.print(&printer);
     }
 
-    // ===== WORD EXPORT =====
-    else if (fileName.endsWith(".docx") ) {
+    // 🔹 EXPORT DOC (Word compatible)
+    else if (fileName.endsWith(".doc", Qt::CaseInsensitive)) {
         QFile file(fileName);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
             return false;
@@ -378,8 +397,8 @@ bool Client::exporterListe(QTableWidget* table, const QString& fileName)
         file.close();
     }
 
-    // ===== CSV EXPORT =====
-    else if (fileName.endsWith(".csv")) {
+    // 🔹 EXPORT CSV
+    else if (fileName.endsWith(".csv", Qt::CaseInsensitive)) {
         QFile file(fileName);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text))
             return false;
@@ -387,26 +406,27 @@ bool Client::exporterListe(QTableWidget* table, const QString& fileName)
         QTextStream out(&file);
 
         // Headers
-        for (int c = 0; c < table->columnCount(); ++c) {
-            out << table->horizontalHeaderItem(c)->text();
-            if (c != table->columnCount() - 1)
-                out << ",";
-        }
-        out << "\n";
+        out << "ID,Date,Montant,Statut\n";
 
-        // Data
-        for (int r = 0; r < table->rowCount(); ++r) {
-            for (int c = 0; c < table->columnCount(); ++c) {
-                QTableWidgetItem *item = table->item(r, c);
-                out << (item ? item->text() : "");
-                if (c != table->columnCount() - 1)
-                    out << ",";
-            }
-            out << "\n";
+        // Re-execute query for CSV
+        QSqlQuery queryCsv;
+        queryCsv.prepare("SELECT ID_COMMANDE, DATE_CREATION, MONTANT, STATUT "
+                         "FROM CUIREA.COMMANDES WHERE MAIL_CLIENT = :mail");
+        queryCsv.bindValue(":mail", mailClient);
+
+        if (!queryCsv.exec())
+            return false;
+
+        while (queryCsv.next()) {
+            out << queryCsv.value(0).toString() << ","
+                << queryCsv.value(1).toString() << ","
+                << queryCsv.value(2).toString() << ","
+                << queryCsv.value(3).toString() << "\n";
         }
 
         file.close();
     }
+
     else {
         return false;
     }
