@@ -1,66 +1,223 @@
-// ====================================================
-// SYSTÈME DE POINTAGE RFID AVEC ARDUINO
-// Compatible avec l'atelier existant
-// ====================================================
+/*
+ * ============================================================
+ * CUIREA - Systeme de Pointage RFID
+ * ============================================================
+ * 
+ * COMPOSANTS :
+ *   - Module RFID RC522 (lecture carte)
+ *   - Ecran LCD I2C 16x2 (affichage)
+ *   - Servomoteur (porte)
+ * 
+ * CABLAGE :
+ *   Module RC522 :
+ *     SDA  -> Pin 10
+ *     SCK  -> Pin 13
+ *     MOSI -> Pin 11
+ *     MISO -> Pin 12
+ *     RST  -> Pin 8
+ *     3.3V -> 3.3V (PAS 5V!)
+ *     GND  -> GND
+ * 
+ *   LCD I2C :
+ *     SDA  -> A4
+ *     SCL  -> A5
+ *     VCC  -> 5V
+ *     GND  -> GND
+ * 
+ *   Servo :
+ *     Signal -> Pin 9
+ *     VCC    -> 5V
+ *     GND    -> GND
+ * 
+ * ============================================================
+ */
 
 #include <SPI.h>
 #include <MFRC522.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 #include <Servo.h>
 
-#define SERVO_PIN  6
-#define RFID_RST   3
-#define RFID_SS    10
+// Broches
+#define RFID_SS_PIN   10
+#define RFID_RST_PIN  8
+#define PIN_SERVO     9
 
-MFRC522 rfid(RFID_SS, RFID_RST);
-Servo   barriere;
+// Objets
+MFRC522 rfid(RFID_SS_PIN, RFID_RST_PIN);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+Servo servo;
 
-// UID du badge autorisé (à adapter selon vos badges)
-byte badge_autorise[] = {0x12, 0xED, 0x19, 0x06};
+String inputBuffer = "";
 
+// ============================================================
+// SETUP
+// ============================================================
 void setup() {
-    // Conforme atelier : Serial.begin(9600)
-    Serial.begin(9600);
-    SPI.begin();
-    rfid.PCD_Init();
-    barriere.attach(SERVO_PIN);
-    barriere.write(0);
-    Serial.println("Systeme pret");
-    Serial.println("Scannez votre badge...");
+  Serial.begin(9600);
+  
+  // RFID
+  SPI.begin();
+  rfid.PCD_Init();
+  
+  // LCD
+  lcd.init();
+  lcd.backlight();
+  afficherAccueil();
+  
+  // Servo (position fermee)
+  servo.attach(PIN_SERVO);
+  servo.write(0);
+  
+  Serial.println("RFID:READY");
 }
 
+// ============================================================
+// LOOP
+// ============================================================
 void loop() {
-    if (!rfid.PICC_IsNewCardPresent()) return;
-    if (!rfid.PICC_ReadCardSerial())   return;
+  // Detection carte RFID
+  if (rfid.PICC_IsNewCardPresent() && rfid.PICC_ReadCardSerial()) {
+    String uid = lireUID();
     
-    // Construire l'UID formaté → envoie "UID:12ED1906"
-    String uid = "UID:";
-    for (byte i = 0; i < rfid.uid.size; i++) {
-        if (rfid.uid.uidByte[i] < 0x10) uid += "0";
-        uid += String(rfid.uid.uidByte[i], HEX);
-    }
-    uid.toUpperCase();
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Lecture...");
+    lcd.setCursor(0, 1);
+    lcd.print(uid);
+    
+    // Envoyer a Qt
     Serial.println("UID:" + uid);
     
-    // Vérification badge local
-    bool valide = true;
-    for (int i = 0; i < 4; i++) {
-        if (rfid.uid.uidByte[i] != badge_autorise[i]) {
-            valide = false;
-            break;
-        }
-    }
+    // Attendre reponse Qt
+    String reponse = attendreReponseQt(5000);
     
-    if (valide) {
-        Serial.println("ACCES:OK");
-        barriere.write(90);
-        delay(4000);
-        barriere.write(0);
+    if (reponse.length() > 0) {
+      traiterReponse(reponse);
     } else {
-        Serial.println("ACCES:REFUSE");
-        delay(2000);
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("Erreur systeme");
+      delay(2000);
+      afficherAccueil();
     }
     
     rfid.PICC_HaltA();
-    Serial.println("Scannez votre badge...");
-    delay(200);
+    rfid.PCD_StopCrypto1();
+  }
+  
+  // Commandes directes de Qt
+  while (Serial.available()) {
+    char c = Serial.read();
+    if (c == '\n') {
+      inputBuffer.trim();
+      if (inputBuffer.length() > 0) {
+        traiterReponse(inputBuffer);
+      }
+      inputBuffer = "";
+    } else {
+      inputBuffer += c;
+    }
+  }
+}
+
+// ============================================================
+// FONCTIONS
+// ============================================================
+
+String lireUID() {
+  String uid = "";
+  for (byte i = 0; i < rfid.uid.size; i++) {
+    if (rfid.uid.uidByte[i] < 0x10) uid += "0";
+    uid += String(rfid.uid.uidByte[i], HEX);
+  }
+  uid.toUpperCase();
+  return uid;
+}
+
+String attendreReponseQt(unsigned long timeout) {
+  String reponse = "";
+  unsigned long startTime = millis();
+  
+  while (millis() - startTime < timeout) {
+    if (Serial.available()) {
+      char c = Serial.read();
+      if (c == '\n') {
+        reponse.trim();
+        return reponse;
+      } else {
+        reponse += c;
+      }
+    }
+  }
+  return "";
+}
+
+void traiterReponse(String msg) {
+  if (msg.startsWith("GRANTED:")) {
+    int premierColon = msg.indexOf(':');
+    int deuxiemeColon = msg.lastIndexOf(':');
+    String prenom = msg.substring(premierColon + 1, deuxiemeColon);
+    String type = msg.substring(deuxiemeColon + 1);
+    
+    if (type == "E") {
+      sequenceEntree(prenom);
+    } else {
+      sequenceSortie(prenom);
+    }
+  } else if (msg == "DENIED") {
+    sequenceRefus();
+  }
+}
+
+void sequenceEntree(String prenom) {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Bienvenue");
+  lcd.setCursor(0, 1);
+  lcd.print(prenom);
+  
+  // Ouvrir porte
+  servo.write(90);
+  delay(5000);
+  servo.write(0);
+  
+  delay(500);
+  afficherAccueil();
+}
+
+void sequenceSortie(String prenom) {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Au revoir");
+  lcd.setCursor(0, 1);
+  lcd.print(prenom);
+  
+  // Ouvrir porte
+  servo.write(90);
+  delay(5000);
+  servo.write(0);
+  
+  delay(500);
+  afficherAccueil();
+}
+
+void sequenceRefus() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Acces refuse");
+  lcd.setCursor(0, 1);
+  lcd.print("Carte inconnue");
+  
+  // Porte reste fermee
+  delay(3000);
+  afficherAccueil();
+}
+
+void afficherAccueil() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("CUIREA Pointage");
+  lcd.setCursor(0, 1);
+  lcd.print("Badgez SVP...");
 }
