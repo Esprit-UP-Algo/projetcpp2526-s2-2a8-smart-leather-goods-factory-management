@@ -7,7 +7,7 @@
 #include <QDebug>
 
 // ── Configuration Brevo ───────────────────────────────────────────────────────
-const QString EmailAlerte::API_KEY      = "";
+const QString EmailAlerte::API_KEY      = "²²";
 const QString EmailAlerte::SENDER_EMAIL = "omardridi123466@gmail.com";
 const QString EmailAlerte::SENDER_NAME  = "CUIREA - Alerte Stock";
 

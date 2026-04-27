@@ -162,7 +162,7 @@ private slots:
     void onArduinoTemperatureUpdated(double celsius);
     void onArduinoTemperatureAlert(double celsius, const QString &message);
     void onArduinoDeliveryValidated(int fournisseurId, int matiereId, double qty);
-    void onArduinoDeliveryRejected(double measuredKg, double orderedKg, double diffPct);
+    void onArduinoDeliveryRejected(int fournisseurId, int matiereId, double measuredKg, double orderedKg, double diffPct);
     void onStartDeliveryCheck();
 
     // Suppliers

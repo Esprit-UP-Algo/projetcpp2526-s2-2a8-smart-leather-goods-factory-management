@@ -2619,6 +2619,11 @@ QPushButton:disabled { background-color: #BCAAA4; }</string>
                   <string>QTÉ COMMANDÉE (kg)</string>
                  </property>
                 </column>
+                <column>
+                 <property name="text">
+                  <string>QTÉ MESURÉE (kg)</string>
+                 </property>
+                </column>
                </widget>
               </item>
              </layout>
