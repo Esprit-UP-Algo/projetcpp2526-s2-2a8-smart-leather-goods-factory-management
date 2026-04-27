@@ -100,7 +100,7 @@ QSqlQueryModel* FournisseurData::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     model->setQuery("SELECT id_fournisseur, nom_entreprise, email, telephone, matricule_fiscal, "
-                    "type_produit, condition_paiement, statut, adresse, quantite_commandee "
+                    "type_produit, condition_paiement, statut, adresse, quantite_commandee, quantite_mesuree "
                     "FROM Fournisseurs ORDER BY nom_entreprise",
                     Connection::instance()->getDatabase());
 

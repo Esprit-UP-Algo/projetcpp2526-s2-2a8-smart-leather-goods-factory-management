@@ -67,7 +67,7 @@ signals:
     // Livraison
     void deliveryWeightRead(double measuredKg, double orderedKg, double diffPct);
     void deliveryValidated(int fournisseurId, int matiereId, double qty);   // OK → enregistrer en BD
-    void deliveryRejected(double measuredKg, double orderedKg, double diffPct);
+    void deliveryRejected(int fournisseurId, int matiereId, double measuredKg, double orderedKg, double diffPct);
 
     // Connexion Arduino
     void arduinoConnected(const QString &port);

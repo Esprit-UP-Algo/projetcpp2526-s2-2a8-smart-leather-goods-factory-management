@@ -7,7 +7,7 @@
 #include <QDebug>
 
 // ── Configuration Brevo ───────────────────────────────────────────────────────
-const QString EmailAlerte::API_KEY      = "";
+const QString EmailAlerte::API_KEY      = "YOUR_SENDINBLUE_API_KEY_HERE";  // À remplacer par votre clé
 const QString EmailAlerte::SENDER_EMAIL = "omardridi123466@gmail.com";
 const QString EmailAlerte::SENDER_NAME  = "CUIREA - Alerte Stock";
 

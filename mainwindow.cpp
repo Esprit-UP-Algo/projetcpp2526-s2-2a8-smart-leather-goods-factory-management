@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "notification.h"
 #include "envloader.h"
@@ -2283,7 +2283,7 @@ void MainWindow::refreshFournisseurTable()
     ui->fournisseurTable->setRowCount(n);
     
     for (int i = 0; i < n; ++i) {
-        for (int col = 0; col < 10; ++col) {
+        for (int col = 0; col < 11; ++col) {  // 11 colonnes maintenant (ajout de quantite_mesuree)
             QString value = model->data(model->index(i, col)).toString();
             ui->fournisseurTable->setItem(i, col, new QTableWidgetItem(value));
         }
@@ -6326,6 +6326,9 @@ void MainWindow::onArduinoTemperatureAlert(double celsius, const QString &messag
 // ─────────────────────────────────────────────────────────────────────────────
 void MainWindow::onArduinoDeliveryValidated(int fournisseurId, int matiereId, double qty)
 {
+    qDebug() << "🔄 onArduinoDeliveryValidated appelé - Fournisseur:" << fournisseurId 
+             << "Matière:" << matiereId << "Quantité:" << qty;
+    
     // 1 — Mettre à jour QUANTITE_ACTUELLE dans MATIERES_PREMIERES
     QSqlQuery q(Connection::instance()->getDatabase());
     q.prepare("UPDATE MATIERES_PREMIERES "
@@ -6333,25 +6336,50 @@ void MainWindow::onArduinoDeliveryValidated(int fournisseurId, int matiereId, do
               "WHERE ID_MATIERE = :id");
     q.bindValue(":qty", qty);
     q.bindValue(":id",  matiereId);
+    
     if (q.exec()) {
+        // Forcer le commit
+        Connection::instance()->getDatabase().commit();
+        
         qDebug() << "✅ Quantité matière" << matiereId << "mise à jour (+" << qty << "kg)";
+        
+        // Vérifier la nouvelle valeur dans la BD
+        QSqlQuery qCheck(Connection::instance()->getDatabase());
+        qCheck.prepare("SELECT QUANTITE_ACTUELLE FROM MATIERES_PREMIERES WHERE ID_MATIERE = :id");
+        qCheck.bindValue(":id", matiereId);
+        if (qCheck.exec() && qCheck.next()) {
+            double newQty = qCheck.value(0).toDouble();
+            qDebug() << "📊 Nouvelle quantité en BD:" << newQty;
+        }
+        
+        qDebug() << "🔄 Rafraîchissement de la table...";
+        
+        // Rafraîchir la table
         setupMatiereTable();
+        
+        // Forcer la mise à jour de l'affichage
+        ui->matiereTable->viewport()->update();
+        ui->matiereTable->repaint();
+        
+        qDebug() << "✅ Table rafraîchie";
+        
     } else {
         qDebug() << "❌ Erreur mise à jour quantité matière:" << q.lastError().text();
     }
 
-    // 2 — Mettre à jour QUANTITE_COMMANDEE dans FOURNISSEURS avec le poids mesuré
+    // 2 — Mettre à jour QUANTITE_MESUREE dans FOURNISSEURS avec le poids mesuré
     QSqlQuery qf(Connection::instance()->getDatabase());
     qf.prepare("UPDATE Fournisseurs "
-               "SET quantite_commandee = :qty "
+               "SET quantite_mesuree = :qty "
                "WHERE id_fournisseur = :id");
     qf.bindValue(":qty", qty);
     qf.bindValue(":id",  fournisseurId);
     if (qf.exec()) {
-        qDebug() << "✅ Quantité commandée fournisseur" << fournisseurId << "mise à jour =" << qty << "kg";
+        Connection::instance()->getDatabase().commit();
+        qDebug() << "✅ Quantité mesurée fournisseur" << fournisseurId << "mise à jour =" << qty << "kg";
         refreshFournisseurTable();
     } else {
-        qDebug() << "❌ Erreur mise à jour quantité fournisseur:" << qf.lastError().text();
+        qDebug() << "❌ Erreur mise à jour quantité mesurée fournisseur:" << qf.lastError().text();
     }
 
     // 3 — Notification succès
@@ -6364,21 +6392,55 @@ void MainWindow::onArduinoDeliveryValidated(int fournisseurId, int matiereId, do
         7000);
 }
 
-void MainWindow::onArduinoDeliveryRejected(double measuredKg, double orderedKg, double diffPct)
+void MainWindow::onArduinoDeliveryRejected(int fournisseurId, int matiereId, double measuredKg, double orderedKg, double diffPct)
 {
     qDebug() << "🔴 Livraison NOK — mesuré:" << measuredKg
              << "kg | commandé:" << orderedKg << "kg | écart:" << diffPct << "%";
+    
+    // ═══ OPTION 2: Mettre à jour le stock avec la valeur MESURÉE même si NOK ═══
+    qDebug() << "🔄 Mise à jour du stock avec la valeur mesurée (même si NOK)";
+    
+    // 1 — Mettre à jour QUANTITE_ACTUELLE dans MATIERES_PREMIERES avec la valeur MESURÉE
+    QSqlQuery q(Connection::instance()->getDatabase());
+    q.prepare("UPDATE MATIERES_PREMIERES "
+              "SET QUANTITE_ACTUELLE = QUANTITE_ACTUELLE + :qty "
+              "WHERE ID_MATIERE = :id");
+    q.bindValue(":qty", measuredKg);  // Utiliser la valeur MESURÉE
+    q.bindValue(":id",  matiereId);
+    
+    if (q.exec()) {
+        Connection::instance()->getDatabase().commit();
+        qDebug() << "✅ Quantité matière" << matiereId << "mise à jour (+" << measuredKg << "kg) - MÊME SI NOK";
+        setupMatiereTable();
+        ui->matiereTable->viewport()->update();
+    } else {
+        qDebug() << "❌ Erreur mise à jour quantité matière:" << q.lastError().text();
+    }
+    
+    // 2 — Mettre à jour QUANTITE_MESUREE dans FOURNISSEURS avec le poids MESURÉ
+    QSqlQuery qf(Connection::instance()->getDatabase());
+    qf.prepare("UPDATE Fournisseurs "
+               "SET quantite_mesuree = :qty "
+               "WHERE id_fournisseur = :id");
+    qf.bindValue(":qty", measuredKg);  // Utiliser la valeur MESURÉE
+    qf.bindValue(":id",  fournisseurId);
+    
+    if (qf.exec()) {
+        Connection::instance()->getDatabase().commit();
+        qDebug() << "✅ Quantité mesurée fournisseur" << fournisseurId << "mise à jour =" << measuredKg << "kg - MÊME SI NOK";
+        refreshFournisseurTable();
+    } else {
+        qDebug() << "❌ Erreur mise à jour quantité mesurée fournisseur:" << qf.lastError().text();
+    }
 
-    // Notification rouge avec bouton Rejeter dans l'onglet Fournisseurs
+    // 3 — Notification rouge avec les détails
     NotificationWidget::show(
-        "⚠ Livraison Non Conforme",
-        QString("Poids mesuré : %1 kg\nCommandé : %2 kg\nÉcart : %3%")
+        "⚠ Livraison Non Conforme (Stock mis à jour)",
+        QString("Poids mesuré : %1 kg (ajouté au stock)\nCommandé : %2 kg\nÉcart : %3%")
             .arg(measuredKg, 0, 'f', 2)
             .arg(orderedKg,  0, 'f', 2)
             .arg(diffPct,    0, 'f', 1),
-        NotificationWidget::Critical,
-        "Rejeter", [](){},
-        QString(), {},
+        NotificationWidget::Warning,
         0);
 }
 

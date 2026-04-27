@@ -199,7 +199,7 @@ void ArduinoMonitor::onWeightStable(double kg)
         m_arduino->ledRed();
         saveDeliveryRecord(kg, false);  // validated=0 → NOK
         qDebug() << "🔴 Livraison NOK | mesuré:" << kg << "kg | commandé:" << ordered << "kg | écart:" << diffPct << "%";
-        emit deliveryRejected(kg, ordered, diffPct);
+        emit deliveryRejected(m_deliveryFournisseurId, m_deliveryMatiereId, kg, ordered, diffPct);
     }
 }
 
