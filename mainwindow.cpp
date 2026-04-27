@@ -727,22 +727,21 @@ void MainWindow::on_btnAdd_clicked()
                 dlg.getNom() + " " + dlg.getPrenom() + " - " + dlg.getRoleSysteme(),
                 NotificationWidget::Success);
             QMessageBox::information(this, "Succes", 
-                QString("Employé ajouté avec succès !\n\n"
->>>>>>> 46737d0e9c95515ba163a0b5fb61db1749ce4f10
+                QString("Employe ajoute avec succes !\n\n"
                        "Identifiants de connexion:\n"
                        "Matricule: %1\n"
-                       "R�le: %2\n"
+                       "Role: %2\n"
                        "Compte actif: %3")
                 .arg(dlg.getMatricule())
                 .arg(dlg.getRoleSysteme())
                 .arg(dlg.isActif() ? "Oui" : "Non"));
         } else {
-            NotificationWidget::show("Erreur ajout employé",
-                "Impossible d'ajouter l'employé dans la base.",
+            NotificationWidget::show("Erreur ajout employe",
+                "Impossible d'ajouter l'employe dans la base.",
                 NotificationWidget::Critical);
             QMessageBox::critical(this, "Erreur", 
-                "Impossible d'ajouter l'employ�.\n"
-                "V�rifiez que la table EMPLOYES existe dans la base de donn�es.");
+                "Impossible d'ajouter l'employe.\n"
+                "Verifiez que la table EMPLOYES existe dans la base de donnees.");
         }
     }
 }
@@ -3140,8 +3139,7 @@ void MainWindow::onCreerProduction()
             QMessageBox::information(this, "Succes", "Commande ajoutee avec succes!");
             loadProductionData();
         } else {
-        } else {
-            qDebug() << "? �chec de l'ajout";
+            qDebug() << "Echec de l'ajout";
             QMessageBox::critical(this, "Erreur", "Erreur lors de l'ajout de la commande.");
         }
     }
@@ -3324,8 +3322,7 @@ void MainWindow::onModifierProduction()
         if (dao.modifier(prod)) {
             NotificationWidget::show("Commande modifiee", prod.getReference() + " mise a jour.", NotificationWidget::Success);
             QMessageBox::information(this, "Succes", "Commande modifiee avec succes!");
-            loadProductionData(); // Actualiser l'affichage
-        } else {
+            loadProductionData();
         } else {
             QMessageBox::critical(this, "Erreur", "Erreur lors de la modification de la commande.");
         }
@@ -4101,15 +4098,14 @@ void MainWindow::onSupprimerProduction()
     int id = cellText(ui->productionTable, row, 0).toInt();
     
     if (QMessageBox::question(this, "Confirmer",
-            QString("Supprimer la commande %1 de l'employ� %2 ?").arg(ref, employe),
+            QString("Supprimer la commande %1 de l'employe %2 ?").arg(ref, employe),
             QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
         
         ProductionDAO dao;
         if (dao.supprimer(id)) {
             NotificationWidget::show("Commande supprimee", "La commande a ete supprimee.", NotificationWidget::Warning);
             QMessageBox::information(this, "Succes", "Commande supprimee avec succes!");
-            loadProductionData(); // Actualiser l'affichage
-        } else {
+            loadProductionData();
         } else {
             QMessageBox::critical(this, "Erreur", "Erreur lors de la suppression de la commande.");
         }
@@ -6490,12 +6486,15 @@ void MainWindow::traiterMessageArduino(const QString &msg)
         bool ok = m_pointage.marquerPresent(uid);
         
         if (ok && !m_pointage.estDejaPointe()) {
-            // Pointage reussi - Notification Windows systeme
+            // Pointage reussi - Envoyer '1' a Arduino (ouvrir porte)
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino("1");
+            
+            // Notification Windows systeme
             QString prenom = m_pointage.getDernierPrenom();
             QString nom = m_pointage.getDernierNom();
             QString heure = QTime::currentTime().toString("HH:mm");
             
-            // Notification Windows native
             SystemNotification::instance().show(
                 "Pointage CUIREA",
                 QString("%1 %2 est arrive(e) a %3").arg(prenom).arg(nom).arg(heure),
@@ -6506,12 +6505,14 @@ void MainWindow::traiterMessageArduino(const QString &msg)
             populateEmployeeTable();
             
         } else if (ok && m_pointage.estDejaPointe()) {
-            // Deja pointe aujourd'hui - c'est une sortie
+            // Deja pointe aujourd'hui - Envoyer '1' (sortie autorisee)
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino("1");
+            
             QString prenom = m_pointage.getDernierPrenom();
             QString nom = m_pointage.getDernierNom();
             QString heure = QTime::currentTime().toString("HH:mm");
             
-            // Notification Windows native
             SystemNotification::instance().show(
                 "Pointage CUIREA",
                 QString("%1 %2 a quitte a %3").arg(prenom).arg(nom).arg(heure),
@@ -6520,7 +6521,10 @@ void MainWindow::traiterMessageArduino(const QString &msg)
             );
             
         } else {
-            // Badge inconnu - Alerte Windows
+            // Badge inconnu - Envoyer '2' a Arduino (refuser)
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino("2");
+            
             QString heure = QTime::currentTime().toString("HH:mm");
             
             // Notification Windows native - Alerte
