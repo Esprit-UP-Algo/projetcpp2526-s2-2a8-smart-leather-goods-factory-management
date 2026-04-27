@@ -28,9 +28,9 @@ bool FournisseurData::ajouter()
 {
     QSqlQuery query(Connection::instance()->getDatabase());
     query.prepare("INSERT INTO Fournisseurs (nom_entreprise, email, telephone, "
-                  "matricule_fiscal, type_produit, condition_paiement, statut, adresse) "
+                  "matricule_fiscal, type_produit, condition_paiement, statut, adresse, quantite_commandee) "
                   "VALUES (:nomEntreprise, :email, :telephone, :matriculeFiscal, "
-                  ":typeProduit, :conditionPaiement, :statut, :adresse)");
+                  ":typeProduit, :conditionPaiement, :statut, :adresse, :quantiteCommandee)");
 
     query.bindValue(":nomEntreprise", nomEntreprise);
     query.bindValue(":email", email);
@@ -40,6 +40,7 @@ bool FournisseurData::ajouter()
     query.bindValue(":conditionPaiement", conditionPaiement);
     query.bindValue(":statut", statut);
     query.bindValue(":adresse", adresse);
+    query.bindValue(":quantiteCommandee", quantiteCommandee);
 
     if (!query.exec()) {
         qDebug() << "❌ Erreur ajout fournisseur:" << query.lastError().text();
@@ -57,7 +58,7 @@ bool FournisseurData::modifier()
                   "nom_entreprise = :nomEntreprise, email = :email, "
                   "telephone = :telephone, matricule_fiscal = :matriculeFiscal, "
                   "type_produit = :typeProduit, condition_paiement = :conditionPaiement, "
-                  "statut = :statut, adresse = :adresse "
+                  "statut = :statut, adresse = :adresse, quantite_commandee = :quantiteCommandee "
                   "WHERE id_fournisseur = :id");
     
     query.bindValue(":id", id);
@@ -69,6 +70,7 @@ bool FournisseurData::modifier()
     query.bindValue(":conditionPaiement", conditionPaiement);
     query.bindValue(":statut", statut);
     query.bindValue(":adresse", adresse);
+    query.bindValue(":quantiteCommandee", quantiteCommandee);
     
     if (!query.exec()) {
         qDebug() << "❌ Erreur modification fournisseur:" << query.lastError().text();
@@ -98,7 +100,7 @@ QSqlQueryModel* FournisseurData::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     model->setQuery("SELECT id_fournisseur, nom_entreprise, email, telephone, matricule_fiscal, "
-                    "type_produit, condition_paiement, statut, adresse "
+                    "type_produit, condition_paiement, statut, adresse, quantite_commandee "
                     "FROM Fournisseurs ORDER BY nom_entreprise",
                     Connection::instance()->getDatabase());
 
@@ -116,6 +118,7 @@ QSqlQueryModel* FournisseurData::afficher()
     model->setHeaderData(6, Qt::Horizontal, "Condition Paiement");
     model->setHeaderData(7, Qt::Horizontal, "Statut");
     model->setHeaderData(8, Qt::Horizontal, "Adresse");
+    model->setHeaderData(9, Qt::Horizontal, "Qté Commandée (kg)");
     
     return model;
 }

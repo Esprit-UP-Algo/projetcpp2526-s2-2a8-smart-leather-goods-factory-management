@@ -103,12 +103,14 @@ void ArduinoMonitor::onTempPollTimer()
 void ArduinoMonitor::onTemperatureReceived(double celsius)
 {
     qDebug() << "🌡 Température stock cuir:" << celsius << "°C";
-    saveTemperatureReading(celsius);
     emit temperatureUpdated(celsius);
 
     bool anomalie = (celsius > TEMP_MAX_CELSIUS || celsius < TEMP_MIN_CELSIUS);
 
     if (anomalie) {
+        // Sauvegarder UNIQUEMENT les températures anormales (> 28°C ou < 5°C)
+        saveTemperatureReading(celsius);
+
         QString msg;
         if (celsius > TEMP_MAX_CELSIUS)
             msg = QString("⚠ TEMPÉRATURE ÉLEVÉE : %1°C (max autorisé : %2°C)")
@@ -118,8 +120,6 @@ void ArduinoMonitor::onTemperatureReceived(double celsius)
                       .arg(celsius, 0, 'f', 1).arg(TEMP_MIN_CELSIUS);
 
         emit temperatureAlert(celsius, msg);
-
-        // Naviguer automatiquement vers Matières Premières
         emit navigateToMatieres();
 
         // LED rouge
@@ -136,8 +136,8 @@ void ArduinoMonitor::onTemperatureReceived(double celsius)
             m_lastTempAlertValue = celsius;
         }
     } else {
-        // Température normale → LED rouge éteinte
-        m_arduino->ledGreen();
+        // Température normale → pas de sauvegarde BD
+        m_arduino->ledOff();
         if (m_tempAlertSent) {
             m_tempAlertSent = false;
             emit temperatureNormal(celsius);
@@ -188,20 +188,17 @@ void ArduinoMonitor::onWeightStable(double kg)
     emit deliveryWeightRead(kg, ordered, diffPct);
 
     if (diffPct <= WEIGHT_TOLERANCE_PCT) {
-        // ── OK ──────────────────────────────────────────────────────────────
-        m_arduino->ledGreen();
+        // ── OK : poids conforme → enregistrer en BD ─────────────────────────
         m_deliveryPending = false;
-
         saveDeliveryRecord(kg, true);
-        emit deliveryValidated(m_deliveryMatiereId, kg);
+        emit deliveryValidated(m_deliveryFournisseurId, m_deliveryMatiereId, kg);
 
     } else {
-        // ── NOK : LED rouge uniquement ───────────────────────────────────────
-        m_arduino->ledRed();
+        // ── NOK : poids non conforme → LED rouge + enregistrement BD ────────
         m_deliveryPending = false;
-
-        qDebug() << "🔴 Livraison NOK — LED rouge allumée | écart:" << diffPct << "%";
-
+        m_arduino->ledRed();
+        saveDeliveryRecord(kg, false);  // validated=0 → NOK
+        qDebug() << "🔴 Livraison NOK | mesuré:" << kg << "kg | commandé:" << ordered << "kg | écart:" << diffPct << "%";
         emit deliveryRejected(kg, ordered, diffPct);
     }
 }

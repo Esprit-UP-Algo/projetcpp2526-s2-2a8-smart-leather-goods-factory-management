@@ -24,6 +24,7 @@ public:
     QString getConditionPaiement() const { return conditionPaiement; }
     QString getStatut() const { return statut; }
     QString getAdresse() const { return adresse; }
+    double  getQuantiteCommandee() const { return quantiteCommandee; }
 
     // Setters
     void setId(const QString &value) { id = value; }
@@ -35,6 +36,7 @@ public:
     void setConditionPaiement(const QString &value) { conditionPaiement = value; }
     void setStatut(const QString &value) { statut = value; }
     void setAdresse(const QString &value) { adresse = value; }
+    void setQuantiteCommandee(double value) { quantiteCommandee = value; }
 
     // Méthodes CRUD
     bool ajouter();
@@ -54,6 +56,7 @@ private:
     QString conditionPaiement;
     QString statut;
     QString adresse;
+    double  quantiteCommandee = 0.0;
 };
 
 #endif // FOURNISSEUR_H

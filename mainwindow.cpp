@@ -1,4 +1,4 @@
-﻿#include "mainwindow.h"
+#include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "notification.h"
 #include "envloader.h"
@@ -602,9 +602,9 @@ MainWindow::MainWindow(QWidget *parent)
         m_tempAlertBtn->setVisible(ui->stackedWidget->currentIndex() == 2);
         if (normal && m_tempAlertCount == 0) {
             m_tempAlertBtn->setStyleSheet(
-                "QPushButton { background:#2E7D32; color:white; border:none;"
+                "QPushButton { background:#8D6E63; color:white; border:none;"
                 "border-radius:21px; font-size:18px; }"
-                "QPushButton:hover { background:#388E3C; }");
+                "QPushButton:hover { background:#D32F2F; }");
             m_tempAlertBtn->setToolTip(
                 QString("✅ Température normale : %1°C").arg(celsius, 0, 'f', 1));
         }
@@ -717,10 +717,9 @@ void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &ti
 
     // Cloche et toasts visibles uniquement sur la page Production (index 4)
     if (m_bell) m_bell->setVisible(index == 4);
-    // Toasts activés sur Production (index 4) ET Matières Premières (index 2)
-    NotificationWidget::setToastsEnabled(index == 4 || index == 2);
-    // Fermer les toasts actifs quand on quitte ces pages
-    if (index != 4 && index != 2) NotificationWidget::closeAll();
+    // Toasts activés sur Production (index 4), Matières Premières (index 2) et Fournisseurs (index 3)
+    NotificationWidget::setToastsEnabled(index == 4 || index == 2 || index == 3);
+    if (index != 4 && index != 2 && index != 3) NotificationWidget::closeAll();
 
     // Bouton 🌡 alerte température — visible uniquement sur Matières Premières
     if (m_tempAlertBtn) {
@@ -2284,7 +2283,7 @@ void MainWindow::refreshFournisseurTable()
     ui->fournisseurTable->setRowCount(n);
     
     for (int i = 0; i < n; ++i) {
-        for (int col = 0; col < 9; ++col) {
+        for (int col = 0; col < 10; ++col) {
             QString value = model->data(model->index(i, col)).toString();
             ui->fournisseurTable->setItem(i, col, new QTableWidgetItem(value));
         }
@@ -2328,6 +2327,7 @@ void MainWindow::on_btnAddFournisseur_clicked()
         f.setConditionPaiement(dlg.getConditionPaiement());
         f.setStatut(dlg.getStatut());
         f.setAdresse(dlg.getAdresse());
+        f.setQuantiteCommandee(dlg.getQuantiteCommandee());
         
         if (f.ajouter()) {
             refreshFournisseurTable();
@@ -2355,13 +2355,12 @@ void MainWindow::on_btnEditFournisseur_clicked()
     QString matriculeFiscal = ui->fournisseurTable->item(row, 4) ? ui->fournisseurTable->item(row, 4)->text() : "";
     QString statut = ui->fournisseurTable->item(row, 7) ? ui->fournisseurTable->item(row, 7)->text() : "";
     QString adresse = ui->fournisseurTable->item(row, 8) ? ui->fournisseurTable->item(row, 8)->text() : "";
-    
-    dlg.setFournisseurData(id, nomEntreprise, email, telephone, typeProduit, conditionPaiement, matriculeFiscal, statut, adresse);
-    
+    double  qteCmd  = ui->fournisseurTable->item(row, 9) ? ui->fournisseurTable->item(row, 9)->text().toDouble() : 0.0;
+
+    dlg.setFournisseurData(id, nomEntreprise, email, telephone, typeProduit, conditionPaiement, matriculeFiscal, statut, adresse, qteCmd);
+
     if (dlg.exec() == QDialog::Accepted) {
         FournisseurData f;
-        
-        // Toujours sauvegarder dans la BD
         f.setId(id);
         f.setNomEntreprise(dlg.getNomEntreprise());
         f.setEmail(dlg.getEmail());
@@ -2371,6 +2370,7 @@ void MainWindow::on_btnEditFournisseur_clicked()
         f.setConditionPaiement(dlg.getConditionPaiement());
         f.setStatut(dlg.getStatut());
         f.setAdresse(dlg.getAdresse());
+        f.setQuantiteCommandee(dlg.getQuantiteCommandee());
         
         if (f.modifier()) {
             refreshFournisseurTable();
@@ -2445,6 +2445,118 @@ void MainWindow::on_btnQrFournisseur_clicked()
     QString typeProduit    = ui->fournisseurTable->item(row, 5) ? ui->fournisseurTable->item(row, 5)->text() : "";
 
     QrFournisseurDialog dlg(nomEntreprise, email, telephone, typeProduit, this);
+    dlg.exec();
+}
+
+void MainWindow::on_btnLivraisonFournisseur_clicked()
+{
+    int row = ui->fournisseurTable->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Sélection requise",
+                             "Veuillez sélectionner un fournisseur dans la liste.");
+        return;
+    }
+
+    QString fournisseurId    = ui->fournisseurTable->item(row, 0) ? ui->fournisseurTable->item(row, 0)->text() : "";
+    QString nomEntreprise    = ui->fournisseurTable->item(row, 1) ? ui->fournisseurTable->item(row, 1)->text() : "";
+
+    // Récupérer la quantité commandée depuis la BD
+    double qteCommandee = 0.0;
+    QSqlQuery qQte(Connection::instance()->getDatabase());
+    qQte.prepare("SELECT quantite_commandee FROM Fournisseurs WHERE id_fournisseur = :id");
+    qQte.bindValue(":id", fournisseurId.toInt());
+    if (qQte.exec() && qQte.next())
+        qteCommandee = qQte.value(0).toDouble();
+
+    // ── Dialog livraison ─────────────────────────────────────────────────────
+    QDialog dlg(this);
+    dlg.setWindowTitle("⚖ Vérification Livraison — " + nomEntreprise);
+    dlg.setFixedWidth(420);
+    dlg.setStyleSheet(
+        "QDialog{background:#FAF5F0;}"
+        "QLabel{color:#291C0E;font-size:12px;font-weight:bold;}"
+        "QDoubleSpinBox{background:white;border:2px solid #BCAAA4;border-radius:6px;"
+        "padding:8px;font-size:13px;color:#291C0E;}"
+        "QComboBox{background:white;border:2px solid #BCAAA4;border-radius:6px;padding:8px;}"
+        "QPushButton{background:#8D6E63;color:white;border:none;border-radius:6px;"
+        "padding:9px 22px;font-size:12px;font-weight:bold;}"
+        "QPushButton:hover{background:#A0826D;}");
+
+    auto *lay = new QVBoxLayout(&dlg);
+    lay->setSpacing(12); lay->setContentsMargins(24,24,24,24);
+
+    // Fournisseur info
+    auto *lblFournisseur = new QLabel("Fournisseur : " + nomEntreprise, &dlg);
+    lblFournisseur->setStyleSheet("font-size:14px;color:#5D4037;font-weight:bold;");
+    lay->addWidget(lblFournisseur);
+
+    // Matière
+    auto *cmbMatiere = new QComboBox(&dlg);
+    QSqlQuery qm(Connection::instance()->getDatabase());
+    qm.exec("SELECT ID_MATIERE, NOM FROM MATIERES_PREMIERES ORDER BY NOM");
+    while (qm.next())
+        cmbMatiere->addItem(qm.value(1).toString(), qm.value(0).toInt());
+    lay->addWidget(new QLabel("Matière livrée :", &dlg));
+    lay->addWidget(cmbMatiere);
+
+    // Quantité commandée — pré-remplie depuis la BD
+    auto *spinQty = new QDoubleSpinBox(&dlg);
+    spinQty->setRange(0.01, 99999.99);
+    spinQty->setValue(qteCommandee > 0 ? qteCommandee : 50.0);
+    spinQty->setSuffix(" kg");
+    spinQty->setDecimals(2);
+    lay->addWidget(new QLabel("Quantité commandée (kg) :", &dlg));
+    lay->addWidget(spinQty);
+
+    // Statut Arduino
+    auto *lblArduino = new QLabel(
+        m_arduinoMonitor->isConnected()
+            ? "✅ Arduino connecté — balance prête"
+            : "⚠ Arduino non connecté — simulation uniquement",
+        &dlg);
+    lblArduino->setStyleSheet(
+        m_arduinoMonitor->isConnected()
+            ? "color:#2E7D32;font-size:11px;font-weight:normal;"
+            : "color:#D32F2F;font-size:11px;font-weight:normal;");
+    lay->addWidget(lblArduino);
+
+    // Boutons
+    auto *btnRow = new QHBoxLayout();
+    auto *btnStart  = new QPushButton("⚖ Démarrer mesure", &dlg);
+    btnStart->setStyleSheet(
+        "QPushButton{background:#5D4037;color:white;border:none;border-radius:6px;"
+        "padding:9px 22px;font-size:12px;font-weight:bold;}"
+        "QPushButton:hover{background:#8D6E63;}");
+    auto *btnCancel = new QPushButton("Annuler", &dlg);
+    btnCancel->setStyleSheet(
+        "QPushButton{background:#BCAAA4;color:white;border:none;border-radius:6px;"
+        "padding:9px 22px;font-size:12px;font-weight:bold;}"
+        "QPushButton:hover{background:#A0826D;}");
+    btnRow->addStretch();
+    btnRow->addWidget(btnStart);
+    btnRow->addWidget(btnCancel);
+    lay->addLayout(btnRow);
+
+    connect(btnCancel, &QPushButton::clicked, &dlg, &QDialog::reject);
+    connect(btnStart,  &QPushButton::clicked, &dlg, [&](){
+        double orderedQty = spinQty->value();
+        int    matiereId  = cmbMatiere->currentData().toInt();
+        dlg.accept();
+
+        // Sauvegarder la quantité commandée dans Fournisseurs immédiatement
+        QSqlQuery qSave(Connection::instance()->getDatabase());
+        qSave.prepare("UPDATE Fournisseurs SET quantite_commandee = :qty WHERE id_fournisseur = :id");
+        qSave.bindValue(":qty", orderedQty);
+        qSave.bindValue(":id",  fournisseurId.toInt());
+        if (qSave.exec()) {
+            refreshFournisseurTable();
+            qDebug() << "✅ Quantité commandée sauvegardée:" << orderedQty << "kg";
+        }
+
+        m_arduinoMonitor->startDeliveryCheck(
+            fournisseurId.toInt(), matiereId, orderedQty);
+    });
+
     dlg.exec();
 }
 
@@ -6212,9 +6324,9 @@ void MainWindow::onArduinoTemperatureAlert(double celsius, const QString &messag
 // ─────────────────────────────────────────────────────────────────────────────
 //  Slots Arduino Monitor — Scénario 2 : Livraison
 // ─────────────────────────────────────────────────────────────────────────────
-void MainWindow::onArduinoDeliveryValidated(int matiereId, double qty)
+void MainWindow::onArduinoDeliveryValidated(int fournisseurId, int matiereId, double qty)
 {
-    // Mettre à jour la quantité de la matière dans la BD
+    // 1 — Mettre à jour QUANTITE_ACTUELLE dans MATIERES_PREMIERES
     QSqlQuery q(Connection::instance()->getDatabase());
     q.prepare("UPDATE MATIERES_PREMIERES "
               "SET QUANTITE_ACTUELLE = QUANTITE_ACTUELLE + :qty "
@@ -6222,19 +6334,52 @@ void MainWindow::onArduinoDeliveryValidated(int matiereId, double qty)
     q.bindValue(":qty", qty);
     q.bindValue(":id",  matiereId);
     if (q.exec()) {
-        qDebug() << "✅ Quantité matière" << matiereId << "mise à jour (+%1 kg)" << qty;
-        setupMatiereTable();  // Rafraîchir le tableau
+        qDebug() << "✅ Quantité matière" << matiereId << "mise à jour (+" << qty << "kg)";
+        setupMatiereTable();
     } else {
-        qDebug() << "❌ Erreur mise à jour quantité:" << q.lastError().text();
+        qDebug() << "❌ Erreur mise à jour quantité matière:" << q.lastError().text();
     }
+
+    // 2 — Mettre à jour QUANTITE_COMMANDEE dans FOURNISSEURS avec le poids mesuré
+    QSqlQuery qf(Connection::instance()->getDatabase());
+    qf.prepare("UPDATE Fournisseurs "
+               "SET quantite_commandee = :qty "
+               "WHERE id_fournisseur = :id");
+    qf.bindValue(":qty", qty);
+    qf.bindValue(":id",  fournisseurId);
+    if (qf.exec()) {
+        qDebug() << "✅ Quantité commandée fournisseur" << fournisseurId << "mise à jour =" << qty << "kg";
+        refreshFournisseurTable();
+    } else {
+        qDebug() << "❌ Erreur mise à jour quantité fournisseur:" << qf.lastError().text();
+    }
+
+    // 3 — Notification succès
+    NotificationWidget::show(
+        "✅ Livraison Conforme",
+        QString("Poids mesuré : %1 kg — conforme à la commande.\nStock et fournisseur mis à jour.")
+            .arg(qty, 0, 'f', 2),
+        NotificationWidget::Success,
+        QString(), {}, QString(), {},
+        7000);
 }
 
 void MainWindow::onArduinoDeliveryRejected(double measuredKg, double orderedKg, double diffPct)
 {
-    // NOK : LED rouge déjà allumée par ArduinoMonitor, email envoyé.
-    // Juste log pour debug.
     qDebug() << "🔴 Livraison NOK — mesuré:" << measuredKg
              << "kg | commandé:" << orderedKg << "kg | écart:" << diffPct << "%";
+
+    // Notification rouge avec bouton Rejeter dans l'onglet Fournisseurs
+    NotificationWidget::show(
+        "⚠ Livraison Non Conforme",
+        QString("Poids mesuré : %1 kg\nCommandé : %2 kg\nÉcart : %3%")
+            .arg(measuredKg, 0, 'f', 2)
+            .arg(orderedKg,  0, 'f', 2)
+            .arg(diffPct,    0, 'f', 1),
+        NotificationWidget::Critical,
+        "Rejeter", [](){},
+        QString(), {},
+        0);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

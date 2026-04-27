@@ -6,6 +6,7 @@
 #include <QComboBox>
 #include <QPushButton>
 #include <QLabel>
+#include <QDoubleSpinBox>
 #include "fournisseur.h"
 
 class FournisseurDialog : public QDialog
@@ -25,7 +26,8 @@ public:
     void setFournisseurData(const QString &id, const QString &nomEntreprise, const QString &email,
                            const QString &telephone, const QString &typeProduit,
                            const QString &conditionPaiement, const QString &matriculeFiscal,
-                           const QString &statut, const QString &adresse = QString());
+                           const QString &statut, const QString &adresse = QString(),
+                           double quantiteCommandee = 0.0);
 
     QString getId() const;
     QString getNomEntreprise() const;
@@ -36,6 +38,7 @@ public:
     QString getMatriculeFiscal() const;
     QString getStatut() const;
     QString getAdresse() const;
+    double  getQuantiteCommandee() const;
 
 private slots:
     void onSaveClicked();
@@ -70,6 +73,7 @@ private:
     QLineEdit *txtMatriculeFiscal;
     QComboBox *cmbStatut;
     QLineEdit *txtAdresse;
+    QDoubleSpinBox *spinQuantiteCommandee;
     
     QPushButton *btnSave;
     QPushButton *btnCancel;

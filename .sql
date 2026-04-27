@@ -88,7 +88,8 @@ CREATE TABLE Fournisseurs (
     condition_paiement  VARCHAR2(100),
     matricule_fiscal    VARCHAR2(50),
     statut              VARCHAR2(50),
-    adresse             VARCHAR2(255)
+    adresse             VARCHAR2(255),
+    quantite_commandee  NUMBER(10,3)  DEFAULT 0
 );
 
 /* =========================

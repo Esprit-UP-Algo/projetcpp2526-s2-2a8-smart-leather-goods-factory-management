@@ -161,7 +161,7 @@ private slots:
     // Arduino Monitor - Scénarios température & livraison
     void onArduinoTemperatureUpdated(double celsius);
     void onArduinoTemperatureAlert(double celsius, const QString &message);
-    void onArduinoDeliveryValidated(int matiereId, double qty);
+    void onArduinoDeliveryValidated(int fournisseurId, int matiereId, double qty);
     void onArduinoDeliveryRejected(double measuredKg, double orderedKg, double diffPct);
     void onStartDeliveryCheck();
 
@@ -174,6 +174,7 @@ private slots:
     void on_btnTriFournisseur_clicked();
     void on_btnSmsFournisseur_clicked();
     void on_btnQrFournisseur_clicked();
+    void on_btnLivraisonFournisseur_clicked();
     void on_searchBoxFournisseur_textChanged(const QString &text);
     void on_btnmap_clicked();
 

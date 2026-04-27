@@ -32,10 +32,9 @@ public:
     int        write_to_arduino(const QByteArray &data);
     QByteArray read_from_arduino();
 
-    // Commandes LED
-    void ledRed();
-    void ledGreen();
-    void ledOff();
+    // Commandes LED (1 seule LED rouge partagée)
+    void ledRed();    // allumer → alerte
+    void ledOff();    // éteindre → normal/OK
 
     // Demandes de lecture capteurs
     void requestTemperature();

@@ -119,19 +119,13 @@ QByteArray Arduino::read_from_arduino()
 void Arduino::ledRed()
 {
     write_to_arduino("LED_RED\n");
-    qDebug() << "🔴 LED rouge activée";
-}
-
-void Arduino::ledGreen()
-{
-    write_to_arduino("LED_GREEN\n");
-    qDebug() << "🟢 LED verte activée";
+    qDebug() << "🔴 LED rouge allumée (alerte)";
 }
 
 void Arduino::ledOff()
 {
     write_to_arduino("LED_OFF\n");
-    qDebug() << "⚫ LED éteinte";
+    qDebug() << "⚫ LED éteinte (normal/OK)";
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

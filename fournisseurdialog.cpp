@@ -117,6 +117,16 @@ void FournisseurDialog::setupUI()
     txtAdresse->setPlaceholderText("Ex: 12 Rue de la Paix, Tunis");
     formLayout->addWidget(lblAdresse, 8, 0);
     formLayout->addWidget(txtAdresse, 8, 1);
+
+    // Quantité commandée
+    QLabel *lblQte = new QLabel("Quantité commandée (kg) :", this);
+    spinQuantiteCommandee = new QDoubleSpinBox(this);
+    spinQuantiteCommandee->setRange(0.0, 999999.99);
+    spinQuantiteCommandee->setDecimals(3);
+    spinQuantiteCommandee->setSuffix(" kg");
+    spinQuantiteCommandee->setValue(0.0);
+    formLayout->addWidget(lblQte, 9, 0);
+    formLayout->addWidget(spinQuantiteCommandee, 9, 1);
     
     mainLayout->addLayout(formLayout);
     
@@ -242,7 +252,8 @@ void FournisseurDialog::setupDeleteMode()
 void FournisseurDialog::setFournisseurData(const QString &id, const QString &nomEntreprise, const QString &email,
                                            const QString &telephone, const QString &typeProduit,
                                            const QString &conditionPaiement, const QString &matriculeFiscal,
-                                           const QString &statut, const QString &adresse)
+                                           const QString &statut, const QString &adresse,
+                                           double quantiteCommandee)
 {
     txtId->setText(id);
     txtNomEntreprise->setText(nomEntreprise);
@@ -256,6 +267,7 @@ void FournisseurDialog::setFournisseurData(const QString &id, const QString &nom
     int statutIndex = cmbStatut->findText(statut);
     if (statutIndex >= 0) cmbStatut->setCurrentIndex(statutIndex);
     txtAdresse->setText(adresse);
+    if (spinQuantiteCommandee) spinQuantiteCommandee->setValue(quantiteCommandee);
 }
 
 QString FournisseurDialog::getId() const
@@ -301,6 +313,11 @@ QString FournisseurDialog::getStatut() const
 QString FournisseurDialog::getAdresse() const
 {
     return txtAdresse ? txtAdresse->text().trimmed() : QString();
+}
+
+double FournisseurDialog::getQuantiteCommandee() const
+{
+    return spinQuantiteCommandee ? spinQuantiteCommandee->value() : 0.0;
 }
 
 void FournisseurDialog::onSaveClicked()

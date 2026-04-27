@@ -30,7 +30,7 @@ class ArduinoMonitor : public QObject
 
 public:
     // Seuils configurables
-    static constexpr double TEMP_MAX_CELSIUS      = 30.0;  // °C max pour le cuir
+    static constexpr double TEMP_MAX_CELSIUS      = 28.0;  // °C max pour le cuir (alerte si T > 28°C)
     static constexpr double TEMP_MIN_CELSIUS       = 5.0;   // °C min
     static constexpr double WEIGHT_TOLERANCE_PCT   = 5.0;   // ±5 % tolérance poids
     static constexpr int    TEMP_POLL_MS           = 10000; // 10 s entre lectures temp
@@ -66,7 +66,7 @@ signals:
 
     // Livraison
     void deliveryWeightRead(double measuredKg, double orderedKg, double diffPct);
-    void deliveryValidated(int matiereId, double qty);   // OK → enregistrer en BD
+    void deliveryValidated(int fournisseurId, int matiereId, double qty);   // OK → enregistrer en BD
     void deliveryRejected(double measuredKg, double orderedKg, double diffPct);
 
     // Connexion Arduino
