@@ -538,36 +538,6 @@ MainWindow::MainWindow(QWidget *parent)
     
     // === POINTAGE RFID - Initialisation ===
     setupArduinoPointage();
-    
-    // === BOUTON TEST NOTIFICATION RFID (flottant) ===
-    QPushButton *btnTestRFID = new QPushButton("TEST NOTIF", this);
-    btnTestRFID->setFixedSize(100, 40);
-    btnTestRFID->setStyleSheet(
-        "QPushButton { background-color: #E74C3C; color: white; font-weight: bold; "
-        "border-radius: 8px; font-size: 12px; }"
-        "QPushButton:hover { background-color: #C0392B; }");
-    btnTestRFID->move(300, 10);
-    btnTestRFID->show();
-    btnTestRFID->raise();
-    connect(btnTestRFID, &QPushButton::clicked, this, [this]() {
-        qDebug() << "=== CLIC TEST NOTIFICATION ===";
-        
-        // Test si tray icon disponible
-        bool available = SystemNotification::instance().isAvailable();
-        qDebug() << "Tray disponible:" << available;
-        
-        if (available) {
-            SystemNotification::instance().show(
-                "Pointage CUIREA",
-                QString("Ali Ben Salem est arrive a %1").arg(QTime::currentTime().toString("HH:mm")),
-                NotificationWidget::Success,
-                5000
-            );
-            QMessageBox::information(this, "Test", "Notification envoyee! Regarde en bas a droite de Windows.");
-        } else {
-            QMessageBox::warning(this, "Erreur", "QSystemTrayIcon non disponible sur ce systeme!");
-        }
-    });
 }
 
 MainWindow::~MainWindow() 
