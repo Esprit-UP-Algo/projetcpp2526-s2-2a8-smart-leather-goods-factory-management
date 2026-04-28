@@ -473,6 +473,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnTrierProduction,       &QPushButton::clicked, this, &MainWindow::onTrierProduction);
     connect(ui->btnStatistiquesProduction,&QPushButton::clicked, this, &MainWindow::onStatistiquesProduction);
     connect(ui->btnExpedier,              &QPushButton::clicked, this, &MainWindow::expedierActionArduino);
+    ui->btnExpedier->setStyleSheet(
+        "QPushButton { background-color:#8D6E63; color:white; border:none; border-radius:10px;"
+        " padding:10px 20px; font-family:Arial,sans-serif; font-size:12px; font-weight:bold; }"
+        "QPushButton:hover { background-color:#A0826D; }"
+        "QPushButton:pressed { background-color:#6E473B; padding:11px 20px 9px 20px; }");
     connect(ui->searchBoxProduction, &QLineEdit::textChanged, this, &MainWindow::onRechercherProduction);
     // -- Timer retard notifications -------------------------------------------
     m_retardTimer = new QTimer(this);
@@ -497,7 +502,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     // -- Notifications systeme natives (tray icon OS) ---------------------------
     SystemNotification::instance().initialize(this);
-    NotificationWidget::setToastsEnabled(false);
 
     // -- Articles ------------------------------------------------------------
     setupArticleTable();
@@ -599,12 +603,9 @@ void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &ti
     // Garder le bouton flottant toujours au-dessus
     if (m_floatingBtn) m_floatingBtn->raise();
 
-    // Cloche et toasts visibles uniquement sur la page Production (index 4)
+    // Cloche et indicateur Arduino visibles selon la page
     if (m_bell) m_bell->setVisible(true); // visible sur toutes les pages
     if (m_arduinoIndicator) m_arduinoIndicator->setVisible(index == 4);
-    NotificationWidget::setToastsEnabled(true); // toasts actifs sur toutes les pages
-    // Fermer les toasts actifs quand on quitte Production
-    // (on garde les toasts actifs partout, on ferme juste si on le souhaite)
 }
 
 void MainWindow::on_btnEmployees_clicked()  
@@ -6357,7 +6358,7 @@ void MainWindow::recevoir_donnee()
     }
 }
 
-// ── Logique partagée Arduino + Simulateur ────────────────────────────────
+// ── inputmbarky ────────────────────────────────
 void MainWindow::traiterMessageArduino(const QString &msg)
 {
     qDebug() << "Arduino msg:" << msg;
@@ -6381,58 +6382,96 @@ void MainWindow::traiterMessageArduino(const QString &msg)
     // ── '1' — confirmation servos (ignorer) ─────────────────────────────
     if (msg == "1") return;
 
-    // ── ID:xxx — chercher en BDD et mettre à jour statut ────────────────
+    // ── ID:xxx — marquer Terminé en BDD, attendre clic Expédier pour les moteurs
     if (msg.startsWith("ID:")) {
         QString id = msg.mid(3).trimmed();
-        if (m_lcdLigne1) m_lcdLigne1->setText("Recherche...");
-        if (m_lcdLigne2) m_lcdLigne2->setText(id);
 
         QSqlQuery q(Connection::instance()->getDatabase());
-        q.prepare("SELECT ID_COMMANDE FROM COMMANDES "
+        q.prepare("SELECT STATUT FROM COMMANDES "
                   "WHERE REFERENCE = :id OR TO_CHAR(ID_COMMANDE) = :id2");
         q.bindValue(":id",  id);
         q.bindValue(":id2", id);
 
-        if (q.exec() && q.next()) {
-            // Trouvé → marquer Terminé + date livraison + envoyer '1' aux servos
-            QString dateAuj = QDate::currentDate().toString("dd/MM/yyyy");
-            QSqlQuery upd(Connection::instance()->getDatabase());
-            upd.prepare("UPDATE COMMANDES SET STATUT = 'Terminé', "
-                        "DATE_LIVRAISON = TO_DATE(:dl, 'DD/MM/YYYY') "
-                        "WHERE REFERENCE = :id OR TO_CHAR(ID_COMMANDE) = :id2");
-            upd.bindValue(":dl",  dateAuj);
-            upd.bindValue(":id",  id);
-            upd.bindValue(":id2", id);
-            upd.exec();
+        bool found = q.exec() && q.next();
+        QString statutActuel = found ? q.value("STATUT").toString() : "";
+        qDebug() << "[Arduino] Statut BDD pour" << id << ":" << statutActuel;
 
-            if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino("1");
-
-            loadProductionData();
-            m_keypadBuffer.clear();
-
-            // ID valide → LCD "Commande terminee" → retour home après 3s
-            if (m_lcdLigne1) m_lcdLigne1->setText("Commande terminee");
-            if (m_lcdLigne2) m_lcdLigne2->setText(id);
-
-            QTimer::singleShot(3000, this, [this]() {
-                if (m_lcdLigne1) m_lcdLigne1->setText("Systeme pret");
-                if (m_lcdLigne2) m_lcdLigne2->setText("Saisir ID + #");
-            });
-
-            NotificationWidget::show(
-                "✅ Commande terminée",
-                "Référence " + id + " marquée Terminé — " + dateAuj,
-                NotificationWidget::Success
-            );
-        } else {
-            // Invalide → envoyer '2', rester en attente
+        if (!found) {
+            // ID introuvable → répondre immédiatement
             if (m_serialArduino && m_serialArduino->isOpen())
                 m_arduino.write_to_arduino("2");
-
             if (m_lcdLigne1) m_lcdLigne1->setText("ID invalide");
-            if (m_lcdLigne2) m_lcdLigne2->setText("Ressaisir + #");
+            if (m_lcdLigne2) m_lcdLigne2->setText("Ressaisir + D");
+            return;
         }
+
+        // ID trouvé → UPDATE STATUT = 'Terminé' (sauf si déjà En livraison/Annulé)
+        if (statutActuel.contains("livraison", Qt::CaseInsensitive) ||
+            statutActuel.contains("Annul",     Qt::CaseInsensitive)) {
+            // Commande déjà expédiée → invalide pour une nouvelle expédition
+            qDebug() << "[Arduino] Statut" << statutActuel << "— déjà expédié";
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino("2");
+            if (m_lcdLigne1) m_lcdLigne1->setText("Deja expedie");
+            if (m_lcdLigne2) m_lcdLigne2->setText(id);
+            return;
+        }
+
+        QSqlQuery upd(Connection::instance()->getDatabase());
+        upd.prepare("UPDATE COMMANDES SET STATUT = 'Termin\u00e9' "
+                    "WHERE REFERENCE = :id OR TO_CHAR(ID_COMMANDE) = :id2");
+        upd.bindValue(":id",  id);
+        upd.bindValue(":id2", id);
+        if (!upd.exec())
+            qDebug() << "[Arduino] UPDATE échoué:" << upd.lastError().text();
+        else
+            qDebug() << "[Arduino] UPDATE OK — lignes:" << upd.numRowsAffected();
+
+        // Si port fermé → tenter reconnexion avant d'envoyer '3'
+        if (!m_serialArduino || !m_serialArduino->isOpen()) {
+            qDebug() << "[Arduino] Port fermé — tentative reconnexion...";
+            int ret = m_arduino.connection()->connect_arduino();
+            if (ret == 0) {
+                m_serialArduino = m_arduino.connection()->getSerial();
+                connect(m_serialArduino, &QSerialPort::readyRead,
+                        this, &MainWindow::recevoir_donnee);
+                m_arduinoIndicator->setText("● Arduino connecté");
+                m_arduinoIndicator->setStyleSheet(
+                    "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
+                    "color:white; background:#27AE60; }");
+                qDebug() << "[Arduino] Reconnecté sur" << m_arduino.connection()->getPortName();
+            }
+        }
+
+        // Envoyer '3' → Arduino "ID OK - Cliquer Expedier"
+        if (m_serialArduino && m_serialArduino->isOpen()) {
+            m_arduino.write_to_arduino("3");
+            qDebug() << "[Arduino] '3' envoyé pour" << id;
+        } else {
+            qDebug() << "[Arduino] ⚠️ Port toujours fermé — '3' non envoyé !";
+        }
+
+        // Mettre à jour miroir LCD Qt
+        if (m_lcdLigne1) m_lcdLigne1->setText("ID OK");
+        if (m_lcdLigne2) m_lcdLigne2->setText("Cliquer Expedier");
+
+        loadProductionData();
+        m_keypadBuffer.clear();
+
+        // Sélectionner automatiquement la ligne dans le tableau
+        for (int r = 0; r < ui->productionTable->rowCount(); ++r) {
+            if (cellText(ui->productionTable, r, 1) == id ||
+                cellText(ui->productionTable, r, 0) == id) {
+                ui->productionTable->selectRow(r);
+                break;
+            }
+        }
+
+        NotificationWidget::show(
+            "✅ Commande prête",
+            "Référence " + id + " — statut Terminé. Cliquez Expédier pour lancer les moteurs.",
+            NotificationWidget::Success
+        );
         return;
     }
 
@@ -6490,16 +6529,30 @@ void MainWindow::expedierActionArduino()
     QString statut = cellText(ui->productionTable, row, 8);
     QString mail   = cellText(ui->productionTable, row, 10);
 
+    qDebug() << "[Expedier] ref=" << ref << "statut=" << statut
+             << "statut.size=" << statut.size()
+             << "hex=" << statut.toUtf8().toHex();
+
     // CAS 3 : statut != Terminé
-    if (statut != "Terminé") {
-        QMessageBox::critical(this, "Expédition impossible",
-            QString("Référence     : %1\nStatut actuel : %2\n"
-                    "La commande doit être Terminé.").arg(ref, statut));
+    // Comparaison insensible aux variantes d'encodage
+    bool estTermine = (statut.trimmed().normalized(QString::NormalizationForm_C)
+                       == QString("Termin\u00e9").normalized(QString::NormalizationForm_C));
+
+    if (!estTermine) {
+        QString msgErr;
+        if (statut.contains("livraison", Qt::CaseInsensitive))
+            msgErr = QString("Référence : %1\nCette commande est déjà en livraison.").arg(ref);
+        else
+            msgErr = QString("Référence     : %1\nStatut actuel : %2\n"
+                             "La commande doit être Terminé pour être expédiée.").arg(ref, statut);
+        QMessageBox::critical(this, "Expédition impossible", msgErr);
         return;
     }
 
-    // CAS 4 : statut == Terminé → expédier
-    m_arduino.write_to_arduino("1");
+    // CAS 4 : statut == Terminé → déclencher les moteurs puis mettre En livraison
+    qDebug() << "[Expedier] Envoi '1' → moteurs pour" << ref;
+    m_arduino.write_to_arduino("1");  // moteurs se déclenchent sur l'Arduino
+    qDebug() << "[Expedier] '1' envoyé";
 
     QString dateAujourdhui = QDate::currentDate().toString("dd/MM/yyyy");
     QSqlQuery upd(Connection::instance()->getDatabase());

@@ -300,7 +300,7 @@ QPushButton#btnAddFournisseur:pressed, QPushButton#btnEditFournisseur:pressed, Q
 }
 
 /* Primary Action Buttons - Production Module */
-QPushButton#btnCreerProduction, QPushButton#btnModifierProduction, QPushButton#btnSupprimerProduction, QPushButton#btnFactureProduction, QPushButton#btnExcelProduction, QPushButton#btnTrierProduction, QPushButton#btnStatistiquesProduction {
+QPushButton#btnCreerProduction, QPushButton#btnModifierProduction, QPushButton#btnSupprimerProduction, QPushButton#btnFactureProduction, QPushButton#btnExcelProduction, QPushButton#btnTrierProduction, QPushButton#btnStatistiquesProduction, QPushButton#btnExpedier {
     background-color: #8D6E63;
     color: white;
     border: none;
@@ -312,12 +312,12 @@ QPushButton#btnCreerProduction, QPushButton#btnModifierProduction, QPushButton#b
     text-align: center;
 }
 
-QPushButton#btnCreerProduction:hover, QPushButton#btnModifierProduction:hover, QPushButton#btnSupprimerProduction:hover, QPushButton#btnFactureProduction:hover, QPushButton#btnExcelProduction:hover, QPushButton#btnTrierProduction:hover, QPushButton#btnStatistiquesProduction:hover {
+QPushButton#btnCreerProduction:hover, QPushButton#btnModifierProduction:hover, QPushButton#btnSupprimerProduction:hover, QPushButton#btnFactureProduction:hover, QPushButton#btnExcelProduction:hover, QPushButton#btnTrierProduction:hover, QPushButton#btnStatistiquesProduction:hover, QPushButton#btnExpedier:hover {
     background-color: #A0826D;
     border: none;
 }
 
-QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:pressed, QPushButton#btnSupprimerProduction:pressed, QPushButton#btnFactureProduction:pressed, QPushButton#btnExcelProduction:pressed, QPushButton#btnTrierProduction:pressed, QPushButton#btnStatistiquesProduction:pressed {
+QPushButton#btnCreerProduction:pressed, QPushButton#btnModifierProduction:pressed, QPushButton#btnSupprimerProduction:pressed, QPushButton#btnFactureProduction:pressed, QPushButton#btnExcelProduction:pressed, QPushButton#btnTrierProduction:pressed, QPushButton#btnStatistiquesProduction:pressed, QPushButton#btnExpedier:pressed {
     background-color: #6E473B;
     border: none;
     padding: 11px 20px 9px 20px;
