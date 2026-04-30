@@ -6456,14 +6456,14 @@ void MainWindow::traiterMessageArduino(const QString &msg)
         bool ok = m_pointage.marquerPresent(uid);
         
         if (ok && !m_pointage.estDejaPointe()) {
-            // Pointage reussi - Envoyer '1' a Arduino (ouvrir porte)
-            if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino("1");
-            
-            // Notification Windows systeme
+            // Pointage reussi - Envoyer nom a Arduino
             QString prenom = m_pointage.getDernierPrenom();
             QString nom = m_pointage.getDernierNom();
             QString heure = QTime::currentTime().toString("HH:mm");
+            
+            // Envoyer "OK:Prenom Nom" a Arduino
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino(QString("OK:%1 %2").arg(prenom).arg(nom).toUtf8().constData());
             
             SystemNotification::instance().show(
                 "Pointage CUIREA",
@@ -6475,13 +6475,14 @@ void MainWindow::traiterMessageArduino(const QString &msg)
             populateEmployeeTable();
             
         } else if (ok && m_pointage.estDejaPointe()) {
-            // Deja pointe aujourd'hui - Envoyer '1' (sortie autorisee)
-            if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino("1");
-            
+            // Deja pointe aujourd'hui - sortie
             QString prenom = m_pointage.getDernierPrenom();
             QString nom = m_pointage.getDernierNom();
             QString heure = QTime::currentTime().toString("HH:mm");
+            
+            // Envoyer "BYE:Prenom Nom" a Arduino
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino(QString("BYE:%1 %2").arg(prenom).arg(nom).toUtf8().constData());
             
             SystemNotification::instance().show(
                 "Pointage CUIREA",
@@ -6493,7 +6494,7 @@ void MainWindow::traiterMessageArduino(const QString &msg)
         } else {
             // Badge inconnu - Envoyer '2' a Arduino (refuser)
             if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino("2");
+                m_arduino.write_to_arduino("NO");
             
             QString heure = QTime::currentTime().toString("HH:mm");
             
