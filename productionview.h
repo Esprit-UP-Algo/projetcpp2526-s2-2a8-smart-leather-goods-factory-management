@@ -106,7 +106,7 @@ private:
     QLineEdit   *txtId, *txtReference;
     QDoubleSpinBox *spnPrix;
     QComboBox   *cmbProduit, *cmbStatut, *cmbResponsable, *cmbPriorite, *cmbClient, *cmbEtatPaiement;
-    QDateEdit   *dateDebut, *dateFin;
+    QDateEdit   *edtDateDebut, *edtDateFin;
     QPushButton *btnSave, *btnCancel, *btnDelete;
 
     /** @brief Cache ID_EMPLOYE → Nom complet pour usage interne. */

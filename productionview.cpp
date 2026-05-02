@@ -51,8 +51,8 @@ ProductionDialog::ProductionDialog(QWidget *parent, DialogMode mode)
     bool readOnly = (mode == DeleteMode);
     spnPrix->setEnabled(!readOnly);
     for (auto *w : {cmbProduit, cmbStatut, cmbResponsable, cmbPriorite}) w->setEnabled(!readOnly);
-    dateDebut->setEnabled(!readOnly);
-    dateFin->setEnabled(!readOnly);
+    edtDateDebut->setEnabled(!readOnly);
+    edtDateFin->setEnabled(!readOnly);
     txtReference->setEnabled(false); // R�f�rence toujours en lecture seule (auto-g�n�r�e)
 
     // Adapter le titre, les boutons et le message selon le mode
@@ -124,10 +124,10 @@ void ProductionDialog::setupUI()
         "QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width:18px; }");
     cmbStatut    = new QComboBox(this);
     cmbStatut->addItems({"En Attente","Planifi�","En Cours","En Production","Suspendu","Termin�","Annul�"});
-    dateDebut    = new QDateEdit(this); dateDebut->setCalendarPopup(true);
-    dateDebut->setDate(QDate::currentDate()); dateDebut->setDisplayFormat("dd/MM/yyyy");
-    dateFin      = new QDateEdit(this); dateFin->setCalendarPopup(true);
-    dateFin->setDate(QDate::currentDate().addDays(7)); dateFin->setDisplayFormat("dd/MM/yyyy");
+    edtDateDebut    = new QDateEdit(this); edtDateDebut->setCalendarPopup(true);
+    edtDateDebut->setDate(QDate::currentDate()); edtDateDebut->setDisplayFormat("dd/MM/yyyy");
+    edtDateFin      = new QDateEdit(this); edtDateFin->setCalendarPopup(true);
+    edtDateFin->setDate(QDate::currentDate().addDays(7)); edtDateFin->setDisplayFormat("dd/MM/yyyy");
     cmbResponsable = new QComboBox(this); // Rempli dynamiquement par loadEmployes()
     cmbPriorite  = new QComboBox(this);
     cmbPriorite->addItems({"Basse","Normale","Haute","Urgente"});
@@ -138,8 +138,8 @@ void ProductionDialog::setupUI()
     addRow("Produit * :",        cmbProduit);
     addRow("Prix * :",           spnPrix);
     addRow("Statut :",           cmbStatut);
-    addRow("Date D�but * :",     dateDebut);
-    addRow("Date Fin Pr�vue * :",dateFin);
+    addRow("Date D�but * :",     edtDateDebut);
+    addRow("Date Fin Pr�vue * :",edtDateFin);
     addRow("Employ� * :",        cmbResponsable);
     addRow("Priorit� :",         cmbPriorite);
 
@@ -174,8 +174,8 @@ void ProductionDialog::setupUI()
 }
 
 void ProductionDialog::setProductionData(const QString &id, const QString &reference, const QString &produit,
-                                         const QString &quantite, const QString &statut, const QString &dDebut,
-                                         const QString &dFin, const QString &responsable, const QString &priorite,
+                                         const QString &quantite, const QString &statut, const QString &dateDebut,
+                                         const QString &dateFin, const QString &responsable, const QString &priorite,
                                          const QString &mailClient)
 {
     txtId->setText(id); txtReference->setText(reference);
@@ -190,8 +190,8 @@ void ProductionDialog::setProductionData(const QString &id, const QString &refer
     };
     setCombo(cmbProduit, produit); setCombo(cmbStatut, statut);
     setCombo(cmbResponsable, responsable); setCombo(cmbPriorite, priorite);
-    dateDebut->setDate(QDate::fromString(dDebut,"dd/MM/yyyy"));
-    dateFin->setDate(QDate::fromString(dFin,"dd/MM/yyyy"));
+    edtDateDebut->setDate(QDate::fromString(dateDebut,"dd/MM/yyyy"));
+    edtDateFin->setDate(QDate::fromString(dateFin,"dd/MM/yyyy"));
     if (!mailClient.isEmpty()) {
         for (int i = 0; i < cmbClient->count(); ++i) {
             if (cmbClient->itemData(i).toString() == mailClient) {
@@ -206,8 +206,8 @@ QString ProductionDialog::getReference()   const { return txtReference->text(); 
 QString ProductionDialog::getProduit()     const { return cmbProduit->currentData().toString(); }
 QString ProductionDialog::getQuantite()    const { return QString::number(spnPrix->value(), 'f', 2); }
 QString ProductionDialog::getStatut()      const { return cmbStatut->currentText(); }
-QString ProductionDialog::getDateDebut()   const { return dateDebut->date().toString("dd/MM/yyyy"); }
-QString ProductionDialog::getDateFin()     const { return dateFin->date().toString("dd/MM/yyyy"); }
+QString ProductionDialog::getDateDebut()   const { return edtDateDebut->date().toString("dd/MM/yyyy"); }
+QString ProductionDialog::getDateFin()     const { return edtDateFin->date().toString("dd/MM/yyyy"); }
 QString ProductionDialog::getResponsable() const { return cmbResponsable->currentText(); }
 QString ProductionDialog::getPriorite()    const { return cmbPriorite->currentText(); }
 QString ProductionDialog::getMailClient()  const { return cmbClient ? cmbClient->currentData().toString() : QString(); }
@@ -231,8 +231,8 @@ void ProductionDialog::onSaveClicked()
     if (spnPrix->value() <= 0) { spnPrix->setStyleSheet("border: 2px solid red; border-radius:6px;"); valid = false; }
     else spnPrix->setStyleSheet("");
 
-    if (dateDebut->date() > dateFin->date()) { setError(dateDebut); setError(dateFin); valid = false; }
-    else { setNormal(dateDebut); setNormal(dateFin); }
+    if (edtDateDebut->date() > edtDateFin->date()) { setError(edtDateDebut); setError(edtDateFin); valid = false; }
+    else { setNormal(edtDateDebut); setNormal(edtDateFin); }
 
     if (!valid) return;
 

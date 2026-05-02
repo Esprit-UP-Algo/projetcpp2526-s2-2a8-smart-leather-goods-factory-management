@@ -41,6 +41,8 @@ private slots:
     void onSaveClicked();
     void onCancelClicked();
     void onDeleteConfirmed();
+    void onWeighDelivery();  // Nouveau slot pour peser
+    void onWeightReceived(double kg);  // Afficher le poids reçu
 
 private:
     void setupUI();
@@ -74,8 +76,11 @@ private:
     QPushButton *btnSave;
     QPushButton *btnCancel;
     QPushButton *btnDelete;
+    QPushButton *btnWeighDelivery;  // Nouveau bouton
     
     QLabel *lblDeleteWarning;
+    QLabel *lblWeight;  // Affichage du poids
+    QLineEdit *txtExpectedWeight;  // Poids attendu
 };
 
 #endif // FOURNISSEURDIALOG_H
