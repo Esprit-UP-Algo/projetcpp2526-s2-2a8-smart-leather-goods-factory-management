@@ -39,6 +39,7 @@
 #include "matieredetection.h"
 #include "voicematieres.h"
 #include "arduinomonitor.h"
+#include "arduinomanager.h"
 #include "pointage.h"
 #include "arduino.h"
 #include <QTimer>
@@ -272,17 +273,23 @@ private:
     // === POINTAGE RFID ===
     Pointage      m_pointage;
 
-    // === ARDUINO ===
-    Arduino       m_arduino;
-    ArduinoMonitor *m_arduinoMonitor = nullptr;
-    QByteArray    arduinoData;
-    QSerialPort  *m_serialArduino      = nullptr;
-    QTimer       *m_timerAbsences      = nullptr;
-    QLabel       *m_arduinoIndicator   = nullptr;
-    QString       m_keypadBuffer;
-    QLabel       *m_lcdLigne1          = nullptr;
-    QLabel       *m_lcdLigne2          = nullptr;
+    // === ARDUINO MULTI-CARTES ===
+    ArduinoManager *m_arduinoManager       = nullptr;  // découverte automatique
+    Arduino        *m_arduinoTempBalance   = nullptr;  // ROLE:TEMP_BALANCE
+    Arduino        *m_arduinoLivraison     = nullptr;  // ROLE:LIVRAISON
+    Arduino        *m_arduinoPointage      = nullptr;  // ROLE:POINTAGE
+    ArduinoMonitor *m_arduinoMonitor       = nullptr;  // scénarios temp + balance
+    QByteArray      arduinoData;
+    QSerialPort    *m_serialLivraison      = nullptr;  // port série carte LIVRAISON
+    QSerialPort    *m_serialPointage       = nullptr;  // port série carte POINTAGE
+    QTimer         *m_timerAbsences        = nullptr;
+    QLabel         *m_arduinoIndicator     = nullptr;
+    QString         m_keypadBuffer;
+    QLabel         *m_lcdLigne1            = nullptr;
+    QLabel         *m_lcdLigne2            = nullptr;
 
+    void setupArduinoMultiCartes();
+    void onArduinoDiscoveryComplete();
     void setupArduinoPointage();
     void onArduinoDataReceived();
     void expedierActionArduino();

@@ -37,6 +37,7 @@ void setup() {
   Serial.begin(9600);
   delay(1000);
   
+  Serial.println("ROLE:TEMP_BALANCE");  // Identification automatique multi-cartes
   Serial.println("=== CUIREA Arduino Starting ===");
   
   // Initialiser DHT

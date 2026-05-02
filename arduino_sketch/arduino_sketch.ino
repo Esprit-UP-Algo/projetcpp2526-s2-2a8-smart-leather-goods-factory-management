@@ -32,6 +32,7 @@ bool   waitingExpedier = false;  // true = ID validé, attente clic bouton Qt
 // ─────────────────────────────────────────────────────────────────────────────
 void setup() {
     Serial.begin(9600);
+    Serial.println("ROLE:LIVRAISON");  // Identification automatique multi-cartes
 
     // Servos — positions de repos d'abord (avant LCD pour éviter pic de courant)
     // ⚠️  Alimenter les servos sur source externe, GND commun avec Arduino

@@ -562,72 +562,8 @@ MainWindow::MainWindow(QWidget *parent)
         }
     });
     
-    // === POINTAGE RFID - Initialisation ===
-    setupArduinoPointage();
-    
-    // === ARDUINO MONITOR - Surveillance Température + Balance ===
-    // Utiliser la même instance Arduino que le pointage RFID
-    m_arduinoMonitor = new ArduinoMonitor(this);
-    m_arduinoMonitor->setArduino(&m_arduino); // Partager l'instance Arduino
-    
-    // Connecter signal alerte température → Notification système + Historique
-    connect(m_arduinoMonitor, &ArduinoMonitor::temperatureAlert, this, 
-            [this](double tempMatiere, const QString &message) {
-        // Notification système
-        SystemNotification::instance().show(
-            "⚠️ ALERTE TEMPÉRATURE",
-            message,
-            NotificationWidget::Warning
-        );
-        
-        // Ajouter dans l'historique des notifications
-        NotificationHistoryItem item;
-        item.title = "⚠️ Alerte Température";
-        item.message = message;
-        item.type = NotificationWidget::Warning;
-        item.timestamp = QDateTime::currentDateTime();
-        item.read = false;
-        item.aiGenerated = false;
-        
-        NotificationHistory::instance().add(item);
-        
-        // Rafraîchir la cloche pour afficher le badge
-        if (m_bell) {
-            m_bell->refresh();
-        }
-    });
-    
-    // Connecter signal mise à jour température → Indicateur
-    connect(m_arduinoMonitor, &ArduinoMonitor::temperatureUpdated, this,
-            [this](double tempMatiere) {
-        if (m_tempIndicator) {
-            m_tempIndicator->setText(QString("🌡 %1°C").arg(tempMatiere, 0, 'f', 1));
-            
-            // Changer la couleur selon la température
-            if (tempMatiere > 30.0) {
-                // Rouge si température élevée
-                m_tempIndicator->setStyleSheet(
-                    "QLabel { background-color: #D32F2F; color: white; border-radius: 16px; "
-                    "font-size: 11px; font-weight: bold; padding: 4px 8px; }"
-                );
-            } else if (tempMatiere > 25.0) {
-                // Orange si température moyenne
-                m_tempIndicator->setStyleSheet(
-                    "QLabel { background-color: #F57C00; color: white; border-radius: 16px; "
-                    "font-size: 11px; font-weight: bold; padding: 4px 8px; }"
-                );
-            } else {
-                // Vert si température normale
-                m_tempIndicator->setStyleSheet(
-                    "QLabel { background-color: #388E3C; color: white; border-radius: 16px; "
-                    "font-size: 11px; font-weight: bold; padding: 4px 8px; }"
-                );
-            }
-        }
-    });
-    
-    // Démarrer la surveillance température automatiquement
-    m_arduinoMonitor->startTemperatureMonitoring();
+    // === ARDUINO MULTI-CARTES - Découverte automatique ===
+    setupArduinoMultiCartes();
 }
 
 MainWindow::~MainWindow() 
@@ -638,6 +574,9 @@ MainWindow::~MainWindow()
         delete m_arduinoMonitor;
         m_arduinoMonitor = nullptr;
     }
+    // ArduinoManager supprime les instances Arduino qu'il a créées
+    delete m_arduinoManager;
+    m_arduinoManager = nullptr;
     
     // Arrêter l'API Python via taskkill (processus détaché)
     QProcess::execute("cmd.exe", QStringList() << "/c" << "taskkill /f /im python.exe >nul 2>&1");
@@ -2545,8 +2484,9 @@ void MainWindow::on_btnLivraisonFournisseur_clicked()
     QString idFournisseur = cellText(ui->fournisseurTable, row, 0);
     QString nomEntreprise = cellText(ui->fournisseurTable, row, 1);
     
-    // Ouvrir le dialog de vérification avec l'instance Arduino
-    VerificationLivraison dialog(nomEntreprise, &m_arduino, this);
+    // Ouvrir le dialog de vérification avec la carte TEMP_BALANCE (balance HX711)
+    Arduino *arduinoBalance = m_arduinoTempBalance ? m_arduinoTempBalance : nullptr;
+    VerificationLivraison dialog(nomEntreprise, arduinoBalance, this);
     if (dialog.exec() == QDialog::Accepted) {
         // Récupérer les valeurs mesurées
         double qteCommandee = dialog.getQuantiteCommandee();
@@ -6770,40 +6710,23 @@ void MainWindow::logout()
 #include <QSerialPort>
 #include <QTime>
 
-// ── Configuration Arduino et Timer ────────────────────────────────────────
-void MainWindow::setupArduinoPointage()
+// ─────────────────────────────────────────────────────────────────────────────
+//  setupArduinoMultiCartes — point d'entrée, lance la découverte automatique
+// ─────────────────────────────────────────────────────────────────────────────
+void MainWindow::setupArduinoMultiCartes()
 {
-    // Indicateur connexion — overlay coin supérieur droit, visible sur page Production
+    // ── Indicateur connexion overlay ──────────────────────────────────────
     m_arduinoIndicator = new QLabel(this);
-    m_arduinoIndicator->setFixedSize(160, 24);
+    m_arduinoIndicator->setFixedSize(200, 24);
     m_arduinoIndicator->setAlignment(Qt::AlignCenter);
     m_arduinoIndicator->setStyleSheet(
-        "QLabel { border-radius:12px; font-size:11px; font-weight:bold; color:white; }");
+        "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
+        "color:white; background:#888; }");
+    m_arduinoIndicator->setText("● Recherche Arduino...");
     m_arduinoIndicator->setVisible(false);
     m_arduinoIndicator->raise();
 
-    // Utilise ArduinoConnection pour détecter automatiquement le port (VID/PID)
-    int result = m_arduino.connection()->connect_arduino();
-
-    if (result == 0) {
-        m_serialArduino = m_arduino.connection()->getSerial();
-        connect(m_serialArduino, &QSerialPort::readyRead,
-                this, &MainWindow::recevoir_donnee);
-        m_arduinoIndicator->setText("● Arduino connecté");
-        m_arduinoIndicator->setStyleSheet(
-            "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
-            "color:white; background:#27AE60; }");
-        qDebug() << "✅ Arduino connecté sur" << m_arduino.connection()->getPortName();
-    } else {
-        m_serialArduino = nullptr;
-        m_arduinoIndicator->setText("● Non connecté");
-        m_arduinoIndicator->setStyleSheet(
-            "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
-            "color:white; background:#E74C3C; }");
-        qDebug() << "⚠️ Arduino non connecté (code:" << result << ")";
-    }
-
-    // Timer fin de journée → marquer absents à 23h59
+    // ── Timer fin de journée → marquer absents à 23h59 ───────────────────
     m_timerAbsences = new QTimer(this);
     connect(m_timerAbsences, &QTimer::timeout, [this]() {
         QTime now = QTime::currentTime();
@@ -6812,25 +6735,150 @@ void MainWindow::setupArduinoPointage()
     });
     m_timerAbsences->start(60000);
 
-    // Simulateur keypad Qt — inséré dans la page Production
+    // ── Miroir LCD Qt ─────────────────────────────────────────────────────
     setupKeypadSimulator();
+
+    // ── ArduinoMonitor (scénarios temp + balance) ─────────────────────────
+    m_arduinoMonitor = new ArduinoMonitor(this);
+
+    connect(m_arduinoMonitor, &ArduinoMonitor::temperatureAlert, this,
+            [this](double /*tempMatiere*/, const QString &message) {
+        SystemNotification::instance().show("⚠️ ALERTE TEMPÉRATURE", message,
+                                            NotificationWidget::Warning);
+        NotificationHistoryItem item;
+        item.title       = "⚠️ Alerte Température";
+        item.message     = message;
+        item.type        = NotificationWidget::Warning;
+        item.timestamp   = QDateTime::currentDateTime();
+        item.read        = false;
+        item.aiGenerated = false;
+        NotificationHistory::instance().add(item);
+        if (m_bell) m_bell->refresh();
+    });
+
+    connect(m_arduinoMonitor, &ArduinoMonitor::temperatureUpdated, this,
+            [this](double tempMatiere) {
+        if (!m_tempIndicator) return;
+        m_tempIndicator->setText(QString("🌡 %1°C").arg(tempMatiere, 0, 'f', 1));
+        QString bg = (tempMatiere > 30.0) ? "#D32F2F"
+                   : (tempMatiere > 25.0) ? "#F57C00"
+                                          : "#388E3C";
+        m_tempIndicator->setStyleSheet(
+            QString("QLabel { background-color:%1; color:white; border-radius:16px; "
+                    "font-size:11px; font-weight:bold; padding:4px 8px; }").arg(bg));
+    });
+
+    // ── ArduinoManager — découverte asynchrone ────────────────────────────
+    m_arduinoManager = new ArduinoManager(this);
+
+    connect(m_arduinoManager, &ArduinoManager::cardIdentified, this,
+            [this](const QString &role, const QString &port) {
+        qDebug() << "🎯 Carte identifiée:" << role << "sur" << port;
+    });
+
+    connect(m_arduinoManager, &ArduinoManager::cardMissing, this,
+            [this](const QString &role) {
+        qDebug() << "⚠️ Carte manquante:" << role;
+    });
+
+    connect(m_arduinoManager, &ArduinoManager::discoveryComplete,
+            this, &MainWindow::onArduinoDiscoveryComplete);
+
+    m_arduinoManager->scanAndIdentify();
 }
 
-// ── Réception données Arduino (RFID pointage) ────────────────────────────
-// ── Réception données Arduino (buffer ligne par ligne) ───────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+//  onArduinoDiscoveryComplete — appelé quand toutes les cartes sont identifiées
+// ─────────────────────────────────────────────────────────────────────────────
+void MainWindow::onArduinoDiscoveryComplete()
+{
+    m_arduinoTempBalance = m_arduinoManager->arduinoTempBalance();
+    m_arduinoLivraison   = m_arduinoManager->arduinoLivraison();
+    m_arduinoPointage    = m_arduinoManager->arduinoPointage();
+
+    // ── Résumé indicateur ─────────────────────────────────────────────────
+    int nbConnected = (m_arduinoTempBalance ? 1 : 0)
+                    + (m_arduinoLivraison   ? 1 : 0)
+                    + (m_arduinoPointage    ? 1 : 0);
+
+    if (nbConnected == 3) {
+        m_arduinoIndicator->setText("● 3 Arduino connectés");
+        m_arduinoIndicator->setStyleSheet(
+            "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
+            "color:white; background:#27AE60; }");
+    } else if (nbConnected > 0) {
+        m_arduinoIndicator->setText(QString("● %1/3 Arduino").arg(nbConnected));
+        m_arduinoIndicator->setStyleSheet(
+            "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
+            "color:white; background:#F57C00; }");
+    } else {
+        m_arduinoIndicator->setText("● Non connecté");
+        m_arduinoIndicator->setStyleSheet(
+            "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
+            "color:white; background:#E74C3C; }");
+    }
+
+    // ── Carte TEMP_BALANCE → ArduinoMonitor ───────────────────────────────
+    if (m_arduinoTempBalance) {
+        m_arduinoMonitor->setArduinoTempBalance(m_arduinoTempBalance);
+        m_arduinoMonitor->startTemperatureMonitoring();
+        qDebug() << "✅ Surveillance température démarrée";
+    }
+
+    // ── Carte LIVRAISON → port série pour expédition ──────────────────────
+    if (m_arduinoLivraison) {
+        m_serialLivraison = m_arduinoLivraison->connection()->getSerial();
+        connect(m_serialLivraison, &QSerialPort::readyRead,
+                this, &MainWindow::recevoir_donnee);
+        qDebug() << "✅ Carte LIVRAISON prête sur" << m_arduinoLivraison->getPortName();
+    }
+
+    // ── Carte POINTAGE → port série pour RFID ────────────────────────────
+    if (m_arduinoPointage) {
+        m_serialPointage = m_arduinoPointage->connection()->getSerial();
+        connect(m_serialPointage, &QSerialPort::readyRead,
+                this, &MainWindow::recevoir_donnee);
+        qDebug() << "✅ Carte POINTAGE prête sur" << m_arduinoPointage->getPortName();
+    }
+
+    qDebug() << "🏁 Initialisation Arduino terminée:" << m_arduinoManager->statusSummary();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  setupArduinoPointage — conservé pour compatibilité (ne fait plus rien)
+// ─────────────────────────────────────────────────────────────────────────────
+void MainWindow::setupArduinoPointage()
+{
+    // Remplacé par setupArduinoMultiCartes() — ne pas appeler directement
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  recevoir_donnee — lit les données des cartes LIVRAISON et POINTAGE
+// ─────────────────────────────────────────────────────────────────────────────
 void MainWindow::recevoir_donnee()
 {
-    if (!m_serialArduino) return;
-    static QByteArray buffer;
-    buffer += m_arduino.read_from_arduino();
+    // Lire depuis la carte LIVRAISON
+    if (m_serialLivraison && m_serialLivraison->bytesAvailable() > 0) {
+        static QByteArray bufLivraison;
+        bufLivraison += m_arduinoLivraison->read_from_arduino();
+        while (bufLivraison.contains('\n')) {
+            int idx = bufLivraison.indexOf('\n');
+            QString msg = QString::fromUtf8(bufLivraison.left(idx)).trimmed();
+            bufLivraison.remove(0, idx + 1);
+            if (!msg.isEmpty()) traiterMessageArduino(msg);
+        }
+    }
 
-    // Traiter chaque ligne complète (terminée par \n)
-    while (buffer.contains('\n')) {
-        int idx = buffer.indexOf('\n');
-        QString msg = QString::fromUtf8(buffer.left(idx)).trimmed();
-        buffer.remove(0, idx + 1);
-        if (!msg.isEmpty())
-            traiterMessageArduino(msg);
+    // Lire depuis la carte POINTAGE
+    if (m_serialPointage && m_serialPointage->bytesAvailable() > 0) {
+        static QByteArray bufPointage;
+        bufPointage += m_arduinoPointage->read_from_arduino();
+        while (bufPointage.contains('\n')) {
+            int idx = bufPointage.indexOf('\n');
+            QString msg = QString::fromUtf8(bufPointage.left(idx)).trimmed();
+            bufPointage.remove(0, idx + 1);
+            if (!msg.isEmpty()) traiterMessageArduino(msg);
+        }
     }
 }
 
@@ -6866,8 +6914,9 @@ void MainWindow::traiterMessageArduino(const QString &msg)
         bool ok;
         double weight = msg.mid(7).toDouble(&ok);
         if (ok) {
-            // Émettre le signal weightStable via l'instance Arduino
-            emit m_arduino.weightStable(weight);
+            // Transmettre le poids à ArduinoMonitor via la carte TEMP_BALANCE
+            if (m_arduinoTempBalance)
+                emit m_arduinoTempBalance->weightStable(weight);
             qDebug() << "Weight received:" << weight << "kg";
         }
         return;
@@ -6916,8 +6965,9 @@ void MainWindow::traiterMessageArduino(const QString &msg)
             upd.bindValue(":id2", id);
             upd.exec();
 
-            if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino("1");
+            // Envoyer '1' à la carte LIVRAISON (servos)
+            if (m_arduinoLivraison && m_arduinoLivraison->isConnected())
+                m_arduinoLivraison->write_to_arduino("1");
 
             loadProductionData();
             m_keypadBuffer.clear();
@@ -6937,9 +6987,9 @@ void MainWindow::traiterMessageArduino(const QString &msg)
                 NotificationWidget::Success
             );
         } else {
-            // Invalide → envoyer '2', rester en attente
-            if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino("2");
+            // Invalide → envoyer '2' à la carte LIVRAISON, rester en attente
+            if (m_arduinoLivraison && m_arduinoLivraison->isConnected())
+                m_arduinoLivraison->write_to_arduino("2");
 
             if (m_lcdLigne1) m_lcdLigne1->setText("ID invalide");
             if (m_lcdLigne2) m_lcdLigne2->setText("Ressaisir + #");
@@ -6958,9 +7008,10 @@ void MainWindow::traiterMessageArduino(const QString &msg)
             QString nom = m_pointage.getDernierNom();
             QString heure = QTime::currentTime().toString("HH:mm");
             
-            // Envoyer "OK:Prenom Nom" a Arduino
-            if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino(QString("OK:%1 %2").arg(prenom).arg(nom).toUtf8().constData());
+            // Envoyer "OK:Prenom Nom" a Arduino POINTAGE
+            if (m_arduinoPointage && m_arduinoPointage->isConnected())
+                m_arduinoPointage->write_to_arduino(
+                    QString("OK:%1 %2").arg(prenom).arg(nom).toUtf8());
             
             SystemNotification::instance().show(
                 "Pointage CUIREA",
@@ -6977,9 +7028,10 @@ void MainWindow::traiterMessageArduino(const QString &msg)
             QString nom = m_pointage.getDernierNom();
             QString heure = QTime::currentTime().toString("HH:mm");
             
-            // Envoyer "BYE:Prenom Nom" a Arduino
-            if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino(QString("BYE:%1 %2").arg(prenom).arg(nom).toUtf8().constData());
+            // Envoyer "BYE:Prenom Nom" a Arduino POINTAGE
+            if (m_arduinoPointage && m_arduinoPointage->isConnected())
+                m_arduinoPointage->write_to_arduino(
+                    QString("BYE:%1 %2").arg(prenom).arg(nom).toUtf8());
             
             SystemNotification::instance().show(
                 "Pointage CUIREA",
@@ -6989,13 +7041,11 @@ void MainWindow::traiterMessageArduino(const QString &msg)
             );
             
         } else {
-            // Badge inconnu - Envoyer '2' a Arduino (refuser)
-            if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino("NO");
+            // Badge inconnu
+            if (m_arduinoPointage && m_arduinoPointage->isConnected())
+                m_arduinoPointage->write_to_arduino("NO");
             
             QString heure = QTime::currentTime().toString("HH:mm");
-            
-            // Notification Windows native - Alerte
             SystemNotification::instance().show(
                 "Alerte Securite CUIREA",
                 QString("Tentative d'acces refusee a %1 - Carte inconnue (UID: %2)").arg(heure).arg(uid),
@@ -7009,22 +7059,15 @@ void MainWindow::traiterMessageArduino(const QString &msg)
 // ── Expédier via bouton Qt ────────────────────────────────────────────────
 void MainWindow::expedierActionArduino()
 {
-    // CAS 1 : Arduino non connecté → tentative reconnexion
-    if (!m_serialArduino || !m_serialArduino->isOpen()) {
-        int ret = m_arduino.connection()->connect_arduino();
-        if (ret == 0) {
-            m_serialArduino = m_arduino.connection()->getSerial();
-            connect(m_serialArduino, &QSerialPort::readyRead,
-                    this, &MainWindow::recevoir_donnee);
-            m_arduinoIndicator->setText("● Arduino connecté");
-            m_arduinoIndicator->setStyleSheet(
-                "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
-                "color:white; background:#27AE60; }");
-        } else {
+    // CAS 1 : carte LIVRAISON non connectée → tentative reconnexion
+    if (!m_arduinoLivraison || !m_arduinoLivraison->isConnected()) {
+        // Relancer la découverte si le manager existe
+        if (m_arduinoManager) {
             QMessageBox::warning(this, "Expédition impossible",
-                "Impossible d'expédier. Vérifiez la connexion série.");
-            return;
+                "Carte d'expédition non connectée.\n"
+                "Vérifiez que l'Arduino LIVRAISON est branché.");
         }
+        return;
     }
 
     // CAS 2 : aucune ligne sélectionnée
@@ -7038,12 +7081,9 @@ void MainWindow::expedierActionArduino()
     QString statut = cellText(ui->productionTable, row, 8);
     QString mail   = cellText(ui->productionTable, row, 10);
 
-    qDebug() << "[Expedier] ref=" << ref << "statut=" << statut
-             << "statut.size=" << statut.size()
-             << "hex=" << statut.toUtf8().toHex();
+    qDebug() << "[Expedier] ref=" << ref << "statut=" << statut;
 
     // CAS 3 : statut != Terminé
-    // Comparaison insensible aux variantes d'encodage
     bool estTermine = (statut.trimmed().normalized(QString::NormalizationForm_C)
                        == QString("Termin\u00e9").normalized(QString::NormalizationForm_C));
 
@@ -7058,10 +7098,9 @@ void MainWindow::expedierActionArduino()
         return;
     }
 
-    // CAS 4 : statut == Terminé → déclencher les moteurs puis mettre En livraison
-    qDebug() << "[Expedier] Envoi '1' → moteurs pour" << ref;
-    m_arduino.write_to_arduino("1");  // moteurs se déclenchent sur l'Arduino
-    qDebug() << "[Expedier] '1' envoyé";
+    // CAS 4 : statut == Terminé → déclencher les moteurs (carte LIVRAISON)
+    qDebug() << "[Expedier] Envoi '1' → carte LIVRAISON pour" << ref;
+    m_arduinoLivraison->write_to_arduino("1");
 
     QString dateAujourdhui = QDate::currentDate().toString("dd/MM/yyyy");
     QSqlQuery upd(Connection::instance()->getDatabase());
@@ -7075,7 +7114,6 @@ void MainWindow::expedierActionArduino()
 
     loadProductionData();
 
-    // Expedition via bouton → LCD "Expedition OK" → retour home après 2s
     if (m_lcdLigne1) m_lcdLigne1->setText("Expedition OK");
     if (m_lcdLigne2) m_lcdLigne2->setText(ref);
 
