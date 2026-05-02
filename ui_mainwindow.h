@@ -118,13 +118,11 @@ public:
     QHBoxLayout *horizontalLayout_6;
     QSpacerItem *horizontalSpacer_4;
     QPushButton *btntrie;
-    QPushButton *btnFidelityClassification;
     QPushButton *btnStatsByRegion;
     QPushButton *btnAddClient;
     QPushButton *btnEditClient;
     QPushButton *btnDeleteClient;
     QPushButton *btnRefreshClient;
-    QPushButton *btnhistorique;
     QTableWidget *clientTable;
     QWidget *rawMaterialsPage;
     QVBoxLayout *verticalLayout_9;
@@ -1244,27 +1242,6 @@ public:
 
         horizontalLayout_6->addWidget(btntrie);
 
-        btnFidelityClassification = new QPushButton(clientButtonsWidget);
-        btnFidelityClassification->setObjectName("btnFidelityClassification");
-        btnFidelityClassification->setStyleSheet(QString::fromUtf8("QPushButton {\n"
-"  background-color: #8D6E63;\n"
-"  color: white;\n"
-"  border: none;\n"
-"  border-radius: 10px;\n"
-"  padding: 10px 20px;\n"
-"  font-family: Arial, sans-serif;\n"
-"  font-size: 12px;\n"
-"  font-weight: bold;\n"
-"  text-align: center;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"  background-color: #A98273;\n"
-"}\n"
-""));
-
-        horizontalLayout_6->addWidget(btnFidelityClassification);
-
         btnStatsByRegion = new QPushButton(clientButtonsWidget);
         btnStatsByRegion->setObjectName("btnStatsByRegion");
         btnStatsByRegion->setStyleSheet(QString::fromUtf8("QPushButton {\n"
@@ -1309,27 +1286,6 @@ public:
         btnRefreshClient->setMinimumSize(QSize(85, 34));
 
         horizontalLayout_6->addWidget(btnRefreshClient);
-
-        btnhistorique = new QPushButton(clientButtonsWidget);
-        btnhistorique->setObjectName("btnhistorique");
-        btnhistorique->setStyleSheet(QString::fromUtf8("QPushButton {\n"
-"  background-color: #8D6E63;\n"
-"  color: white;\n"
-"  border: none;\n"
-"  border-radius: 10px;\n"
-"  padding: 10px 20px;\n"
-"  font-family: Arial, sans-serif;\n"
-"  font-size: 12px;\n"
-"  font-weight: bold;\n"
-"  text-align: center;\n"
-"}\n"
-"\n"
-"QPushButton:hover {\n"
-"  background-color: #A98273;\n"
-"}\n"
-""));
-
-        horizontalLayout_6->addWidget(btnhistorique);
 
 
         verticalLayout_8->addWidget(clientButtonsWidget);
@@ -1900,7 +1856,7 @@ public:
 
         btnSupprimerProduction = new QPushButton(productionToolbar);
         btnSupprimerProduction->setObjectName("btnSupprimerProduction");
-        btnSupprimerProduction->setMinimumSize(QSize(110, 32));
+        btnSupprimerProduction->setMinimumSize(QSize(120, 32));
 
         horizontalLayout_production->addWidget(btnSupprimerProduction);
 
@@ -1912,7 +1868,7 @@ public:
 
         btnExcelProduction = new QPushButton(productionToolbar);
         btnExcelProduction->setObjectName("btnExcelProduction");
-        btnExcelProduction->setMinimumSize(QSize(80, 32));
+        btnExcelProduction->setMinimumSize(QSize(90, 32));
 
         horizontalLayout_production->addWidget(btnExcelProduction);
 
@@ -2267,16 +2223,14 @@ public:
         ___qtablewidgetitem8->setText(QCoreApplication::translate("MainWindow", "Telephone", nullptr));
         QTableWidgetItem *___qtablewidgetitem9 = employeeTable->horizontalHeaderItem(9);
         ___qtablewidgetitem9->setText(QCoreApplication::translate("MainWindow", "Email", nullptr));
-        listTitle->setText(QCoreApplication::translate("MainWindow", "HISTORIQUE DES CLIENTS", nullptr));
+        listTitle->setText(QCoreApplication::translate("MainWindow", "GESTION DES CLIENTS", nullptr));
         searchBoxClient->setPlaceholderText(QCoreApplication::translate("MainWindow", "\342\214\225 Rechercher un client...", nullptr));
         btntrie->setText(QCoreApplication::translate("MainWindow", "Trier", nullptr));
-        btnFidelityClassification->setText(QCoreApplication::translate("MainWindow", "Fidelit\303\251", nullptr));
         btnStatsByRegion->setText(QCoreApplication::translate("MainWindow", "StatsRegion", nullptr));
         btnAddClient->setText(QCoreApplication::translate("MainWindow", "+ Ajouter", nullptr));
         btnEditClient->setText(QCoreApplication::translate("MainWindow", "\342\234\216 Modifier", nullptr));
         btnDeleteClient->setText(QCoreApplication::translate("MainWindow", "\342\234\225 Supprimer", nullptr));
         btnRefreshClient->setText(QCoreApplication::translate("MainWindow", "\342\206\273 Actualiser", nullptr));
-        btnhistorique->setText(QCoreApplication::translate("MainWindow", "\342\237\201 Agent IA", nullptr));
         QTableWidgetItem *___qtablewidgetitem10 = clientTable->horizontalHeaderItem(0);
         ___qtablewidgetitem10->setText(QCoreApplication::translate("MainWindow", "Nom", nullptr));
         QTableWidgetItem *___qtablewidgetitem11 = clientTable->horizontalHeaderItem(1);

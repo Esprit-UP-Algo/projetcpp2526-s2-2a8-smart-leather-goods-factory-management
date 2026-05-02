@@ -1466,7 +1466,7 @@ Management</string>
               <item alignment="Qt::AlignmentFlag::AlignHCenter">
                <widget class="QLabel" name="listTitle">
                 <property name="text">
-                 <string>HISTORIQUE DES CLIENTS</string>
+                 <string>GESTION DES CLIENTS</string>
                 </property>
                </widget>
               </item>
@@ -1558,31 +1558,6 @@ QPushButton:hover {
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="btnFidelityClassification">
-                   <property name="styleSheet">
-                    <string notr="true">QPushButton {
-  background-color: #8D6E63;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 20px;
-  font-family: Arial, sans-serif;
-  font-size: 12px;
-  font-weight: bold;
-  text-align: center;
-}
-
-QPushButton:hover {
-  background-color: #A98273;
-}
-</string>
-                   </property>
-                   <property name="text">
-                    <string>Fidelité</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
                   <widget class="QPushButton" name="btnStatsByRegion">
                    <property name="styleSheet">
                     <string notr="true">QPushButton {
@@ -1656,31 +1631,6 @@ QPushButton:hover {
                    </property>
                    <property name="text">
                     <string>↻ Actualiser</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="btnhistorique">
-                   <property name="styleSheet">
-                    <string notr="true">QPushButton {
-  background-color: #8D6E63;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 20px;
-  font-family: Arial, sans-serif;
-  font-size: 12px;
-  font-weight: bold;
-  text-align: center;
-}
-
-QPushButton:hover {
-  background-color: #A98273;
-}
-</string>
-                   </property>
-                   <property name="text">
-                    <string>⟁ Agent IA</string>
                    </property>
                   </widget>
                  </item>
@@ -2900,21 +2850,21 @@ QPushButton:hover {
                   <widget class="QPushButton" name="btnExcelProduction">
                    <property name="minimumSize">
                     <size>
-                     <width>130</width>
-                     <height>34</height>
+                     <width>90</width>
+                     <height>42</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>130</width>
-                     <height>34</height>
+                     <width>90</width>
+                     <height>42</height>
                     </size>
                    </property>
                    <property name="text">
-                    <string>Bilan</string>
+                    <string>📊 Bilan</string>
                    </property>
                    <property name="styleSheet">
-                    <string notr="true">QPushButton#btnExcelProduction { background-color: #C4923A; color: white; border: none; border-radius: 10px; padding: 6px 18px; font-size: 13px; font-weight: bold; } QPushButton#btnExcelProduction:hover { background-color: #A87730; } QPushButton#btnExcelProduction:pressed { background-color: #8B6020; }</string>
+                    <string notr="true">QPushButton#btnExcelProduction { background-color: #C4923A; color: white; border: none; border-radius: 10px; padding: 8px 20px; font-size: 15px; font-weight: bold; font-family: Arial, sans-serif; letter-spacing: 1px; } QPushButton#btnExcelProduction:hover { background-color: #A87730; } QPushButton#btnExcelProduction:pressed { background-color: #8B6020; }</string>
                    </property>
                   </widget>
                  </item>
