@@ -458,7 +458,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->btnExportMatiere,&QPushButton::clicked, this, &MainWindow::onExportMatiere);
 
     // -- Client extra buttons ------------------------------------------------
-    connect(ui->btnFidelityClassification, &QPushButton::clicked, this, &MainWindow::on_btnFidelityClassification_clicked);
+
 
     // -- Fournisseurs --------------------------------------------------------
     ui->fournisseurTable->verticalHeader()->setVisible(false);
