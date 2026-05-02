@@ -12,7 +12,10 @@ TEMPLATE = app
 SOURCES += \
     arduino.cpp \
     arduinoconnection.cpp \
+    arduinomonitor.cpp \
+    emailalerte.cpp \
     aichatwidget.cpp \
+    rfidoutput.cpp \
     articleviewer3d.cpp \
     bilandialog.cpp \
     client.cpp \
@@ -34,6 +37,7 @@ SOURCES += \
     voicematieres.cpp \
     fournisseur.cpp \
     fournisseurdialog.cpp \
+    verificationlivraison.cpp \
     smsfournisseurdialog.cpp \
     qrfournisseurdialog.cpp \
     production.cpp \
@@ -49,7 +53,10 @@ SOURCES += \
 HEADERS += \
     arduino.h \
     arduinoconnection.h \
+    arduinomonitor.h \
+    emailalerte.h \
     aichatwidget.h \
+    rfidoutput.h \
     articleviewer3d.h \
     bilandialog.h \
     email.h \
@@ -71,6 +78,7 @@ HEADERS += \
     voicematieres.h \
     fournisseur.h \
     fournisseurdialog.h \
+    verificationlivraison.h \
     smsfournisseurdialog.h \
     qrfournisseurdialog.h \
     production.h \

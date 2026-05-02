@@ -98,7 +98,8 @@ QSqlQueryModel* FournisseurData::afficher()
 {
     QSqlQueryModel* model = new QSqlQueryModel();
     model->setQuery("SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
-                    "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT, ADRESSE "
+                    "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT, ADRESSE, "
+                    "NVL(QTE_COMMANDEE, 0) AS QTE_COMMANDEE, NVL(QTE_MESUREE, 0) AS QTE_MESUREE "
                     "FROM FOURNISSEURS ORDER BY NOM_ENTREPRISE",
                     Connection::instance()->getDatabase());
 
@@ -116,6 +117,8 @@ QSqlQueryModel* FournisseurData::afficher()
     model->setHeaderData(6, Qt::Horizontal, "Condition Paiement");
     model->setHeaderData(7, Qt::Horizontal, "Statut");
     model->setHeaderData(8, Qt::Horizontal, "Adresse");
+    model->setHeaderData(9, Qt::Horizontal, "Qté Commandée (kg)");
+    model->setHeaderData(10, Qt::Horizontal, "Qté Mesurée (kg)");
     
     return model;
 }

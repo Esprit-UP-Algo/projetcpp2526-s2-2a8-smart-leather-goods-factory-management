@@ -38,6 +38,7 @@
 #include "notification.h"
 #include "matieredetection.h"
 #include "voicematieres.h"
+#include "arduinomonitor.h"
 #include "pointage.h"
 #include "arduino.h"
 #include <QTimer>
@@ -160,6 +161,7 @@ private slots:
     void on_btnAddFournisseur_clicked();
     void on_btnEditFournisseur_clicked();
     void on_btnDeleteFournisseur_clicked();
+    void on_btnLivraisonFournisseur_clicked();
     void on_btnExportFournisseur_clicked();
     void on_btnStatsFournisseur_clicked();
     void on_btnTriFournisseur_clicked();
@@ -265,12 +267,14 @@ private:
     NotificationAI      *m_ai      = nullptr;
     NotificationBell    *m_bell    = nullptr;
     NotificationWatcher *m_watcher = nullptr;
+    QLabel              *m_tempIndicator = nullptr;  // Indicateur température
 
     // === POINTAGE RFID ===
     Pointage      m_pointage;
 
     // === ARDUINO ===
     Arduino       m_arduino;
+    ArduinoMonitor *m_arduinoMonitor = nullptr;
     QByteArray    arduinoData;
     QSerialPort  *m_serialArduino      = nullptr;
     QTimer       *m_timerAbsences      = nullptr;

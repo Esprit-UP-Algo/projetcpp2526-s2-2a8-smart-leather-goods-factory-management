@@ -18,7 +18,6 @@
 #include <QColor>
 #include <QFrame>
 #include <QGroupBox>
-#include <QRandomGenerator>
 #include <QTime>
 #include <QRegularExpression>
 
@@ -52,8 +51,8 @@ ProductionDialog::ProductionDialog(QWidget *parent, DialogMode mode)
     bool readOnly = (mode == DeleteMode);
     spnPrix->setEnabled(!readOnly);
     for (auto *w : {cmbProduit, cmbStatut, cmbResponsable, cmbPriorite}) w->setEnabled(!readOnly);
-    edtDateDebut->setEnabled(!readOnly);
-    edtDateFin->setEnabled(!readOnly);
+    dateDebut->setEnabled(!readOnly);
+    dateFin->setEnabled(!readOnly);
     txtReference->setEnabled(false); // Référence toujours en lecture seule (auto-générée)
 
     // Adapter le titre, les boutons et le message selon le mode
@@ -125,10 +124,10 @@ void ProductionDialog::setupUI()
         "QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width:18px; }");
     cmbStatut    = new QComboBox(this);
     cmbStatut->addItems({"En Attente","Planifié","En Cours","En Production","Suspendu","Terminé","Annulé"});
-    edtDateDebut    = new QDateEdit(this); edtDateDebut->setCalendarPopup(true);
-    edtDateDebut->setDate(QDate::currentDate()); edtDateDebut->setDisplayFormat("dd/MM/yyyy");
-    edtDateFin      = new QDateEdit(this); edtDateFin->setCalendarPopup(true);
-    edtDateFin->setDate(QDate::currentDate().addDays(7)); edtDateFin->setDisplayFormat("dd/MM/yyyy");
+    dateDebut    = new QDateEdit(this); dateDebut->setCalendarPopup(true);
+    dateDebut->setDate(QDate::currentDate()); dateDebut->setDisplayFormat("dd/MM/yyyy");
+    dateFin      = new QDateEdit(this); dateFin->setCalendarPopup(true);
+    dateFin->setDate(QDate::currentDate().addDays(7)); dateFin->setDisplayFormat("dd/MM/yyyy");
     cmbResponsable = new QComboBox(this); // Rempli dynamiquement par loadEmployes()
     cmbPriorite  = new QComboBox(this);
     cmbPriorite->addItems({"Basse","Normale","Haute","Urgente"});
@@ -139,8 +138,8 @@ void ProductionDialog::setupUI()
     addRow("Produit * :",        cmbProduit);
     addRow("Prix * :",           spnPrix);
     addRow("Statut :",           cmbStatut);
-    addRow("Date Début * :",     edtDateDebut);
-    addRow("Date Fin Prévue * :",edtDateFin);
+    addRow("Date Début * :",     dateDebut);
+    addRow("Date Fin Prévue * :",dateFin);
     addRow("Employé * :",        cmbResponsable);
     addRow("Priorité :",         cmbPriorite);
 
@@ -175,8 +174,8 @@ void ProductionDialog::setupUI()
 }
 
 void ProductionDialog::setProductionData(const QString &id, const QString &reference, const QString &produit,
-                                         const QString &quantite, const QString &statut, const QString &dateDebut,
-                                         const QString &dateFin, const QString &responsable, const QString &priorite,
+                                         const QString &quantite, const QString &statut, const QString &dDebut,
+                                         const QString &dFin, const QString &responsable, const QString &priorite,
                                          const QString &mailClient)
 {
     txtId->setText(id); txtReference->setText(reference);
@@ -191,8 +190,8 @@ void ProductionDialog::setProductionData(const QString &id, const QString &refer
     };
     setCombo(cmbProduit, produit); setCombo(cmbStatut, statut);
     setCombo(cmbResponsable, responsable); setCombo(cmbPriorite, priorite);
-    edtDateDebut->setDate(QDate::fromString(dateDebut,"dd/MM/yyyy"));
-    edtDateFin->setDate(QDate::fromString(dateFin,"dd/MM/yyyy"));
+    dateDebut->setDate(QDate::fromString(dDebut,"dd/MM/yyyy"));
+    dateFin->setDate(QDate::fromString(dFin,"dd/MM/yyyy"));
     if (!mailClient.isEmpty()) {
         for (int i = 0; i < cmbClient->count(); ++i) {
             if (cmbClient->itemData(i).toString() == mailClient) {
@@ -207,8 +206,8 @@ QString ProductionDialog::getReference()   const { return txtReference->text(); 
 QString ProductionDialog::getProduit()     const { return cmbProduit->currentData().toString(); }
 QString ProductionDialog::getQuantite()    const { return QString::number(spnPrix->value(), 'f', 2); }
 QString ProductionDialog::getStatut()      const { return cmbStatut->currentText(); }
-QString ProductionDialog::getDateDebut()   const { return edtDateDebut->date().toString("dd/MM/yyyy"); }
-QString ProductionDialog::getDateFin()     const { return edtDateFin->date().toString("dd/MM/yyyy"); }
+QString ProductionDialog::getDateDebut()   const { return dateDebut->date().toString("dd/MM/yyyy"); }
+QString ProductionDialog::getDateFin()     const { return dateFin->date().toString("dd/MM/yyyy"); }
 QString ProductionDialog::getResponsable() const { return cmbResponsable->currentText(); }
 QString ProductionDialog::getPriorite()    const { return cmbPriorite->currentText(); }
 QString ProductionDialog::getMailClient()  const { return cmbClient ? cmbClient->currentData().toString() : QString(); }
@@ -232,8 +231,8 @@ void ProductionDialog::onSaveClicked()
     if (spnPrix->value() <= 0) { spnPrix->setStyleSheet("border: 2px solid red; border-radius:6px;"); valid = false; }
     else spnPrix->setStyleSheet("");
 
-    if (edtDateDebut->date() > edtDateFin->date()) { setError(edtDateDebut); setError(edtDateFin); valid = false; }
-    else { setNormal(edtDateDebut); setNormal(edtDateFin); }
+    if (dateDebut->date() > dateFin->date()) { setError(dateDebut); setError(dateFin); valid = false; }
+    else { setNormal(dateDebut); setNormal(dateFin); }
 
     if (!valid) return;
 
@@ -260,26 +259,13 @@ void ProductionDialog::onDeleteConfirmed()
 
 void ProductionDialog::generateAutoReference()
 {
-    // Format fixe : ABC + 3 chiffres (ABC100, ABC101, ..., ABC999)
-    // Trouve le prochain numéro libre en base
+    // Interroge le MAX(ID_COMMANDE) pour générer la prochaine référence unique
+    // Format : CMD-YYYY-NNNN (ex: CMD-2026-0042)
     QSqlQuery query(Connection::instance()->getDatabase());
-    query.prepare("SELECT REFERENCE FROM COMMANDES WHERE REFERENCE LIKE 'ABC%' ORDER BY REFERENCE DESC");
-
-    int nextNum = 100;
-    if (query.exec()) {
-        while (query.next()) {
-            QString ref = query.value(0).toString();
-            if (ref.length() == 6 && ref.startsWith("ABC")) {
-                bool ok;
-                int num = ref.mid(3).toInt(&ok);
-                if (ok && num >= nextNum)
-                    nextNum = num + 1;
-            }
-        }
-    }
-    if (nextNum > 999) nextNum = 100; // boucle si dépassement
-
-    txtReference->setText(QString("ABC%1").arg(nextNum));
+    query.prepare("SELECT NVL(MAX(ID_COMMANDE), 0) + 1 FROM COMMANDES");
+    int nextId = 1;
+    if (query.exec() && query.next()) nextId = query.value(0).toInt();
+    txtReference->setText(QString("CMD-%1-%2").arg(QDate::currentDate().year()).arg(nextId, 4, 10, QChar('0')));
 }
 
 void ProductionDialog::loadEmployes()

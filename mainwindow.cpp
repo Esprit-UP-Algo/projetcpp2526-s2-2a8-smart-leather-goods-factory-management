@@ -1,4 +1,4 @@
-﻿#include "mainwindow.h"
+#include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include "notification.h"
 #include "envloader.h"
@@ -14,6 +14,7 @@
 #include "clientmanagerdialog.h"
 #include "matieredialog.h"
 #include "fournisseurdialog.h"
+#include "verificationlivraison.h"
 #include "smsfournisseurdialog.h"
 #include "qrfournisseurdialog.h"
 #include "productionview.h"
@@ -142,13 +143,13 @@ static void filterTable(QTableWidget *table, const QString &text)
 }
 
 // -----------------------------------------------------------------------------
-// FloatingAIButton � cercle anim� style Meta AI
+// FloatingAIButton  cercle animé style Meta AI
 // -----------------------------------------------------------------------------
 FloatingAIButton::FloatingAIButton(QWidget *parent)
     : QWidget(parent)
 {
     setFixedSize(64, 64);
-    // Pas de WA_TranslucentBackground � on peint le fond nous-m�mes
+    // Pas de WA_TranslucentBackground  on peint le fond nous-mêmes
     setCursor(Qt::PointingHandCursor);
     setToolTip("Assistant IA");
 
@@ -170,7 +171,7 @@ void FloatingAIButton::paintEvent(QPaintEvent *)
     // Fond : couleur du parent
     p.fillRect(rect(), parentWidget() ? parentWidget()->palette().window() : Qt::transparent);
 
-    // Ombre port�e
+    // Ombre portée
     p.setPen(Qt::NoPen);
     p.setBrush(QColor(0, 0, 0, 50));
     p.drawEllipse(5, 7, 58, 58);
@@ -185,7 +186,7 @@ void FloatingAIButton::paintEvent(QPaintEvent *)
     p.setBrush(Qt::NoBrush);
     p.drawEllipse(3, 3, 58, 58);
 
-    // Cercle int�rieur beige CUIREA
+    // Cercle intérieur beige CUIREA
     p.setPen(Qt::NoPen);
     p.setBrush(QColor("#FAF5F0"));
     p.drawEllipse(7, 7, 50, 50);
@@ -240,13 +241,13 @@ MainWindow::MainWindow(QWidget *parent)
     ui->setupUi(this);
     setWindowTitle("CUIREA - Management System");
     
-    // Initialiser la d�tection de d�fauts (Mode API Cloud - Hugging Face Spaces)
+    // Initialiser la détection de défauts (Mode API Cloud - Hugging Face Spaces)
     networkManager = new QNetworkAccessManager(this);
     apiUrl = "https://ahmedomar10-detection-cuir.hf.space";
     detectionResultLabel = nullptr;
     detectionProgress = nullptr;
     
-    // Initialiser les classes extraites pour mati�res premi�res
+    // Initialiser les classes extraites pour matières premiéres
     matiereDetection = new MatiereDetection(this, ui->matiereTable, networkManager, apiUrl);
     voiceMatieres = new VoiceMatieres(this, ui->matiereTable);
     //=========================MAPFOURNISSEUR
@@ -257,14 +258,14 @@ MainWindow::MainWindow(QWidget *parent)
         });
     // -- Employee table ------------------------------------------------------
     ui->employeeTable->verticalHeader()->setVisible(false);
-    // Colonnes: 0=Matricule, 1=Nom, 2=Pr�nom, 3=CIN, 4=DateNaissance, 5=Sexe,
-    //           6=Adresse, 7=T�l�phone, 8=Email, 9=Poste, 10=D�partement,
+    // Colonnes: 0=Matricule, 1=Nom, 2=Prénom, 3=CIN, 4=DateNaissance, 5=Sexe,
+    //           6=Adresse, 7=Téléphone, 8=Email, 9=Poste, 10=Département,
     //           11=DateEmbauche, 12=Photo, 13=ID
     ui->employeeTable->setColumnCount(14);
-    ui->employeeTable->setHorizontalHeaderLabels({"Matricule", "Nom", "Pr�nom", "CIN", 
+    ui->employeeTable->setHorizontalHeaderLabels({"Matricule", "Nom", "Prénom", "CIN", 
                                                    "Date Naissance", "Sexe", "Adresse", 
-                                                   "T�l�phone", "Email", "Poste", 
-                                                   "D�partement", "Date Embauche", "Photo", "ID"});
+                                                   "Téléphone", "Email", "Poste", 
+                                                   "Département", "Date Embauche", "Photo", "ID"});
     // Cacher: Adresse, DateEmbauche, Photo, ID
     ui->employeeTable->setColumnHidden(6, true);   // Adresse
     ui->employeeTable->setColumnHidden(11, true);  // Date Embauche
@@ -277,18 +278,18 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->employeeTable, &QTableWidget::currentCellChanged,
             this, &MainWindow::onEmployeeSelected);
     
-    // Permettre de d�s�lectionner en cliquant sur une zone vide du tableau
+    // Permettre de désélectionner en cliquant sur une zone vide du tableau
     ui->employeeTable->viewport()->installEventFilter(this);
     
-    // Masquer le panneau de profil au d�marrage
+    // Masquer le panneau de profil au démarrage
     ui->employeeProfilePanel->setVisible(false);
     
-    // Recherche en temps r�el avec crit�res
+    // Recherche en temps réel avec critéres
     connect(ui->searchBox, &QLineEdit::textChanged, this, [this](const QString &text) {
         QString searchTerm = text.trimmed();
         
         if (searchTerm.isEmpty()) {
-            // Afficher tous les employ�s
+            // Afficher tous les employés
             populateEmployeeTable();
             return;
         }
@@ -297,7 +298,7 @@ MainWindow::MainWindow(QWidget *parent)
         Employe e;
         QSqlQueryModel* model = nullptr;
         
-        // D�tecter le type de recherche
+        // Détecter le type de recherche
         if (searchTerm.startsWith("id:")) {
             // Recherche par ID
             QString id = searchTerm.mid(3).trimmed();
@@ -309,15 +310,15 @@ MainWindow::MainWindow(QWidget *parent)
             model = e.rechercherParCritere("nom", nom);
             ui->searchBox->setPlaceholderText("? Recherche par nom...");
         } else if (searchTerm.startsWith("prenom:")) {
-            // Recherche par pr�nom
+            // Recherche par prénom
             QString prenom = searchTerm.mid(7).trimmed();
             model = e.rechercherParCritere("prenom", prenom);
-            ui->searchBox->setPlaceholderText("? Recherche par pr�nom...");
+            ui->searchBox->setPlaceholderText("? Recherche par prénom...");
         } else if (searchTerm.startsWith("dept:")) {
-            // Recherche par d�partement
+            // Recherche par département
             QString dept = searchTerm.mid(5).trimmed();
             model = e.rechercherParCritere("departement", dept);
-            ui->searchBox->setPlaceholderText("? Recherche par d�partement...");
+            ui->searchBox->setPlaceholderText("? Recherche par département...");
         } else if (searchTerm.startsWith("poste:")) {
             // Recherche par poste
             QString poste = searchTerm.mid(6).trimmed();
@@ -334,33 +335,33 @@ MainWindow::MainWindow(QWidget *parent)
             return;
         }
         
-        // Afficher les r�sultats - IMPORTANT: afficher toutes les 15 colonnes
+        // Afficher les résultats - IMPORTANT: afficher toutes les 15 colonnes
         int n = model->rowCount();
         ui->employeeTable->setRowCount(n);
         
-        // Le mod�le retourne maintenant 12 colonnes dans cet ordre:
-        // 0=ID, 1=Matricule, 2=Nom, 3=Pr�nom, 4=CIN, 5=DateNaissance, 6=Sexe,
-        // 7=D�partement, 8=Poste, 9=T�l�phone, 10=Email, 11=Photo
+        // Le modèle retourne maintenant 12 colonnes dans cet ordre:
+        // 0=ID, 1=Matricule, 2=Nom, 3=Prénom, 4=CIN, 5=DateNaissance, 6=Sexe,
+        // 7=Département, 8=Poste, 9=Téléphone, 10=Email, 11=Photo
         
         // Le tableau a 14 colonnes dans cet ordre:
-        // 0=Matricule, 1=Nom, 2=Pr�nom, 3=CIN, 4=DateNaissance, 5=Sexe,
-        // 6=Adresse, 7=T�l�phone, 8=Email, 9=Poste,
-        // 10=D�partement, 11=DateEmbauche, 12=Photo, 13=ID
+        // 0=Matricule, 1=Nom, 2=Prénom, 3=CIN, 4=DateNaissance, 5=Sexe,
+        // 6=Adresse, 7=Téléphone, 8=Email, 9=Poste,
+        // 10=Département, 11=DateEmbauche, 12=Photo, 13=ID
         
         for (int i = 0; i < n; ++i) {
-            // Mapper les colonnes du mod�le vers le tableau
+            // Mapper les colonnes du modèle vers le tableau
             ui->employeeTable->setItem(i, 0, new QTableWidgetItem(model->data(model->index(i, 1)).toString())); // Matricule
             ui->employeeTable->setItem(i, 1, new QTableWidgetItem(model->data(model->index(i, 2)).toString())); // Nom
-            ui->employeeTable->setItem(i, 2, new QTableWidgetItem(model->data(model->index(i, 3)).toString())); // Pr�nom
+            ui->employeeTable->setItem(i, 2, new QTableWidgetItem(model->data(model->index(i, 3)).toString())); // Prénom
             ui->employeeTable->setItem(i, 3, new QTableWidgetItem(model->data(model->index(i, 4)).toString())); // CIN
             ui->employeeTable->setItem(i, 4, new QTableWidgetItem(model->data(model->index(i, 5)).toString())); // Date Naissance
             ui->employeeTable->setItem(i, 5, new QTableWidgetItem(model->data(model->index(i, 6)).toString())); // Sexe
-            ui->employeeTable->setItem(i, 6, new QTableWidgetItem("")); // Adresse (cach�e)
-            ui->employeeTable->setItem(i, 7, new QTableWidgetItem(model->data(model->index(i, 9)).toString())); // T�l�phone
+            ui->employeeTable->setItem(i, 6, new QTableWidgetItem("")); // Adresse (cachée)
+            ui->employeeTable->setItem(i, 7, new QTableWidgetItem(model->data(model->index(i, 9)).toString())); // Téléphone
             ui->employeeTable->setItem(i, 8, new QTableWidgetItem(model->data(model->index(i, 10)).toString())); // Email
             ui->employeeTable->setItem(i, 9, new QTableWidgetItem(model->data(model->index(i, 8)).toString())); // Poste
-            ui->employeeTable->setItem(i, 10, new QTableWidgetItem(model->data(model->index(i, 7)).toString())); // D�partement
-            ui->employeeTable->setItem(i, 11, new QTableWidgetItem("")); // Date Embauche (cach�e)
+            ui->employeeTable->setItem(i, 10, new QTableWidgetItem(model->data(model->index(i, 7)).toString())); // Département
+            ui->employeeTable->setItem(i, 11, new QTableWidgetItem("")); // Date Embauche (cachée)
             ui->employeeTable->setItem(i, 12, new QTableWidgetItem(model->data(model->index(i, 11)).toString())); // Photo
             ui->employeeTable->setItem(i, 13, new QTableWidgetItem(model->data(model->index(i, 0)).toString())); // ID
         }
@@ -403,10 +404,10 @@ MainWindow::MainWindow(QWidget *parent)
                 if (widget && (widget->objectName() == "btnAdd" || 
                               widget->objectName() == "btnStatistics" ||
                               widget->objectName() == "btnExport")) {
-                    // On a trouvé le bon layout, ajouter le bouton
+                    // On a trouvé le bon layout, ajouter le bouton Pointage
                     layout->addWidget(btnPointage);
-                    qDebug() << "✅ Bouton Pointage ajouté au layout des employés";
-                    goto button_added; // Sortir des boucles imbriquées
+                    qDebug() << "Bouton Pointage ajoute";
+                    goto button_added;
                 }
             }
         }
@@ -416,6 +417,8 @@ MainWindow::MainWindow(QWidget *parent)
     // Connecter le signal
     connect(btnPointage, &QPushButton::clicked, 
             this, &MainWindow::on_btnPointage_clicked);
+
+
 
     // -- Raw materials -------------------------------------------------------
     ui->matiereTable->verticalHeader()->setVisible(false);
@@ -479,6 +482,7 @@ MainWindow::MainWindow(QWidget *parent)
         "QPushButton:hover { background-color:#A0826D; }"
         "QPushButton:pressed { background-color:#6E473B; padding:11px 20px 9px 20px; }");
     connect(ui->searchBoxProduction, &QLineEdit::textChanged, this, &MainWindow::onRechercherProduction);
+
     // -- Timer retard notifications -------------------------------------------
     m_retardTimer = new QTimer(this);
     connect(m_retardTimer, &QTimer::timeout, this, &MainWindow::checkRetards);
@@ -495,6 +499,19 @@ MainWindow::MainWindow(QWidget *parent)
     // Cloche positionnee en overlay coin superieur droit
     m_bell = new NotificationBell(this);
     m_bell->raise();
+    
+    // Indicateur de température à côté de la cloche
+    m_tempIndicator = new QLabel(this);
+    m_tempIndicator->setFixedSize(80, 32);
+    m_tempIndicator->setAlignment(Qt::AlignCenter);
+    m_tempIndicator->setText("🌡 --°C");
+    m_tempIndicator->setStyleSheet(
+        "QLabel { background-color: #5D4037; color: white; border-radius: 16px; "
+        "font-size: 11px; font-weight: bold; padding: 4px 8px; }"
+    );
+    m_tempIndicator->setToolTip("Température matière première");
+    m_tempIndicator->setVisible(false); // masqué sur Production au démarrage
+    m_tempIndicator->raise();
 
     m_watcher = new NotificationWatcher(QSqlDatabase::database(), this);
     if (m_ai) m_watcher->setAI(m_ai);
@@ -514,17 +531,17 @@ MainWindow::MainWindow(QWidget *parent)
     
     // -- AI floating button ---------------------------------------------------
     m_aiWidget = new AIChatWidget(this);
-    m_aiWidget->setContext("Gestion des Employ�s");
+    m_aiWidget->setContext("Gestion des Employés");
 
     m_floatingBtn = new FloatingAIButton(this);
     connect(m_floatingBtn, &FloatingAIButton::clicked, this, [this]() {
         m_aiWidget->toggleChat();
     });
 
-    // Forcer le plein �cran au d�marrage
+    // Forcer le plein écran au démarrage
     showMaximized();
 
-    // Positionner et afficher le bouton flottant apr�s que la fen�tre soit visible
+    // Positionner et afficher le bouton flottant aprés que la fenétre soit visible
     QTimer::singleShot(100, this, [this]() {
         m_floatingBtn->move(190, height() - 84);
         m_floatingBtn->show();
@@ -532,25 +549,104 @@ MainWindow::MainWindow(QWidget *parent)
 
         if (m_bell) {
             m_bell->move(width() - m_bell->width() - 12, 6);
-            m_bell->setVisible(true); // visible sur toutes les pages
+            m_bell->setVisible(false); // masquée par défaut, visible seulement sur Production
             m_bell->raise();
+        }
+        
+        if (m_tempIndicator) {
+            // Positionner à gauche de la cloche
+            int bellX = m_bell ? (width() - m_bell->width() - 12) : width();
+            m_tempIndicator->move(bellX - m_tempIndicator->width() - 8, 6);
+            // Visibilité gérée par switchPage — ne pas forcer ici
+            m_tempIndicator->raise();
         }
     });
     
     // === POINTAGE RFID - Initialisation ===
     setupArduinoPointage();
+    
+    // === ARDUINO MONITOR - Surveillance Température + Balance ===
+    // Utiliser la même instance Arduino que le pointage RFID
+    m_arduinoMonitor = new ArduinoMonitor(this);
+    m_arduinoMonitor->setArduino(&m_arduino); // Partager l'instance Arduino
+    
+    // Connecter signal alerte température → Notification système + Historique
+    connect(m_arduinoMonitor, &ArduinoMonitor::temperatureAlert, this, 
+            [this](double tempMatiere, const QString &message) {
+        // Notification système
+        SystemNotification::instance().show(
+            "⚠️ ALERTE TEMPÉRATURE",
+            message,
+            NotificationWidget::Warning
+        );
+        
+        // Ajouter dans l'historique des notifications
+        NotificationHistoryItem item;
+        item.title = "⚠️ Alerte Température";
+        item.message = message;
+        item.type = NotificationWidget::Warning;
+        item.timestamp = QDateTime::currentDateTime();
+        item.read = false;
+        item.aiGenerated = false;
+        
+        NotificationHistory::instance().add(item);
+        
+        // Rafraîchir la cloche pour afficher le badge
+        if (m_bell) {
+            m_bell->refresh();
+        }
+    });
+    
+    // Connecter signal mise à jour température → Indicateur
+    connect(m_arduinoMonitor, &ArduinoMonitor::temperatureUpdated, this,
+            [this](double tempMatiere) {
+        if (m_tempIndicator) {
+            m_tempIndicator->setText(QString("🌡 %1°C").arg(tempMatiere, 0, 'f', 1));
+            
+            // Changer la couleur selon la température
+            if (tempMatiere > 30.0) {
+                // Rouge si température élevée
+                m_tempIndicator->setStyleSheet(
+                    "QLabel { background-color: #D32F2F; color: white; border-radius: 16px; "
+                    "font-size: 11px; font-weight: bold; padding: 4px 8px; }"
+                );
+            } else if (tempMatiere > 25.0) {
+                // Orange si température moyenne
+                m_tempIndicator->setStyleSheet(
+                    "QLabel { background-color: #F57C00; color: white; border-radius: 16px; "
+                    "font-size: 11px; font-weight: bold; padding: 4px 8px; }"
+                );
+            } else {
+                // Vert si température normale
+                m_tempIndicator->setStyleSheet(
+                    "QLabel { background-color: #388E3C; color: white; border-radius: 16px; "
+                    "font-size: 11px; font-weight: bold; padding: 4px 8px; }"
+                );
+            }
+        }
+    });
+    
+    // Démarrer la surveillance température automatiquement
+    m_arduinoMonitor->startTemperatureMonitoring();
 }
 
 MainWindow::~MainWindow() 
 {
-    // Arr�ter l'API Python via taskkill (processus d�tach�)
+    // Arrêter la surveillance Arduino
+    if (m_arduinoMonitor) {
+        m_arduinoMonitor->stopTemperatureMonitoring();
+        delete m_arduinoMonitor;
+        m_arduinoMonitor = nullptr;
+    }
+    
+    // Arrêter l'API Python via taskkill (processus détaché)
     QProcess::execute("cmd.exe", QStringList() << "/c" << "taskkill /f /im python.exe >nul 2>&1");
     delete ui; 
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event)
 {
-    // G�rer le clic sur une zone vide du tableau employ�s
+    // Gérer le clic sur une zone vide du tableau employés
     if (obj == ui->employeeTable->viewport() && event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
         QModelIndex index = ui->employeeTable->indexAt(mouseEvent->pos());
@@ -559,11 +655,11 @@ bool MainWindow::eventFilter(QObject *obj, QEvent *event)
         if (!index.isValid()) {
             ui->employeeTable->clearSelection();
             ui->employeeProfilePanel->setVisible(false);
-            return true; // �v�nement trait�
+            return true; // événement traité
         }
     }
     
-    // Passer l'�v�nement au gestionnaire parent
+    // Passer l'événement au gestionnaire parent
     return QMainWindow::eventFilter(obj, event);
 }
 
@@ -579,10 +675,26 @@ void MainWindow::resizeEvent(QResizeEvent *event)
         m_bell->move(width() - m_bell->width() - 12, 6);
         m_bell->raise();
     }
+    if (m_tempIndicator) {
+        int bellX = m_bell ? (width() - m_bell->width() - 12) : width();
+        m_tempIndicator->move(bellX - m_tempIndicator->width() - 8, 6);
+        m_tempIndicator->raise();
+    }
     if (m_arduinoIndicator) {
         m_arduinoIndicator->move(width() - m_arduinoIndicator->width() - 12,
                                   m_bell ? m_bell->height() + 10 : 6);
         m_arduinoIndicator->raise();
+    }
+    if (m_lcdLigne1) {
+        // LCD positionné juste sous l'indicateur Arduino
+        QWidget *lcdFrame = m_lcdLigne1->parentWidget();
+        if (lcdFrame) {
+            int indY = m_arduinoIndicator
+                ? (m_bell ? m_bell->height() + 10 : 6) + m_arduinoIndicator->height() + 6
+                : 50;
+            lcdFrame->move(width() - lcdFrame->width() - 12, indY);
+            lcdFrame->raise();
+        }
     }
 }
 
@@ -603,16 +715,28 @@ void MainWindow::switchPage(int index, QPushButton *activeBtn, const QString &ti
     // Garder le bouton flottant toujours au-dessus
     if (m_floatingBtn) m_floatingBtn->raise();
 
-    // Cloche et indicateur Arduino visibles selon la page
-    if (m_bell) m_bell->setVisible(true); // visible sur toutes les pages
+    // Restaurer la position fixe du chat IA si visible (équivalent position:fixed)
+    if (m_aiWidget && m_aiWidget->isVisible()) {
+        m_aiWidget->raise();
+    }
+
+    // Cloche et indicateur Arduino visibles uniquement sur la page Production (index 4)
+    if (m_bell) m_bell->setVisible(index == 4);
     if (m_arduinoIndicator) m_arduinoIndicator->setVisible(index == 4);
+    // Indicateur température visible sur toutes les pages SAUF Production
+    if (m_tempIndicator) m_tempIndicator->setVisible(index != 4);
+    // LCD miroir visible uniquement sur la page Production
+    if (m_lcdLigne1) {
+        QWidget *lcdFrame = m_lcdLigne1->parentWidget();
+        if (lcdFrame) lcdFrame->setVisible(index == 4);
+    }
 }
 
 void MainWindow::on_btnEmployees_clicked()  
 { 
-    switchPage(0, ui->btnEmployees,  "CUIREA - Gestion des Employ�s");  
-    m_aiWidget->setContext("Gestion des Employ�s"); 
-    // Masquer le panneau de profil et d�s�lectionner
+    switchPage(0, ui->btnEmployees,  "CUIREA - Gestion des Employés");  
+    m_aiWidget->setContext("Gestion des Employés"); 
+    // Masquer le panneau de profil et désélectionner
     ui->employeeProfilePanel->setVisible(false);
     ui->employeeTable->clearSelection();
 }
@@ -621,7 +745,7 @@ void MainWindow::on_btnClients_clicked()
 { 
     switchPage(1, ui->btnClients,    "CUIREA - Gestion des Clients"); 
     m_aiWidget->setContext("Gestion des Clients");
-    // Masquer le panneau de profil employ� quand on change de page
+    // Masquer le panneau de profil employé quand on change de page
     ui->employeeProfilePanel->setVisible(false);
     afficherClients();
 }
@@ -630,15 +754,15 @@ void MainWindow::on_btnProducts_clicked()
 { 
     switchPage(5, ui->btnProducts,   "CUIREA - Gestion des Articles"); 
     m_aiWidget->setContext("Gestion des Articles"); 
-    // Masquer le panneau de profil employ� quand on change de page
+    // Masquer le panneau de profil employé quand on change de page
     ui->employeeProfilePanel->setVisible(false);
 }
 
 void MainWindow::on_btnRawMaterials_clicked()
 { 
-    switchPage(2, ui->btnRawMaterials,"CUIREA - Mati�res Premi�res"); 
-    m_aiWidget->setContext("Gestion des Mati�res Premi�res"); 
-    // Masquer le panneau de profil employ� quand on change de page
+    switchPage(2, ui->btnRawMaterials,"CUIREA - Matières Premières"); 
+    m_aiWidget->setContext("Gestion des Matières Premières"); 
+    // Masquer le panneau de profil employé quand on change de page
     ui->employeeProfilePanel->setVisible(false);
 }
 
@@ -646,7 +770,7 @@ void MainWindow::on_btnSuppliers_clicked()
 { 
     switchPage(3, ui->btnSuppliers,  ""); 
     m_aiWidget->setContext("Gestion des Fournisseurs"); 
-    // Masquer le panneau de profil employ� quand on change de page
+    // Masquer le panneau de profil employé quand on change de page
     ui->employeeProfilePanel->setVisible(false);
 }
 void MainWindow::on_btnProduction_clicked() 
@@ -654,10 +778,11 @@ void MainWindow::on_btnProduction_clicked()
     switchPage(4, ui->btnProduction, "CUIREA - Gestion de la Production");
     updateProductionStatsCards();
     m_aiWidget->setContext("Gestion de la Production");
+    // Masquer le panneau de profil employe quand on change de page
     ui->employeeProfilePanel->setVisible(false);
     m_notifiedIds.clear();
     QTimer::singleShot(3000, this, &MainWindow::checkRetards);
-    setupKeypadSimulator(); // guard interne — ne crée qu'une seule fois
+    // setupKeypadSimulator(); // Désactivé - simulateur keypad non nécessaire
 }
 
 // -- Employee CRUD -------------------------------------------------------------
@@ -667,7 +792,7 @@ void MainWindow::on_btnAdd_clicked()
     if (dlg.exec() == QDialog::Accepted) {
         Employe e;
         
-        // Mode BD - toujours essayer d'ajouter dans la base de donn�es
+        // Mode BD - toujours essayer d'ajouter dans la base de données
         e.setMatricule(dlg.getMatricule());
         e.setNom(dlg.getNom());
         e.setPrenom(dlg.getPrenom());
@@ -690,25 +815,25 @@ void MainWindow::on_btnAdd_clicked()
         
         if (e.ajouter()) {
             populateEmployeeTable();
-            NotificationWidget::show("Employé ajouté",
-                dlg.getNom() + " " + dlg.getPrenom() + " — " + dlg.getRoleSysteme(),
+            NotificationWidget::show("Employe ajoute",
+                dlg.getNom() + " " + dlg.getPrenom() + " - " + dlg.getRoleSysteme(),
                 NotificationWidget::Success);
-            QMessageBox::information(this, "Succès", 
-                QString("Employé ajouté avec succès !\n\n"
+            QMessageBox::information(this, "Succes", 
+                QString("Employe ajoute avec succes !\n\n"
                        "Identifiants de connexion:\n"
                        "Matricule: %1\n"
-                       "Rôle: %2\n"
+                       "Role: %2\n"
                        "Compte actif: %3")
                 .arg(dlg.getMatricule())
                 .arg(dlg.getRoleSysteme())
                 .arg(dlg.isActif() ? "Oui" : "Non"));
         } else {
-            NotificationWidget::show("Erreur ajout employé",
-                "Impossible d'ajouter l'employé dans la base.",
+            NotificationWidget::show("Erreur ajout employe",
+                "Impossible d'ajouter l'employe dans la base.",
                 NotificationWidget::Critical);
             QMessageBox::critical(this, "Erreur", 
-                "Impossible d'ajouter l'employé.\n"
-                "Vérifiez que la table EMPLOYES existe dans la base de données.");
+                "Impossible d'ajouter l'employe.\n"
+                "Verifiez que la table EMPLOYES existe dans la base de donnees.");
         }
     }
 }
@@ -718,12 +843,12 @@ void MainWindow::on_btnExport_clicked()
     int row = ui->employeeTable->currentRow();
     if (row < 0) {
         QMessageBox::warning(this, "Attention", 
-            "Veuillez s�lectionner un employ� pour g�n�rer sa fiche de paie.");
+            "Veuillez sélectionner un employé pour générer sa fiche de paie.");
         return;
     }
     
-    // R�cup�rer les donn�es de l'employ� s�lectionn�
-    int idEmploye = cellText(ui->employeeTable, row, 13).toInt();  // ✅ Colonne 13 = ID_EMPLOYE
+    // Recuperer les donnees de l'employe selectionne
+    int idEmploye = cellText(ui->employeeTable, row, 13).toInt();  // Colonne 13 = ID_EMPLOYE
     QString matricule = cellText(ui->employeeTable, row, 0);
     QString nom = cellText(ui->employeeTable, row, 1);
     QString prenom = cellText(ui->employeeTable, row, 2);
@@ -741,11 +866,11 @@ void MainWindow::on_btnExport_clicked()
 void MainWindow::on_btnEdit_clicked()
 {
     int row = ui->employeeTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","Veuillez s�lectionner un employ� � modifier."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Veuillez sélectionner un employé à modifier."); return; }
     
     EmployeeDialog dlg(this, EmployeeDialog::EditMode);
-    // Colonnes: 0=Matricule, 1=Nom, 2=Pr�nom, 3=CIN, 4=DateNaissance, 5=Sexe,
-    //           6=Adresse, 7=T�l�phone, 8=Email, 9=Poste, 10=D�partement,
+    // Colonnes: 0=Matricule, 1=Nom, 2=Prénom, 3=CIN, 4=DateNaissance, 5=Sexe,
+    //           6=Adresse, 7=Téléphone, 8=Email, 9=Poste, 10=Département,
     //           11=DateEmbauche, 12=Photo, 13=ID
     QTableWidgetItem *idItem = ui->employeeTable->item(row, 13);
     QString employeeId = idItem ? idItem->text() : "";
@@ -761,7 +886,7 @@ void MainWindow::on_btnEdit_clicked()
     if (dlg.exec() == QDialog::Accepted) {
         Employe e;
         
-        // Mode BD - toujours modifier dans la base de donn�es
+        // Mode BD - toujours modifier dans la base de données
         e.setId(employeeId.toInt());
         e.setMatricule(dlg.getMatricule());
         e.setNom(dlg.getNom());
@@ -785,12 +910,12 @@ void MainWindow::on_btnEdit_clicked()
         
         if (e.modifier()) {
             populateEmployeeTable();
-            NotificationWidget::show("Employé modifié", "Modifications enregistrées.", NotificationWidget::Success);
-            QMessageBox::information(this, "Succès", "Employé modifié avec succès !");
+            NotificationWidget::show("Employe modifie", "Modifications enregistrees.", NotificationWidget::Success);
+            QMessageBox::information(this, "Succes", "Employe modifie avec succes !");
         } else {
             QMessageBox::critical(this, "Erreur", 
-                "Impossible de modifier l'employ�.\n"
-                "V�rifiez que la table EMPLOYES existe dans la base de donn�es.");
+                "Impossible de modifier l'employé.\n"
+                "Vérifiez que la table EMPLOYES existe dans la base de données.");
         }
     }
 }
@@ -798,11 +923,11 @@ void MainWindow::on_btnEdit_clicked()
 void MainWindow::on_btnDelete_clicked()
 {
     int row = ui->employeeTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","Veuillez s�lectionner un employ� � supprimer."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Veuillez sélectionner un employé à supprimer."); return; }
     
     EmployeeDialog dlg(this, EmployeeDialog::DeleteMode);
-    // Colonnes: 0=Matricule, 1=Nom, 2=Pr�nom, 3=CIN, 4=DateNaissance, 5=Sexe,
-    //           6=Adresse, 7=T�l�phone, 8=Email, 9=Poste, 10=D�partement,
+    // Colonnes: 0=Matricule, 1=Nom, 2=Prénom, 3=CIN, 4=DateNaissance, 5=Sexe,
+    //           6=Adresse, 7=Téléphone, 8=Email, 9=Poste, 10=Département,
     //           11=DateEmbauche, 12=Photo, 13=ID
     QTableWidgetItem *idItem = ui->employeeTable->item(row, 13);
     QString employeeId = idItem ? idItem->text() : "";
@@ -815,17 +940,17 @@ void MainWindow::on_btnDelete_clicked()
     if (dlg.exec() == QDialog::Accepted) {
         int id = employeeId.toInt();
         
-        // Mode BD - toujours supprimer de la base de donn�es
+        // Mode BD - toujours supprimer de la base de données
         Employe e;
         if (e.supprimer(id)) {
             populateEmployeeTable();
-            NotificationWidget::show("Employé supprimé", "L'employé a été supprimé.", NotificationWidget::Warning);
-            QMessageBox::information(this, "Succès", "Employé supprimé avec succès !");
+            NotificationWidget::show("Employe supprime", "L'employe a ete supprime.", NotificationWidget::Warning);
+            QMessageBox::information(this, "Succes", "Employe supprime avec succes !");
         } else {
             QMessageBox::critical(this, "Erreur", 
-                QString("Impossible de supprimer l'employ�.\n"
+                QString("Impossible de supprimer l'employé.\n"
                        "ID: %1\n"
-                       "V�rifiez que la table EMPLOYES existe dans la base de donn�es.").arg(id));
+                       "Vérifiez que la table EMPLOYES existe dans la base de données.").arg(id));
         }
     }
 }
@@ -845,14 +970,14 @@ void MainWindow::on_btnSort_clicked()
         QMenu *sub = menu.addMenu("?? " + label);
         sub->setStyleSheet(menu.styleSheet());
         auto *asc = sub->addAction("? Croissant (A ? Z)");
-        auto *desc = sub->addAction("? D�croissant (Z ? A)");
+        auto *desc = sub->addAction("? Décroissant (Z ? A)");
         connect(asc, &QAction::triggered, [=]{ ui->employeeTable->sortItems(col, Qt::AscendingOrder); });
         connect(desc, &QAction::triggered, [=]{ ui->employeeTable->sortItems(col, Qt::DescendingOrder); });
     };
 
     addSortOptions("Matricule", 1);
     addSortOptions("Nom", 2);
-    addSortOptions("Pr�nom", 3);
+    addSortOptions("Prénom", 3);
 
     // Afficher le menu sous le bouton
     QPoint pos = ui->btnSort->mapToGlobal(QPoint(0, ui->btnSort->height()));
@@ -921,13 +1046,13 @@ void MainWindow::onEmployeeSelected()
 {
     int row = ui->employeeTable->currentRow();
     
-    // Si aucune ligne s�lectionn�e, masquer le panneau
+    // Si aucune ligne sélectionnée, masquer le panneau
     if (row < 0) {
         ui->employeeProfilePanel->setVisible(false);
         return;
     }
     
-    // V�rifier que la ligne a des donn�es valides
+    // Vérifier que la ligne a des données valides
     if (ui->employeeTable->item(row, 1) == nullptr) {
         ui->employeeProfilePanel->setVisible(false);
         return;
@@ -936,9 +1061,9 @@ void MainWindow::onEmployeeSelected()
     // Afficher le panneau et remplir les informations
     ui->employeeProfilePanel->setVisible(true);
     
-    // Remplir les labels avec les donn�es de l'employ� s�lectionn�
-    // Colonnes: 0=Matricule, 1=Nom, 2=Pr�nom, 3=CIN, 4=DateNaissance, 5=Sexe,
-    //           6=Adresse, 7=T�l�phone, 8=Email, 9=Poste, 10=D�partement,
+    // Remplir les labels avec les données de l'employé sélectionné
+    // Colonnes: 0=Matricule, 1=Nom, 2=Prénom, 3=CIN, 4=DateNaissance, 5=Sexe,
+    //           6=Adresse, 7=Téléphone, 8=Email, 9=Poste, 10=Département,
     //           11=DateEmbauche, 12=Photo, 13=ID
     ui->valMatricule->setText(cellText(ui->employeeTable, row, 0));
     ui->valNom->setText(cellText(ui->employeeTable, row, 1));
@@ -952,7 +1077,7 @@ void MainWindow::onEmployeeSelected()
     ui->valDepartement->setText(cellText(ui->employeeTable, row, 10));
     ui->valDateEmbauche->setText(cellText(ui->employeeTable, row, 11));
     
-    // R�cup�rer la photo depuis la base de donn�es
+    // Récupérer la photo depuis la base de données
     QTableWidgetItem *idItem = ui->employeeTable->item(row, 13);
     int employeId = idItem ? idItem->text().toInt() : 0;
     
@@ -993,7 +1118,7 @@ void MainWindow::afficherClients()
     ui->clientTable->clear();
     ui->clientTable->setRowCount(model->rowCount());
     ui->clientTable->setColumnCount(model->columnCount());
-    QStringList headers = { "ID","Nom", "Pr�nom", "Sexe", "CIN", "Pays", "Ville", "Adresse", "Email", "Date Inscription"};
+    QStringList headers = { "ID","Nom", "Prénom", "Sexe", "CIN", "Pays", "Ville", "Adresse", "Email", "Date Inscription"};
     ui->clientTable->setHorizontalHeaderLabels(headers);
     for(int row = 0; row < model->rowCount(); ++row)
         for(int col = 0; col < model->columnCount(); ++col)
@@ -1026,11 +1151,11 @@ void MainWindow::on_btnAddClient_clicked()
 
         if(c.ajouter()) {
             afficherClients();
-            QMessageBox::information(this, "Succ�s", "Client ajout� avec succ�s !");
+            QMessageBox::information(this, "Succès", "Client ajouté avec succès !");
         } else {
             QMessageBox::critical(this, "Erreur",
                                   "Impossible d'ajouter le client.\n"
-                                  "V�rifiez que la table CLIENTS existe dans la base de donn�es.");
+                                  "Vérifiez que la table CLIENTS existe dans la base de données.");
         }
     }
 }
@@ -1042,7 +1167,7 @@ void MainWindow::on_btnEditClient_clicked()
 {
     int row = ui->clientTable->currentRow();
     if(row < 0) {
-        QMessageBox::warning(this, "Erreur", "Veuillez s�lectionner un client � modifier.");
+        QMessageBox::warning(this, "Erreur", "Veuillez sélectionner un client à modifier.");
         return;
     }
 
@@ -1052,7 +1177,7 @@ void MainWindow::on_btnEditClient_clicked()
     dlg.setEditingId(id);
     dlg.setClientData(
         ui->clientTable->item(row, 1)->text(),  // Nom
-        ui->clientTable->item(row, 2)->text(),  // Pr�nom
+        ui->clientTable->item(row, 2)->text(),  // Prénom
         ui->clientTable->item(row, 3)->text(),  // Sexe
         ui->clientTable->item(row, 4)->text(),  // CIN
         ui->clientTable->item(row, 5)->text(),  // Pays
@@ -1076,9 +1201,9 @@ void MainWindow::on_btnEditClient_clicked()
 
         if(c.modifier()) {
             afficherClients();
-            QMessageBox::information(this, "Succ�s", "Client modifi� avec succ�s !");
+            QMessageBox::information(this, "Succès", "Client modifié avec succès !");
         } else {
-            QMessageBox::critical(this, "Erreur", "�chec de modification du client !");
+            QMessageBox::critical(this, "Erreur", "échec de modification du client !");
         }
     }
 }
@@ -1090,7 +1215,7 @@ void MainWindow::on_btnDeleteClient_clicked()
 {
     int row = ui->clientTable->currentRow();
     if(row < 0) {
-        QMessageBox::warning(this, "Erreur", "Veuillez s�lectionner un client � supprimer.");
+        QMessageBox::warning(this, "Erreur", "Veuillez sélectionner un client à supprimer.");
         return;
     }
 
@@ -1100,7 +1225,7 @@ void MainWindow::on_btnDeleteClient_clicked()
     dlg.setDeleteId(id);
     dlg.setClientData(
         ui->clientTable->item(row, 1)->text(),  // Nom
-        ui->clientTable->item(row, 2)->text(),  // Pr�nom
+        ui->clientTable->item(row, 2)->text(),  // Prénom
         ui->clientTable->item(row, 3)->text(),  // Sexe
         ui->clientTable->item(row, 4)->text(),  // CIN
         ui->clientTable->item(row, 5)->text(),  // Pays
@@ -1111,9 +1236,9 @@ void MainWindow::on_btnDeleteClient_clicked()
     if(dlg.exec() == QDialog::Accepted) {
         if(Client().supprimer(id)) {
             afficherClients();
-            QMessageBox::information(this, "Succ�s", "Client supprim� avec succ�s !");
+            QMessageBox::information(this, "Succès", "Client supprimé avec succès !");
         } else {
-            QMessageBox::critical(this, "Erreur", "�chec de suppression du client !");
+            QMessageBox::critical(this, "Erreur", "échec de suppression du client !");
         }
     }
 }
@@ -1185,11 +1310,11 @@ void MainWindow::on_btntrie_clicked()
     // ?? DATE SUBMENU
     QMenu *dateMenu = menu->addMenu("?? Date inscription");
     QAction *dateAsc  = dateMenu->addAction("Croissant");
-    QAction *dateDesc = dateMenu->addAction("D�croissant");
+    QAction *dateDesc = dateMenu->addAction("Décroissant");
     // ?? ALPHA SUBMENU
-    QMenu *alphaMenu = menu->addMenu("?? Alphab�tique");
+    QMenu *alphaMenu = menu->addMenu("?? Alphabétique");
     QAction *alphaAsc  = alphaMenu->addAction("Croissant");
-    QAction *alphaDesc = alphaMenu->addAction("D�croissant");
+    QAction *alphaDesc = alphaMenu->addAction("Décroissant");
     // =========================
     // ?? ACTION HANDLING
     // =========================
@@ -1291,9 +1416,9 @@ void MainWindow::on_btnExportClient_clicked()
 
     Client c;
     if (c.exporterCommandesParClient(mailClient, filePath)) {
-        QMessageBox::information(this, "Succès", "Export réussi !");
+        QMessageBox::information(this, "Succes", "Export reussi !");
     } else {
-        QMessageBox::critical(this, "Erreur", "Échec de l'export !");
+        QMessageBox::critical(this, "Erreur", "Echec de l'export !");
     }
 }
 //historique client
@@ -1360,15 +1485,15 @@ void MainWindow::setupMatiereTable()
     }
     ui->matiereTable->setRowCount(0);
     ui->matiereTable->setColumnCount(7);
-    ui->matiereTable->setHorizontalHeaderLabels({"MODULE", "R�F�RENCE", "TYPE", "QUANTIT� ACTUELLE", "SEUIL", "DATE D'EXPIRATION", "PHOTO"});
+    ui->matiereTable->setHorizontalHeaderLabels({"MODULE", "RÉFÉRENCE", "TYPE", "QUANTITÉ ACTUELLE", "SEUIL", "DATE D'EXPIRATION", "PHOTO"});
     const int rowCount = model->rowCount();
     for (int row = 0; row < rowCount; ++row) {
         ui->matiereTable->insertRow(row);
-        // Cr�er les items de base
+        // Créer les items de base
         ui->matiereTable->setItem(row, 0, new QTableWidgetItem(model->data(model->index(row, 1)).toString()));
         ui->matiereTable->setItem(row, 1, new QTableWidgetItem(model->data(model->index(row, 2)).toString()));
         ui->matiereTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(row, 3)).toString()));
-        ui->matiereTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(row, 4)).toString() + " m�"));
+        ui->matiereTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(row, 4)).toString() + " m²"));
         ui->matiereTable->setItem(row, 4, new QTableWidgetItem(model->data(model->index(row, 5)).toString()));
         ui->matiereTable->setItem(row, 5, new QTableWidgetItem(model->data(model->index(row, 6)).toDate().toString("yyyy-MM-dd")));
         QString photoPath = model->data(model->index(row, 7)).toString();
@@ -1382,7 +1507,7 @@ void MainWindow::setupMatiereTable()
             photoLabel->setToolTip("Double-cliquez pour agrandir");
             ui->matiereTable->setCellWidget(row, 6, photoLabel);
         } else {
-            photoItem->setText("�");
+            photoItem->setText("é");
             ui->matiereTable->setItem(row, 6, photoItem);
         }
         
@@ -1418,17 +1543,17 @@ void MainWindow::onAddMatiere()
     matiere.setPhotoUrl(dlg.getPhotoUrl());
     
     if (matiere.ajouter()) {
-        QMessageBox::information(this, "Succ�s", "Mati�re ajout�e avec succ�s!");
+        QMessageBox::information(this, "Succès", "Matière ajoutée avec succès!");
         setupMatiereTable();
     } else {
-        QMessageBox::critical(this, "Erreur", "Erreur lors de l'ajout de la mati�re.");
+        QMessageBox::critical(this, "Erreur", "Erreur lors de l'ajout de la matière.");
     }
 }
 void MainWindow::onEditMatiere()
 {
     int row = ui->matiereTable->currentRow();
     if (row < 0) {
-        QMessageBox::warning(this, "", "Veuillez s�lectionner une mati�re � modifier.");
+        QMessageBox::warning(this, "", "Veuillez sélectionner une matière a modifier.");
         return;
     }
     int matiereId = ui->matiereTable->item(row, 0)->data(Qt::UserRole).toInt();
@@ -1451,17 +1576,17 @@ void MainWindow::onEditMatiere()
     matiere.setPhotoUrl(dlg.getPhotoUrl());
     
     if (matiere.modifier()) {
-        QMessageBox::information(this, "Succ�s", "Mati�re mise � jour avec succ�s!");
+        QMessageBox::information(this, "Succès", "Matière mise à jour avec succès!");
         setupMatiereTable();
     } else {
-        QMessageBox::critical(this, "Erreur", "Erreur lors de la modification de la mati�re.");
+        QMessageBox::critical(this, "Erreur", "Erreur lors de la modification de la matière.");
     }
 }
 void MainWindow::onDeleteMatiere()
 {
     int row = ui->matiereTable->currentRow();
     if (row < 0) {
-        QMessageBox::warning(this, "", "Veuillez s�lectionner une mati�re � supprimer.");
+        QMessageBox::warning(this, "", "Veuillez sélectionner une matière à supprimer.");
         return;
     }
     int matiereId = ui->matiereTable->item(row, 0)->data(Qt::UserRole).toInt();
@@ -1475,10 +1600,10 @@ void MainWindow::onDeleteMatiere()
     if (dlg.exec() != QDialog::Accepted) return;
     Matiere matiereTmp;
     if (matiereTmp.supprimer(matiereId)) {
-        QMessageBox::information(this, "Succ�s", "Mati�re supprim�e avec succ�s!");
+        QMessageBox::information(this, "Succès", "Matière supprimée avec succès!");
         setupMatiereTable();
     } else {
-        QMessageBox::critical(this, "Erreur", "Erreur lors de la suppression de la mati�re.");
+        QMessageBox::critical(this, "Erreur", "Erreur lors de la suppression de la matière.");
     }
 }
 void MainWindow::onExportMatiere()
@@ -1493,8 +1618,12 @@ void MainWindow::onExportMatiere()
     int critique = 0, normal = 0, eleve = 0, expires = 0, proche30j = 0;
     QMap<QString, int> parType;
     for (int r = 0; r < total; ++r) {
-        double qty   = cellText(ui->matiereTable, r, 3).remove(" m�").toDouble();
-        int    seuil = cellText(ui->matiereTable, r, 4).toInt();
+        // Extraire la quantité proprement
+        QString qtyText = cellText(ui->matiereTable, r, 3);
+        qtyText = qtyText.remove(" m²").remove(" mé").remove("m²").remove("mé").trimmed();
+        double qty = qtyText.toDouble();
+        
+        int seuil = cellText(ui->matiereTable, r, 4).toInt();
         QString type = cellText(ui->matiereTable, r, 2);
         if      (qty < seuil * 0.5) critique++;
         else if (qty < seuil)       normal++;
@@ -1506,7 +1635,7 @@ void MainWindow::onExportMatiere()
         else if (daysLeft < 30) proche30j++;
     }
     int stockOK = normal + eleve;
-    // Construction HTML identique � l'image
+    // Construction HTML identique à l'image
     QString html;
     html += R"(
     <html><head><meta charset="UTF-8">
@@ -1581,13 +1710,14 @@ void MainWindow::onExportMatiere()
                font-size: 9px; font-weight: 700; }
       .badge-critique { background: #FDECEA; color: #C0392B; }
       .badge-normal   { background: #FEF5E7; color: #E67E22; }
+      .badge-ok       { background: #E8F5E9; color: #2E7D32; }
       .footer { font-size: 10px; color: #666; margin-top: 25px;
                 padding: 12px 0; border-top: 2px solid #E8DED3;
                 display: flex; justify-content: space-between; }
       .footer-right { font-weight: 600; }
     </style></head><body>
     )";
-    // En-t�te avec logo
+    // En-téte avec logo
     html += R"(
     <div class="header">
       <div class="logo">CUIREA</div>
@@ -1598,46 +1728,46 @@ void MainWindow::onExportMatiere()
     <div class="subheader">Genere le %1</div>
     )").arg(QDateTime::currentDateTime().toString("dd/MM/yyyy 'pm' HH:mm"));
     html += R"(<div class="content">)";
-    //Statistiques g�n�rales
+    //Statistiques générales
     html += R"(<div class="section-title">STATISTIQUES GENERALES</div>)";
     html += QString(R"(
     <div class="cards">
       <div class="card card-total">
-        <div class="card-icon">??</div>
-        <div class="card-title">Total<br>Matieres</div>
+        <div class="card-icon">📦</div>
+        <div class="card-title">Total<br>Matières</div>
         <div class="card-value">%1</div>
         <div class="card-label">Actives</div>
       </div>
       <div class="card card-critique">
-        <div class="card-icon">??</div>
+        <div class="card-icon">⚠️</div>
         <div class="card-title">Stock<br>Critique</div>
         <div class="card-value">%2</div>
-        <div class="card-label">Items a reapprovisionner</div>
+        <div class="card-label">Items à réapprovisionner</div>
       </div>
       <div class="card card-expires">
-        <div class="card-icon">?</div>
-        <div class="card-title">Expires</div>
+        <div class="card-icon">❌</div>
+        <div class="card-title">Expirés</div>
         <div class="card-value">%3</div>
-        <div class="card-label">Expires</div>
+        <div class="card-label">Expirés</div>
       </div>
       <div class="card card-proche">
-        <div class="card-icon">??</div>
+        <div class="card-icon">⏰</div>
         <div class="card-title">< 30 Jours</div>
         <div class="card-value">%4</div>
         <div class="card-label">A surveiller</div>
       </div>
       <div class="card card-ok">
-        <div class="card-icon">?</div>
+        <div class="card-icon">✅</div>
         <div class="card-title">Stock<br>OK</div>
         <div class="card-value">%5</div>
         <div class="card-label">Stock OK</div>
       </div>
     </div>
     )").arg(total).arg(critique).arg(expires).arg(proche30j).arg(stockOK);
-    // R�partition par type (graphique + tableau)
+    // Répartition par type (graphique + tableau)
     html += R"(<div class="section-title">REPARTITION PAR TYPE</div>)";
     html += R"(<div class="charts-row">)";
-    // Graphique � barres
+    // Graphique à barres
     html += R"(<div class="chart-section"><div class="bar-chart">)";
     int maxType = 0;
     for (auto it = parType.begin(); it != parType.end(); ++it)
@@ -1654,7 +1784,7 @@ void MainWindow::onExportMatiere()
         )").arg(it.key()).arg(width).arg(it.value());
     }
     html += R"(</div></div>)";
-    // Tableau r�capitulatif
+    // Tableau récapitulatif
     html += R"(
       <div class="chart-section">
         <table class="summary-table">
@@ -1669,31 +1799,63 @@ void MainWindow::onExportMatiere()
       </div>
     </div>
     )";
-    //Liste d�taill�e
+    //Liste détaillée
     html += R"(<div class="section-title">LISTE DETAILLEE DES MATIERES</div>)";
     html += R"(
     <table class="detail-table">
       <tr>
-        <th>Module</th><th>Reference</th><th>Type</th>
-        <th>Quantite</th><th>Seuil</th><th>Expiration</th><th>Statut</th>
+        <th>Module</th><th>Référence</th><th>Type</th>
+        <th>Quantité Stock</th><th>Qté Demandée</th><th>Seuil</th><th>Expiration</th><th>Statut</th>
       </tr>
     )";
+    
     for (int r = 0; r < total; ++r) {
-        double qty   = cellText(ui->matiereTable, r, 3).remove(" m�").toDouble();
-        int    seuil = cellText(ui->matiereTable, r, 4).toInt();
+        // Extraire la quantité stock proprement
+        QString qtyText = cellText(ui->matiereTable, r, 3);
+        qtyText = qtyText.remove(" m²").remove(" mé").remove("m²").remove("mé").trimmed();
+        double qty = qtyText.toDouble();
+        
+        int seuil = cellText(ui->matiereTable, r, 4).toInt();
+        
+        // Calculer la quantité demandée automatiquement
+        // Si stock < seuil, il faut commander la différence
+        double qteDemandee = 0.0;
+        if (qty < seuil) {
+            qteDemandee = seuil - qty;
+        }
+        
         QString badge, label;
         if      (qty < seuil * 0.5) { badge = "badge-critique"; label = "Critique"; }
         else if (qty < seuil)       { badge = "badge-normal";   label = "Normal";   }
+        else                        { badge = "badge-ok";       label = "OK";       }
+        
+        // Couleur selon l'urgence
+        QString couleurDemande = "#999999"; // Gris par défaut
+        if (qteDemandee > 0) {
+            if (qty < seuil * 0.5) {
+                couleurDemande = "#D32F2F"; // Rouge - Urgent
+            } else {
+                couleurDemande = "#E67E22"; // Orange - À commander
+            }
+        }
+        
         html += QString(R"(
         <tr>
-          <td><span class="icon-leather">??</span>%1</td>
-          <td>%2</td><td>%3</td><td>%4</td><td>%5</td><td>%6</td>
-          <td><span class="%7">%8</span></td>
+          <td><span class="icon-leather">🔶</span> %1</td>
+          <td><strong>%2</strong></td>
+          <td>%3</td>
+          <td><strong>%4</strong> m²</td>
+          <td style="color: %5; font-weight: bold;">%6 m²</td>
+          <td>%7</td>
+          <td>%8</td>
+          <td><span class="badge %9">%10</span></td>
         </tr>
         )").arg(cellText(ui->matiereTable, r, 0))
            .arg(cellText(ui->matiereTable, r, 1))
            .arg(cellText(ui->matiereTable, r, 2))
-           .arg(cellText(ui->matiereTable, r, 3))
+           .arg(QString::number(qty, 'f', 2))
+           .arg(couleurDemande)
+           .arg(QString::number(qteDemandee, 'f', 2))
            .arg(cellText(ui->matiereTable, r, 4))
            .arg(cellText(ui->matiereTable, r, 5))
            .arg(badge).arg(label);
@@ -1702,12 +1864,12 @@ void MainWindow::onExportMatiere()
     //Footer
     html += R"(
     <div class="footer">
-      <div>CUIREA Management System � Rapport genere automatiquement</div>
+      <div>CUIREA Management System  Rapport genere automatiquement</div>
       <div class="footer-right">1 / 1</div>
     </div>
     )";
     html += R"(</div></body></html>)";
-    //G�n�ration PDF
+    //Génération PDF
     QPrinter printer(QPrinter::PrinterResolution);
     printer.setOutputFormat(QPrinter::PdfFormat);
     printer.setOutputFileName(fileName);
@@ -1724,14 +1886,14 @@ void MainWindow::onExportMatiere()
 void MainWindow::onStatistiquesMatiere()
 {
     QDialog dlg(this);
-    dlg.setWindowTitle("Statistiques - Mati�res Premi�res");
+    dlg.setWindowTitle("Statistiques - Matières Premières");
     dlg.setMinimumSize(950, 650);
     dlg.setStyleSheet("QDialog { background-color: #F5F0EB; }");
     QVBoxLayout mainLay(&dlg);
     mainLay.setContentsMargins(25, 25, 25, 25);
     mainLay.setSpacing(20);
     // Titre
-    auto *title = new QLabel("?? STATISTIQUES DES MATI�RES PREMI�RES");
+    auto *title = new QLabel("📊 STATISTIQUES DES MATIÈRES PREMIÈRES");
     title->setStyleSheet("font-size: 18px; font-weight: bold; color: #6D4C41; padding: 8px;");
     title->setAlignment(Qt::AlignCenter);
     mainLay.addWidget(title);
@@ -1740,7 +1902,7 @@ void MainWindow::onStatistiquesMatiere()
     int critique = 0, normal = 0, eleve = 0, expires = 0, proche30j = 0;
     QMap<QString, int> parType;
     for (int r = 0; r < total; ++r) {
-        double qty = cellText(ui->matiereTable, r, 3).remove(" m�").toDouble();
+        double qty = cellText(ui->matiereTable, r, 3).remove(" m²").toDouble();
         int seuil = cellText(ui->matiereTable, r, 4).toInt();
         QString type = cellText(ui->matiereTable, r, 2);
         if (qty < seuil * 0.5) critique++;
@@ -1777,36 +1939,51 @@ void MainWindow::onStatistiquesMatiere()
         lay->addStretch();
         return card;
     };
-    cardsLay->addWidget(createCard("Total Mati�res", QString::number(total), "#2C2416", "#E0D5CC"));
+    cardsLay->addWidget(createCard("Total Matières", QString::number(total), "#2C2416", "#E0D5CC"));
     cardsLay->addWidget(createCard("Stock Critique", QString::number(critique), "#C0392B", "#FDECEA"));
-    cardsLay->addWidget(createCard("Expir�s", QString::number(expires), "#8B4513", "#FEF5E7"));
+    cardsLay->addWidget(createCard("Expirés", QString::number(expires), "#8B4513", "#FEF5E7"));
     cardsLay->addWidget(createCard("< 30 jours", QString::number(proche30j), "#D4A574", "#FFF8E1"));
     mainLay.addLayout(cardsLay);
     // Graphiques
     QHBoxLayout *chartsLay = new QHBoxLayout();
     chartsLay->setSpacing(20);
-    // Donut Chart - R�partition stock (CRITICIT�) 
+    // Donut Chart - Répartition stock (CRITICITÉ) avec pourcentages
     auto *pieSeries = new QPieSeries();
     pieSeries->setHoleSize(0.5);  // Donut chart
+    
+    // Calculer les pourcentages
+    double totalCount = critique + eleve + normal;
+    if (totalCount == 0) totalCount = 1; // Éviter division par zéro
+    
     auto *sliceCrit = pieSeries->append("Critique", critique);
     sliceCrit->setBrush(QColor("#B33A3A"));
-    sliceCrit->setLabelVisible(false);
-    auto *sliceElev = pieSeries->append("�lev�", eleve);
+    sliceCrit->setLabelVisible(true);
+    sliceCrit->setLabel(QString("Critique\n%1%").arg(QString::number(critique * 100.0 / totalCount, 'f', 1)));
+    sliceCrit->setLabelColor(QColor("#B33A3A"));
+    sliceCrit->setLabelFont(QFont("Arial", 9, QFont::Bold));
+    
+    auto *sliceElev = pieSeries->append("Élevé", eleve);
     sliceElev->setBrush(QColor("#E67E22"));
-    sliceElev->setLabelVisible(false);
+    sliceElev->setLabelVisible(true);
+    sliceElev->setLabel(QString("Élevé\n%1%").arg(QString::number(eleve * 100.0 / totalCount, 'f', 1)));
+    sliceElev->setLabelColor(QColor("#E67E22"));
+    sliceElev->setLabelFont(QFont("Arial", 9, QFont::Bold));
     
     auto *sliceNorm = pieSeries->append("Normal", normal);
     sliceNorm->setBrush(QColor("#95A472"));
-    sliceNorm->setLabelVisible(false);
+    sliceNorm->setLabelVisible(true);
+    sliceNorm->setLabel(QString("Normal\n%1%").arg(QString::number(normal * 100.0 / totalCount, 'f', 1)));
+    sliceNorm->setLabelColor(QColor("#95A472"));
+    sliceNorm->setLabelFont(QFont("Arial", 9, QFont::Bold));
 
     auto *pieChart = new QChart();
     pieChart->addSeries(pieSeries);
-    pieChart->setTitle("R�partition des Stocks (CRITICIT�)");
+    pieChart->setTitle("Répartition des Stocks (CRITICITÉ)");
     pieChart->setTitleFont(QFont("Arial", 12, QFont::Bold));
     pieChart->setBackgroundBrush(QColor("#FFFFFF"));
     pieChart->setBackgroundRoundness(10);
     
-    // L�gende personnalis�e
+    // Légende personnalisée
     pieChart->legend()->setVisible(true);
     pieChart->legend()->setAlignment(Qt::AlignRight);
     pieChart->legend()->setFont(QFont("Arial", 10));
@@ -1823,7 +2000,7 @@ void MainWindow::onStatistiquesMatiere()
     chartsLay->addWidget(pieView);
 
     // -- Bar chart - Par type ----------------------------------
-    auto *barSet = new QBarSet("Quantit�");
+    auto *barSet = new QBarSet("Quantité");
     barSet->setColor(QColor("#6D4C41"));
     QStringList categories;
     for (auto it = parType.begin(); it != parType.end(); ++it) {
@@ -1836,7 +2013,7 @@ void MainWindow::onStatistiquesMatiere()
     
     auto *barChart = new QChart();
     barChart->addSeries(barSeries);
-    barChart->setTitle("R�partition par Type");
+    barChart->setTitle("Répartition par Type");
     barChart->setTitleFont(QFont("Arial", 12, QFont::Bold));
     barChart->legend()->setVisible(false);
     barChart->setBackgroundBrush(QColor("#FFFFFF"));
@@ -1889,25 +2066,25 @@ void MainWindow::onTriMatiere()
     QStringList options;
     options << "Tri par Module (A-Z)" << "Tri par Module (Z-A)"
             << "Tri par Type (A-Z)" << "Tri par Type (Z-A)"
-            << "Tri par Quantit� (Croissant)" << "Tri par Quantit� (D�croissant)"
-            << "Tri par Seuil (Croissant)" << "Tri par Seuil (D�croissant)"
+            << "Tri par Quantité (Croissant)" << "Tri par Quantité (Décroissant)"
+            << "Tri par Seuil (Croissant)" << "Tri par Seuil (Décroissant)"
             << "Tri par Date d'expiration (Plus proche)" << "Tri par Date d'expiration (Plus lointaine)";
     
     bool ok;
-    QString choice = QInputDialog::getItem(this, "Tri des Mati�res", 
-                                          "Choisissez le crit�re de tri:", 
+    QString choice = QInputDialog::getItem(this, "Tri des Matières", 
+                                          "Choisissez le critère de tri:", 
                                           options, 0, false, &ok);
     
     if (!ok || choice.isEmpty()) return;
     
-    // Structure pour stocker ligne compl�te avec donn�es UserRole
+    // Structure pour stocker ligne compléte avec données UserRole
     struct RowData {
         QStringList texts;
         QVariant photoUrl;
         int originalId;
     };
     
-    // Collecter toutes les donn�es
+    // Collecter toutes les données
     QList<RowData> rows;
     for (int r = 0; r < ui->matiereTable->rowCount(); ++r) {
         RowData row;
@@ -1919,7 +2096,7 @@ void MainWindow::onTriMatiere()
         rows.append(row);
     }
     
-    // Trier selon le crit�re
+    // Trier selon le critére
     if (choice.contains("Module")) {
         bool desc = choice.contains("Z-A");
         std::sort(rows.begin(), rows.end(), [desc](const RowData &a, const RowData &b) {
@@ -1930,15 +2107,15 @@ void MainWindow::onTriMatiere()
         std::sort(rows.begin(), rows.end(), [desc](const RowData &a, const RowData &b) {
             return desc ? a.texts[2] > b.texts[2] : a.texts[2] < b.texts[2];
         });
-    } else if (choice.contains("Quantit�")) {
-        bool desc = choice.contains("D�croissant");
+    } else if (choice.contains("Quantité")) {
+        bool desc = choice.contains("Décroissant");
         std::sort(rows.begin(), rows.end(), [desc](const RowData &a, const RowData &b) {
-            double qtyA = QString(a.texts[3]).remove(" m�").toDouble();
-            double qtyB = QString(b.texts[3]).remove(" m�").toDouble();
+            double qtyA = QString(a.texts[3]).remove(" m²").toDouble();
+            double qtyB = QString(b.texts[3]).remove(" m²").toDouble();
             return desc ? qtyA > qtyB : qtyA < qtyB;
         });
     } else if (choice.contains("Seuil")) {
-        bool desc = choice.contains("D�croissant");
+        bool desc = choice.contains("Décroissant");
         std::sort(rows.begin(), rows.end(), [desc](const RowData &a, const RowData &b) {
             double seuilA = a.texts[4].toDouble();
             double seuilB = b.texts[4].toDouble();
@@ -1955,7 +2132,7 @@ void MainWindow::onTriMatiere()
         });
     }
     
-    // R�appliquer les donn�es tri�es avec UserRole
+    // Réappliquer les données triées avec UserRole
     for (int r = 0; r < rows.size(); ++r) {
         for (int c = 0; c < rows[r].texts.size(); ++c) {
             if (ui->matiereTable->item(r, c)) {
@@ -1968,14 +2145,14 @@ void MainWindow::onTriMatiere()
         }
     }
     
-    QMessageBox::information(this, "Tri effectu�", 
-                           QString("Les mati�res ont �t� tri�es par: %1").arg(choice));
+    QMessageBox::information(this, "Tri effectué", 
+                           QString("Les matières ont été triées par: %1").arg(choice));
 }
 
 void MainWindow::onRechercheTriMatiere()
 {
     QDialog dlg(this);
-    dlg.setWindowTitle("Recherche Avanc�e");
+    dlg.setWindowTitle("Recherche Avancée");
     dlg.setMinimumWidth(500);
     dlg.setStyleSheet(DIALOG_STYLE);
 
@@ -1983,7 +2160,7 @@ void MainWindow::onRechercheTriMatiere()
     lay.setSpacing(12);
     lay.setContentsMargins(20, 20, 20, 20);
 
-    auto *title = new QLabel("?? Recherche de Mati�res Premi�res");
+    auto *title = new QLabel("?? Recherche de Matières Premiéres");
     title->setStyleSheet("font-size: 16px; font-weight: bold; color: #8D6E63;");
     title->setAlignment(Qt::AlignCenter);
 
@@ -1996,26 +2173,26 @@ void MainWindow::onRechercheTriMatiere()
     txtRef->setPlaceholderText("Ex: dd, aaaa...");
     
     auto *cmbType = new QComboBox(&dlg);
-    cmbType->addItems({"Tous", "Cuir", "Peau de Veau", "Ficelin�e", "Quincaillerie"});
+    cmbType->addItems({"Tous", "Cuir", "Peau de Veau", "Ficelinée", "Quincaillerie"});
     
     auto *cmbStock = new QComboBox(&dlg);
-    cmbStock->addItems({"Tous", "Critique", "Normal", "�lev�"});
+    cmbStock->addItems({"Tous", "Critique", "Normal", "élevé"});
     
     auto *txtSeuil = new QLineEdit(&dlg);
     txtSeuil->setPlaceholderText("Ex: 100, >50, <200");
     
     auto *cmbPeremption = new QComboBox(&dlg);
-    cmbPeremption->addItems({"Tous", "Expir�", "< 30 jours", "< 90 jours", "> 90 jours"});
+    cmbPeremption->addItems({"Tous", "Expiré", "< 30 jours", "< 90 jours", "> 90 jours"});
     
     auto *cmbPhoto = new QComboBox(&dlg);
     cmbPhoto->addItems({"Tous", "Avec photo", "Sans photo"});
 
     form.addRow("Nom / Module :", txtNom);
-    form.addRow("R�f�rence :", txtRef);
+    form.addRow("Référence :", txtRef);
     form.addRow("Type :", cmbType);
     form.addRow("Niveau Stock :", cmbStock);
     form.addRow("Seuil :", txtSeuil);
-    form.addRow("P�remption :", cmbPeremption);
+    form.addRow("Péremption :", cmbPeremption);
     form.addRow("Photo :", cmbPhoto);
 
     QDialogButtonBox btns(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
@@ -2046,7 +2223,7 @@ void MainWindow::onRechercheTriMatiere()
             if (!nom.contains(nomFilter)) match = false;
         }
 
-        // Filtre r�f�rence
+        // Filtre référence
         if (!refFilter.isEmpty() && match) {
             QString ref = cellText(ui->matiereTable, r, 1).toLower();
             if (!ref.contains(refFilter)) match = false;
@@ -2060,11 +2237,11 @@ void MainWindow::onRechercheTriMatiere()
 
         // Filtre stock
         if (stockFilter != "Tous" && match) {
-            int qty = cellText(ui->matiereTable, r, 3).remove(" m�").toDouble();
+            int qty = cellText(ui->matiereTable, r, 3).remove(" mé").toDouble();
             int seuil = cellText(ui->matiereTable, r, 4).toInt();
             if (stockFilter == "Critique" && qty >= seuil) match = false;
             if (stockFilter == "Normal" && (qty < seuil || qty > seuil * 2)) match = false;
-            if (stockFilter == "�lev�" && qty <= seuil * 2) match = false;
+            if (stockFilter == "élevé" && qty <= seuil * 2) match = false;
         }
 
         // Filtre seuil
@@ -2081,13 +2258,13 @@ void MainWindow::onRechercheTriMatiere()
             }
         }
 
-        // Filtre p�remption
+        // Filtre péremption
         if (peremptionFilter != "Tous" && match) {
             QString dateStr = cellText(ui->matiereTable, r, 5);
             QDate expDate = QDate::fromString(dateStr, "yyyy-MM-dd");
             int daysLeft = QDate::currentDate().daysTo(expDate);
             
-            if (peremptionFilter == "Expir�" && daysLeft >= 0) match = false;
+            if (peremptionFilter == "Expiré" && daysLeft >= 0) match = false;
             if (peremptionFilter == "< 30 jours" && (daysLeft < 0 || daysLeft >= 30)) match = false;
             if (peremptionFilter == "< 90 jours" && (daysLeft < 0 || daysLeft >= 90)) match = false;
             if (peremptionFilter == "> 90 jours" && daysLeft < 90) match = false;
@@ -2109,7 +2286,7 @@ void MainWindow::onRechercheTriMatiere()
         if (!ui->matiereTable->isRowHidden(r)) visibleCount++;
 
     QMainWindow::statusBar()->showMessage(
-        QString("?? %1 mati�re(s) trouv�e(s)").arg(visibleCount), 5000);
+        QString("✓ %1 matière(s) trouvée(s)").arg(visibleCount), 5000);
 }
 
 void MainWindow::onDetectionDefauts()
@@ -2123,7 +2300,7 @@ void MainWindow::updateMatiereStatistics()
     for (int r = 0; r < total; ++r) {
         double quantite = cellText(ui->matiereTable, r, 3).split(" ").first().toDouble();
         int seuil = cellText(ui->matiereTable, r, 4).toInt();
-        if (quantite < seuil) ++critical; // Stock critique si quantit� < seuil
+        if (quantite < seuil) ++critical; // Stock critique si quantité < seuil
     }
     ui->statsValueMatiere1->setText(QString::number(total));
     ui->statsValueMatiere2->setText(QString::number(critical));
@@ -2132,14 +2309,69 @@ void MainWindow::updateMatiereStatistics()
 // -- Suppliers -----------------------------------------------------------------
 void MainWindow::setupFournisseurTable()
 {
-    ui->fournisseurTable->setColumnHidden(0, true);
+    // Configurer le tableau avec 11 colonnes
+    ui->fournisseurTable->setColumnCount(11);
+    ui->fournisseurTable->setHorizontalHeaderLabels({
+        "ID", "Nom Entreprise", "Email", "Téléphone", "Matricule Fiscal",
+        "Type Produit", "Condition Paiement", "Statut", "Adresse",
+        "Qté Commandée (kg)", "Qté Mesurée (kg)"
+    });
+    
+    ui->fournisseurTable->setColumnHidden(0, true);  // Cacher ID
+    ui->fournisseurTable->setColumnHidden(8, true);  // Cacher Adresse
+    
+    // Ajuster les largeurs de colonnes
+    ui->fournisseurTable->setColumnWidth(1, 150);  // Nom
+    ui->fournisseurTable->setColumnWidth(2, 180);  // Email
+    ui->fournisseurTable->setColumnWidth(3, 100);  // Téléphone
+    ui->fournisseurTable->setColumnWidth(4, 120);  // Matricule
+    ui->fournisseurTable->setColumnWidth(5, 120);  // Type
+    ui->fournisseurTable->setColumnWidth(6, 130);  // Condition
+    ui->fournisseurTable->setColumnWidth(7, 80);   // Statut
+    ui->fournisseurTable->setColumnWidth(9, 130);  // Qté Commandée
+    ui->fournisseurTable->setColumnWidth(10, 120); // Qté Mesurée
+    
     refreshFournisseurTable();
     updateFournisseurStatistics();
+    
+    // Créer le bouton Livraison dynamiquement s'il n'existe pas dans l'UI
+    if (!findChild<QPushButton*>("btnLivraisonFournisseur")) {
+        QPushButton *btnLivraison = new QPushButton("⚖️ Livraison", this);
+        btnLivraison->setObjectName("btnLivraisonFournisseur");
+        btnLivraison->setStyleSheet(
+            "QPushButton { background-color: #2E7D32; color: white; border: none; "
+            "border-radius: 8px; padding: 10px 20px; font-size: 12px; font-weight: bold; }"
+            "QPushButton:hover { background-color: #388E3C; }"
+            "QPushButton:pressed { background-color: #1B5E20; }"
+        );
+        
+        // Trouver le layout des boutons fournisseurs et ajouter le bouton
+        QWidget *fournisseurPage = ui->stackedWidget->widget(3); // Page Fournisseurs
+        if (fournisseurPage) {
+            QList<QHBoxLayout*> layouts = fournisseurPage->findChildren<QHBoxLayout*>();
+            for (QHBoxLayout *layout : layouts) {
+                // Chercher le layout qui contient les boutons d'action
+                for (int i = 0; i < layout->count(); ++i) {
+                    QWidget *widget = layout->itemAt(i)->widget();
+                    if (widget && widget->objectName().contains("btn") && 
+                        widget->objectName().contains("Fournisseur")) {
+                        // Insérer après le bouton Supprimer
+                        layout->insertWidget(3, btnLivraison);
+                        connect(btnLivraison, &QPushButton::clicked, 
+                                this, &MainWindow::on_btnLivraisonFournisseur_clicked);
+                        qDebug() << "✅ Bouton Livraison ajouté dynamiquement";
+                        goto button_added;
+                    }
+                }
+            }
+        }
+        button_added:;
+    }
 }
 
 void MainWindow::refreshFournisseurTable()
 {
-    // Charger depuis la base de donn�es
+    // Charger depuis la base de données
     FournisseurData f;
     QSqlQueryModel* model = f.afficher();
     
@@ -2147,14 +2379,31 @@ void MainWindow::refreshFournisseurTable()
         return;
     }
     
-    // Charger depuis le mod�le BD
+    // Charger depuis le modèle BD
     int n = model->rowCount();
     ui->fournisseurTable->setRowCount(n);
     
     for (int i = 0; i < n; ++i) {
-        for (int col = 0; col < 9; ++col) {
+        for (int col = 0; col < 11; ++col) {  // 11 colonnes maintenant (ajout qté commandée + mesurée)
             QString value = model->data(model->index(i, col)).toString();
-            ui->fournisseurTable->setItem(i, col, new QTableWidgetItem(value));
+            QTableWidgetItem *item = new QTableWidgetItem(value);
+            
+            // Coloration pour les quantités
+            if (col == 10 && col == 9) {  // Qté Mesurée
+                double qteMesuree = value.toDouble();
+                double qteCommandee = model->data(model->index(i, 9)).toDouble();
+                
+                if (qteMesuree > 0 && qteCommandee > 0) {
+                    double diff = qAbs(qteMesuree - qteCommandee) / qteCommandee * 100.0;
+                    if (diff <= 5.0) {
+                        item->setForeground(QColor("#2E7D32"));  // Vert si conforme
+                    } else {
+                        item->setForeground(QColor("#D32F2F"));  // Rouge si non conforme
+                    }
+                }
+            }
+            
+            ui->fournisseurTable->setItem(i, col, item);
         }
     }
     
@@ -2199,12 +2448,12 @@ void MainWindow::on_btnAddFournisseur_clicked()
         
         if (f.ajouter()) {
             refreshFournisseurTable();
-            NotificationWidget::show("Fournisseur ajouté", "Nouveau fournisseur enregistré.", NotificationWidget::Success);
-            QMessageBox::information(this, "Succès", "Fournisseur ajouté avec succès dans la base de données!");
+            NotificationWidget::show("Fournisseur ajoute", "Nouveau fournisseur enregistre.", NotificationWidget::Success);
+            QMessageBox::information(this, "Succes", "Fournisseur ajoute avec succes dans la base de donnees!");
         } else {
             QMessageBox::critical(this, "Erreur", 
                 "Impossible d'ajouter le fournisseur.\n"
-                "V�rifiez que la table FOURNISSEURS existe dans la base de donn�es.");
+                "Vérifiez que la table FOURNISSEURS existe dans la base de données.");
         }
     }
 }
@@ -2212,7 +2461,7 @@ void MainWindow::on_btnAddFournisseur_clicked()
 void MainWindow::on_btnEditFournisseur_clicked()
 {
     int row = ui->fournisseurTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","Veuillez s�lectionner un fournisseur � modifier."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Veuillez sélectionner un fournisseur à modifier."); return; }
     
     FournisseurDialog dlg(this, FournisseurDialog::EditMode);
     QString id = ui->fournisseurTable->item(row, 0) ? ui->fournisseurTable->item(row, 0)->text() : "";
@@ -2243,11 +2492,11 @@ void MainWindow::on_btnEditFournisseur_clicked()
         
         if (f.modifier()) {
             refreshFournisseurTable();
-            QMessageBox::information(this, "Succ�s", "Fournisseur modifi� avec succ�s!");
+            QMessageBox::information(this, "Succès", "Fournisseur modifié avec succès!");
         } else {
             QMessageBox::critical(this, "Erreur", 
                 "Impossible de modifier le fournisseur.\n"
-                "V�rifiez que la table FOURNISSEURS existe dans la base de donn�es.");
+                "Vérifiez que la table FOURNISSEURS existe dans la base de données.");
         }
     }
 }
@@ -2255,7 +2504,7 @@ void MainWindow::on_btnEditFournisseur_clicked()
 void MainWindow::on_btnDeleteFournisseur_clicked()
 {
     int row = ui->fournisseurTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","Veuillez s�lectionner un fournisseur � supprimer."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Veuillez sélectionner un fournisseur à supprimer."); return; }
     
     FournisseurDialog dlg(this, FournisseurDialog::DeleteMode);
     QString id = ui->fournisseurTable->item(row, 0) ? ui->fournisseurTable->item(row, 0)->text() : "";
@@ -2275,12 +2524,84 @@ void MainWindow::on_btnDeleteFournisseur_clicked()
         // Toujours supprimer de la BD
         if (f.supprimer(id)) {
             refreshFournisseurTable();
-            QMessageBox::information(this, "Succ�s", "Fournisseur supprim� avec succ�s!");
+            QMessageBox::information(this, "Succès", "Fournisseur supprimé avec succès!");
         } else {
             QMessageBox::critical(this, "Erreur", 
                 QString("Impossible de supprimer le fournisseur.\n"
                        "ID: %1\n"
-                       "V�rifiez que la table FOURNISSEURS existe dans la base de donn�es.").arg(id));
+                       "Vérifiez que la table FOURNISSEURS existe dans la base de données.").arg(id));
+        }
+    }
+}
+
+void MainWindow::on_btnLivraisonFournisseur_clicked()
+{
+    int row = ui->fournisseurTable->currentRow();
+    if (row < 0) {
+        QMessageBox::warning(this, "Sélection", "Veuillez sélectionner un fournisseur pour valider une livraison.");
+        return;
+    }
+    
+    QString idFournisseur = cellText(ui->fournisseurTable, row, 0);
+    QString nomEntreprise = cellText(ui->fournisseurTable, row, 1);
+    
+    // Ouvrir le dialog de vérification avec l'instance Arduino
+    VerificationLivraison dialog(nomEntreprise, &m_arduino, this);
+    if (dialog.exec() == QDialog::Accepted) {
+        // Récupérer les valeurs mesurées
+        double qteCommandee = dialog.getQuantiteCommandee();
+        double qteMesuree = dialog.getMeasuredWeight();
+        bool isValid = dialog.isDeliveryValid();
+        
+        // Vérifier si les colonnes existent, sinon les créer
+        QSqlQuery checkQuery(Connection::instance()->getDatabase());
+        checkQuery.prepare("SELECT column_name FROM user_tab_columns "
+                          "WHERE table_name = 'FOURNISSEURS' AND column_name = 'QTE_COMMANDEE'");
+        
+        if (checkQuery.exec() && !checkQuery.next()) {
+            // Les colonnes n'existent pas, les créer
+            QSqlQuery alterQuery(Connection::instance()->getDatabase());
+            alterQuery.exec("ALTER TABLE FOURNISSEURS ADD QTE_COMMANDEE NUMBER(10,2) DEFAULT 0");
+            alterQuery.exec("ALTER TABLE FOURNISSEURS ADD QTE_MESUREE NUMBER(10,2) DEFAULT 0");
+            alterQuery.exec("ALTER TABLE FOURNISSEURS ADD DATE_DERNIERE_LIVRAISON DATE");
+            qDebug() << "Colonnes de livraison créées dans FOURNISSEURS";
+        }
+        
+        // Mettre à jour la base de données
+        QSqlQuery query(Connection::instance()->getDatabase());
+        query.prepare("UPDATE FOURNISSEURS SET QTE_COMMANDEE = :cmd, QTE_MESUREE = :mes, "
+                     "DATE_DERNIERE_LIVRAISON = SYSDATE WHERE ID_FOURNISSEUR = :id");
+        query.bindValue(":cmd", qteCommandee);
+        query.bindValue(":mes", qteMesuree);
+        query.bindValue(":id", idFournisseur.toInt());
+        
+        if (query.exec()) {
+            // Rafraîchir le tableau
+            refreshFournisseurTable();
+            
+            // Afficher un message de succès
+            if (isValid) {
+                QMessageBox::information(this, "Livraison validée",
+                    QString("Livraison de %1 acceptée\n\n"
+                           "Quantité commandée : %2 kg\n"
+                           "Quantité mesurée : %3 kg\n"
+                           "Statut : ✓ Conforme")
+                    .arg(nomEntreprise)
+                    .arg(qteCommandee, 0, 'f', 2)
+                    .arg(qteMesuree, 0, 'f', 2));
+            } else {
+                QMessageBox::warning(this, "Livraison refusée",
+                    QString("Livraison de %1 refusée\n\n"
+                           "Quantité commandée : %2 kg\n"
+                           "Quantité mesurée : %3 kg\n"
+                           "Statut : ✗ Non conforme")
+                    .arg(nomEntreprise)
+                    .arg(qteCommandee, 0, 'f', 2)
+                    .arg(qteMesuree, 0, 'f', 2));
+            }
+        } else {
+            QMessageBox::critical(this, "Erreur", 
+                "Impossible de mettre à jour la base de données:\n" + query.lastError().text());
         }
     }
 }
@@ -2289,8 +2610,9 @@ void MainWindow::on_btnSmsFournisseur_clicked()
 {
     int row = ui->fournisseurTable->currentRow();
     if (row < 0) {
-        QMessageBox::warning(this, "", "Veuillez s�lectionner un fournisseur pour envoyer un SMS.");
+        QMessageBox::warning(this, "", "Veuillez sélectionner un fournisseur pour envoyer un SMS.");
         return;
+
     }
 
     QString nomEntreprise = ui->fournisseurTable->item(row, 1) ? ui->fournisseurTable->item(row, 1)->text() : "";
@@ -2304,7 +2626,7 @@ void MainWindow::on_btnQrFournisseur_clicked()
 {
     int row = ui->fournisseurTable->currentRow();
     if (row < 0) {
-        QMessageBox::warning(this, "", "Veuillez s�lectionner un fournisseur pour g�n�rer le QR code.");
+        QMessageBox::warning(this, "", "Veuillez sélectionner un fournisseur pour générer le QR code.");
         return;
     }
 
@@ -2355,7 +2677,7 @@ void MainWindow::on_btnExportFournisseur_clicked()
 
     // Section 1: Liste des fournisseurs
     html += "<div class='section'><h2>?? Liste des Fournisseurs</h2>"
-            "<table><thead><tr><th>ID</th><th>Nom Entreprise</th><th>Email</th><th>T�l�phone</th>"
+            "<table><thead><tr><th>ID</th><th>Nom Entreprise</th><th>Email</th><th>Téléphone</th>"
             "<th>Type Produit</th><th>Condition Paiement</th><th>Statut</th></tr></thead><tbody>";
 
     for (const FournisseurData &f : fournisseursData) {
@@ -2366,9 +2688,9 @@ void MainWindow::on_btnExportFournisseur_clicked()
     }
     html += "</tbody></table></div>";
 
-    // Section 2: Historique des transactions (donn�es statiques)
+    // Section 2: Historique des transactions (données statiques)
     html += "<div class='section'><h2>?? Historique des Transactions</h2>"
-            "<table><thead><tr><th>Date</th><th>Fournisseur</th><th>Type</th><th>Montant (TND)</th><th>R�f�rence</th></tr></thead><tbody>"
+            "<table><thead><tr><th>Date</th><th>Fournisseur</th><th>Type</th><th>Montant (TND)</th><th>Référence</th></tr></thead><tbody>"
             "<tr><td>15/01/2025</td><td>Leather Premium Co.</td><td>Paiement</td><td>5,000.00</td><td>PAY-2025-001</td></tr>"
             "<tr><td>10/01/2025</td><td>Textile Supplies Ltd</td><td>Facture</td><td>12,500.00</td><td>INV-2025-003</td></tr>"
             "<tr><td>05/01/2025</td><td>Metal Accessories Inc</td><td>Paiement</td><td>7,500.00</td><td>PAY-2025-002</td></tr>"
@@ -2378,33 +2700,33 @@ void MainWindow::on_btnExportFournisseur_clicked()
             "<tr><td>10/12/2024</td><td>Button Factory</td><td>Paiement</td><td>1,800.00</td><td>PAY-2024-075</td></tr>"
             "</tbody></table></div>";
 
-    // Section 3: Liste des commandes effectu�es
-    html += "<div class='section'><h2>?? Liste des Commandes Effectu�es</h2>"
-            "<table><thead><tr><th>N� Commande</th><th>Date</th><th>Fournisseur</th><th>Produit</th><th>Quantit�</th><th>Montant (TND)</th></tr></thead><tbody>"
-            "<tr><td>CMD-2025-015</td><td>10/01/2025</td><td>Leather Premium Co.</td><td>Cuir Premium</td><td>500 m�</td><td>12,500.00</td></tr>"
+    // Section 3: Liste des commandes effectuées
+    html += "<div class='section'><h2>?? Liste des Commandes Effectuées</h2>"
+            "<table><thead><tr><th>Né Commande</th><th>Date</th><th>Fournisseur</th><th>Produit</th><th>Quantité</th><th>Montant (TND)</th></tr></thead><tbody>"
+            "<tr><td>CMD-2025-015</td><td>10/01/2025</td><td>Leather Premium Co.</td><td>Cuir Premium</td><td>500 mé</td><td>12,500.00</td></tr>"
             "<tr><td>CMD-2024-098</td><td>28/12/2024</td><td>Textile Supplies Ltd</td><td>Tissu Doublure</td><td>300 m</td><td>8,200.00</td></tr>"
-            "<tr><td>CMD-2024-087</td><td>15/12/2024</td><td>Zipper World</td><td>Fermetures �clair</td><td>1000 pcs</td><td>3,500.00</td></tr>"
-            "<tr><td>CMD-2024-076</td><td>05/12/2024</td><td>Button Factory</td><td>Boutons M�tal</td><td>2000 pcs</td><td>1,800.00</td></tr>"
+            "<tr><td>CMD-2024-087</td><td>15/12/2024</td><td>Zipper World</td><td>Fermetures éclair</td><td>1000 pcs</td><td>3,500.00</td></tr>"
+            "<tr><td>CMD-2024-076</td><td>05/12/2024</td><td>Button Factory</td><td>Boutons Métal</td><td>2000 pcs</td><td>1,800.00</td></tr>"
             "<tr><td>CMD-2024-065</td><td>28/11/2024</td><td>Metal Accessories Inc</td><td>Boucles</td><td>500 pcs</td><td>4,200.00</td></tr>"
             "</tbody></table></div>";
 
-    // Section 4: R�sum� financier
+    // Section 4: Résumé financier
     html += "<div class='summary'>"
-            "<h2 style='color:#8D6E63;margin-top:0;'>?? R�sum� Financier</h2>"
-            "<p><b>?? Montant Total Pay�:</b> 26,000.00 TND</p>"
-            "<p><b>?? Montant Total Factur�:</b> 38,500.00 TND</p>"
+            "<h2 style='color:#8D6E63;margin-top:0;'>?? Résumé Financier</h2>"
+            "<p><b>?? Montant Total Payé:</b> 26,000.00 TND</p>"
+            "<p><b>?? Montant Total Facturé:</b> 38,500.00 TND</p>"
             "<p><b>? Solde Restant:</b> 12,500.00 TND</p>"
             "<p><b>?? Nombre de Transactions:</b> 7</p>"
             "<p><b>?? Nombre de Commandes:</b> 5</p>"
             "</div>";
 
     html += "<div style='text-align:center;margin-top:30px;color:#999;font-size:9px;'>"
-            "Document g�n�r� automatiquement par CUIREA Management System<br>"
+            "Document généré automatiquement par CUIREA Management System<br>"
             "Pour usage interne uniquement - Confidentiel</div>"
             "</body></html>";
 
     QTextDocument doc; doc.setHtml(html); doc.print(&printer);
-    QMessageBox::information(this,"Succ�s","Historique des transactions export�: "+fn);
+    QMessageBox::information(this,"Succès","Historique des transactions exporté: "+fn);
 }
 
 void MainWindow::on_btnStatsFournisseur_clicked()
@@ -2429,12 +2751,12 @@ void MainWindow::on_btnStatsFournisseur_clicked()
     table->setColumnCount(7);
     table->setHorizontalHeaderLabels({
         "Fournisseur", 
-        "?? D�lai Moyen", 
+        "?? Délai Moyen", 
         "?? Retards (%)", 
         "? Annulations (%)", 
         "?? Retours (%)", 
         "? Score", 
-        "Fiabilit�"
+        "Fiabilité"
     });
     table->horizontalHeader()->setStretchLastSection(true);
     table->setAlternatingRowColors(true);
@@ -2474,10 +2796,10 @@ void MainWindow::on_btnStatsFournisseur_clicked()
         
         // Calculate reliability score (0-100)
         double score = 100.0;
-        score -= (p.delaiMoyen - 3) * 2;  // P�nalit� d�lai
-        score -= p.tauxRetard * 1.5;       // P�nalit� retards
-        score -= p.tauxAnnulation * 3;     // P�nalit� annulations
-        score -= p.tauxRetour * 2;         // P�nalit� retours
+        score -= (p.delaiMoyen - 3) * 2;  // Pénalité délai
+        score -= p.tauxRetard * 1.5;       // Pénalité retards
+        score -= p.tauxAnnulation * 3;     // Pénalité annulations
+        score -= p.tauxRetour * 2;         // Pénalité retours
         if (score < 0) score = 0;
         if (score > 100) score = 100;
         
@@ -2555,7 +2877,7 @@ void MainWindow::on_btnStatsFournisseur_clicked()
     
     // Summary text
     auto *summary = new QLabel(QString(
-        "?? <b>R�sum�:</b> Sur %1 fournisseurs analys�s, le score moyen de fiabilit� est de <b>%2/100</b>. "
+        "?? <b>Résumé:</b> Sur %1 fournisseurs analysés, le score moyen de fiabilité est de <b>%2/100</b>. "
         "<span style='color:#2E7D32;'><b>%3</b> excellents</span>, "
         "<span style='color:#388E3C;'><b>%4</b> bons</span>, "
         "<span style='color:#F57C00;'><b>%5</b> moyens</span>, "
@@ -2593,7 +2915,7 @@ void MainWindow::on_searchBoxFournisseur_textChanged(const QString &text)
         return;
     }
     
-    // Essayer d'utiliser la m�thode rechercher de la BD
+    // Essayer d'utiliser la méthode rechercher de la BD
     FournisseurData f;
     QSqlQueryModel* model = f.rechercher(text);
     
@@ -2604,7 +2926,7 @@ void MainWindow::on_searchBoxFournisseur_textChanged(const QString &text)
         return;
     }
     
-    // Afficher les r�sultats de la recherche BD
+    // Afficher les résultats de la recherche BD
     int n = model->rowCount();
     ui->fournisseurTable->setRowCount(n);
     
@@ -2632,7 +2954,7 @@ void MainWindow::on_btnTriFournisseur_clicked()
         QMenu *sub = menu.addMenu("?? " + label);
         sub->setStyleSheet(menu.styleSheet());
         auto *asc = sub->addAction("? Croissant (A ? Z)");
-        auto *desc = sub->addAction("? D�croissant (Z ? A)");
+        auto *desc = sub->addAction("? Décroissant (Z ? A)");
         connect(asc, &QAction::triggered, [=]{ ui->fournisseurTable->sortItems(col, Qt::AscendingOrder); });
         connect(desc, &QAction::triggered, [=]{ ui->fournisseurTable->sortItems(col, Qt::DescendingOrder); });
     };
@@ -2676,7 +2998,7 @@ void MainWindow::setupProductionTable()
         };
         if (!colToSql.contains(logicalIndex)) return;
 
-        // Alterner ASC/DESC si m�me colonne
+        // Alterner ASC/DESC si même colonne
         if (m_productionSortCol == logicalIndex)
             m_productionSortAsc = !m_productionSortAsc;
         else {
@@ -2751,12 +3073,12 @@ void MainWindow::fillProductionRow(int row, const QAbstractItemModel *m, int i)
     ui->productionTable->setItem(row, 4,  new QTableWidgetItem(
         QString::number(get(8).toDouble(), 'f', 2) + " DT"));
 
-    // Col 5 : �tat Paiement (color�)
+    // Col 5 : état Paiement (coloré)
     QString etat = get(10).toString();
-    if (etat.isEmpty()) etat = "Non pay�e";
+    if (etat.isEmpty()) etat = "Non payée";
     auto *etatItem = new QTableWidgetItem(etat);
     etatItem->setTextAlignment(Qt::AlignCenter);
-    const bool paye = etat.toLower() == "pay�e" || etat.toLower() == "payee";
+    const bool paye = etat.toLower() == "payée" || etat.toLower() == "payee";
     etatItem->setBackground(QColor(paye ? "#27AE60" : "#E74C3C"));
     etatItem->setForeground(Qt::white);
     ui->productionTable->setItem(row, 5, etatItem);
@@ -2771,7 +3093,7 @@ void MainWindow::fillProductionRow(int row, const QAbstractItemModel *m, int i)
     ui->productionTable->setItem(row, 10, new QTableWidgetItem(get(9).toString()));
 }
 
-// Helper : ex�cute une requ�te et remplit le tableau
+// Helper : exécute une requéte et remplit le tableau
 void MainWindow::applyProductionQuery(const QString &sql)
 {
     QSqlQueryModel model;
@@ -2825,16 +3147,16 @@ void MainWindow::checkRetards()
     if (ui->stackedWidget->currentIndex() != 4) return;
 
     QSqlQuery query(Connection::instance()->getDatabase());
-    // Statuts qui d�clenchent la bulle : En Attente, En Cours, Suspendu
-    // On exclut : Exp�di�, Termin�, Annul� (et variantes sans accent)
+    // Statuts qui déclenchent la bulle : En Attente, En Cours, Suspendu
+    // On exclut : Expédié, Terminé, Annulé (et variantes sans accent)
     query.prepare(
         "SELECT ID_COMMANDE, REFERENCE, DATE_LIVRAISON, STATUT, PRIORITE "
         "FROM COMMANDES "
         "WHERE DATE_LIVRAISON IS NOT NULL "
         "AND DATE_LIVRAISON < :today "
         "AND UPPER(STATUT) NOT IN ("
-        "  'TERMINE','TERMIN�',"
-        "  'ANNULE','ANNUL�'"
+        "  'TERMINE','TERMINé',"
+        "  'ANNULE','ANNULé'"
         ")"
     );
     query.bindValue(":today", QDate::currentDate());
@@ -2860,8 +3182,8 @@ void MainWindow::checkRetards()
         if (priorite.toUpper() == "URGENTE" || jours > 7)
             ntype = NotificationWidget::Critical;
 
-        QString titre = QString("? Retard � %1").arg(ref);
-        QString msg   = QString("Livraison pr�vue le %1\n%2 jour(s) de retard � Statut : %3")
+        QString titre = QString("⚠️ Retard — %1").arg(ref);
+        QString msg   = QString("Livraison prévue le %1\n%2 jour(s) de retard — Statut : %3")
                             .arg(dl.toString("dd/MM/yyyy"))
                             .arg(jours)
                             .arg(statut);
@@ -2872,9 +3194,9 @@ void MainWindow::checkRetards()
 
 void MainWindow::onTrierProduction()
 {
-    // -- Dialogue de tri avanc� multi-crit�res --------------------------------
+    // -- Dialogue de tri avancé multi-critéres --------------------------------
     QDialog dlg(this);
-    dlg.setWindowTitle("Tri avanc� � Production");
+    dlg.setWindowTitle("Tri avancé — Production");
     dlg.setFixedSize(380, 240);
     dlg.setStyleSheet(
         "QDialog{background:#FBF5F0;}"
@@ -2899,37 +3221,37 @@ void MainWindow::onTrierProduction()
     root->addWidget(title);
 
     // Colonnes disponibles
-    QStringList colLabels = {"Employ�","Produit","Montant HT",
-                             "Date Cr�ation","Date Livraison","Statut","Priorit�","Mail Client"};
+    QStringList colLabels = {"Employé","Produit","Montant HT",
+                             "Date Création","Date Livraison","Statut","Priorité","Mail Client"};
     QStringList colSql    = {"","PRODUIT","MONTANT",
                              "DATE_CREATION","DATE_LIVRAISON","STATUT","PRIORITE",""};
 
-    // Crit�re 1
-    QGroupBox *g1 = new QGroupBox("Crit�re principal");
+    // Critère 1
+    QGroupBox *g1 = new QGroupBox("Critère principal");
     QHBoxLayout *l1 = new QHBoxLayout(g1);
     l1->setContentsMargins(8, 4, 8, 6);
     l1->setSpacing(6);
     QComboBox *col1 = new QComboBox(); QComboBox *ord1 = new QComboBox();
     for (int i = 0; i < colLabels.size(); ++i)
         if (!colSql[i].isEmpty()) col1->addItem(colLabels[i], colSql[i]);
-    col1->setCurrentIndex(2); // Montant par d�faut
-    ord1->addItem("? D�croissant", false);
-    ord1->addItem("? Croissant",   true);
+    col1->setCurrentIndex(2); // Montant par défaut
+    ord1->addItem("↓ Décroissant", false);
+    ord1->addItem("↑ Croissant",   true);
     ord1->setFixedWidth(120);
     l1->addWidget(col1, 1); l1->addWidget(ord1);
     root->addWidget(g1);
 
-    // Crit�re 2
-    QGroupBox *g2 = new QGroupBox("Crit�re secondaire (optionnel)");
+    // Critère 2
+    QGroupBox *g2 = new QGroupBox("Critère secondaire (optionnel)");
     QHBoxLayout *l2 = new QHBoxLayout(g2);
     l2->setContentsMargins(8, 4, 8, 6);
     l2->setSpacing(6);
     QComboBox *col2 = new QComboBox(); QComboBox *ord2 = new QComboBox();
-    col2->addItem("� Aucun �", "");
+    col2->addItem("— Aucun —", "");
     for (int i = 0; i < colLabels.size(); ++i)
         if (!colSql[i].isEmpty()) col2->addItem(colLabels[i], colSql[i]);
-    ord2->addItem("? D�croissant", false);
-    ord2->addItem("? Croissant",   true);
+    ord2->addItem("↓ Décroissant", false);
+    ord2->addItem("↑ Croissant",   true);
     ord2->setFixedWidth(120);
     l2->addWidget(col2, 1); l2->addWidget(ord2);
     root->addWidget(g2);
@@ -2938,8 +3260,8 @@ void MainWindow::onTrierProduction()
 
     // Boutons
     QHBoxLayout *btns = new QHBoxLayout(); btns->setSpacing(8);
-    QPushButton *btnReset  = new QPushButton("? R�initialiser");
-    QPushButton *btnApply  = new QPushButton("? Appliquer");
+    QPushButton *btnReset  = new QPushButton("↺ Réinitialiser");
+    QPushButton *btnApply  = new QPushButton("✔ Appliquer");
     QPushButton *btnCancel = new QPushButton("Annuler");
     btnApply->setStyleSheet(
         "QPushButton{background:#6B2737;color:white;border:none;border-radius:5px;"
@@ -3000,13 +3322,13 @@ void MainWindow::onTrierProduction()
 
 void MainWindow::updateProductionStatsCards()
 {
-    // Optimisation: 1 seule requ�te au lieu de 4
+    // Optimisation: 1 seule requéte au lieu de 4
     QSqlQuery query(Connection::instance()->getDatabase());
     
     QString sql = "SELECT "
                   "COUNT(*) AS total, "
                   "SUM(CASE WHEN STATUT = 'En Production' THEN 1 ELSE 0 END) AS en_prod, "
-                  "SUM(CASE WHEN STATUT = 'Termin�' THEN 1 ELSE 0 END) AS terminees, "
+                  "SUM(CASE WHEN STATUT = 'Terminé' THEN 1 ELSE 0 END) AS terminees, "
                   "NVL(SUM(MONTANT), 0) AS montant_total "
                   "FROM COMMANDES";
     
@@ -3020,16 +3342,16 @@ void MainWindow::updateProductionStatsCards()
         montantTotal = query.value(3).toDouble();
     }
     
-    // Mettre � jour les labels
+    // Mettre à jour les labels
     ui->statsValueProduction1->setText(QString::number(total));
     ui->statsValueProduction2->setText(QString::number(enProd));
     ui->statsValueProduction3->setText(QString::number(terminees));
     ui->statsValueProduction4->setText(QString::number(montantTotal, 'f', 2) + " DT");
     
-    qDebug() << "?? Statistiques mises � jour:";
+    qDebug() << "?? Statistiques mises à jour:";
     qDebug() << "   Total:" << total;
     qDebug() << "   En Production:" << enProd;
-    qDebug() << "   Termin�es:" << terminees;
+    qDebug() << "   Terminées:" << terminees;
     qDebug() << "   Montant Total:" << montantTotal << "DT";
 }
 
@@ -3037,14 +3359,14 @@ void MainWindow::onCreerProduction()
 {
     ProductionDialog dlg(this, ProductionDialog::AddMode);
 
-    // Ajouter �tat paiement directement dans le dialogue
+    // Ajouter état paiement directement dans le dialogue
     QComboBox *cmbPaiement = new QComboBox(&dlg);
-    cmbPaiement->addItems({"Non pay�e", "Pay�e"});
+    cmbPaiement->addItems({"Non payée", "Payée"});
     QFormLayout *form = dlg.findChild<QFormLayout*>();
     if (!form) {
         // Chercher dans les layouts enfants
         for (auto *lay : dlg.findChildren<QGridLayout*>()) {
-            lay->addWidget(new QLabel("�tat Paiement :", &dlg), lay->rowCount(), 0);
+            lay->addWidget(new QLabel("état Paiement :", &dlg), lay->rowCount(), 0);
             lay->addWidget(cmbPaiement, lay->rowCount()-1, 1);
             break;
         }
@@ -3053,25 +3375,38 @@ void MainWindow::onCreerProduction()
     if (dlg.exec() == QDialog::Accepted) {
         qDebug() << "========== AJOUT COMMANDE ==========";
         
-        // Cr�er l'objet Production
+        // Créer l'objet Production
         Production prod;
         
-        // G�n�rer une r�f�rence unique
+        // Générer une référence unique au format ABC + 3 chiffres
         QString ref = dlg.getReference();
         if (ref.isEmpty()) {
-            ref = QString("PROD-%1-%2")
-                .arg(QDate::currentDate().year())
-                .arg(QTime::currentTime().toString("HHmmss"));
+            // Fallback : même logique ABC100, ABC101...
+            QSqlQuery query(Connection::instance()->getDatabase());
+            query.prepare("SELECT REFERENCE FROM COMMANDES WHERE REFERENCE LIKE 'ABC%' ORDER BY REFERENCE DESC");
+            int nextNum = 100;
+            if (query.exec()) {
+                while (query.next()) {
+                    QString r = query.value(0).toString();
+                    if (r.length() == 6 && r.startsWith("ABC")) {
+                        bool ok;
+                        int num = r.mid(3).toInt(&ok);
+                        if (ok && num >= nextNum) nextNum = num + 1;
+                    }
+                }
+            }
+            if (nextNum > 999) nextNum = 100;
+            ref = QString("ABC%1").arg(nextNum);
         }
         
         prod.setReference(ref);
-        prod.setType(dlg.getProduit()); // Le nom du produit (ex: "Sac � Main Cuir") va dans PRODUIT
+        prod.setType(dlg.getProduit()); // Le nom du produit (ex: "Sac à Main Cuir") va dans PRODUIT
         prod.setServiceVente(dlg.getProduit());
         prod.setMontant(dlg.getQuantite().toDouble()); // getQuantite() contient le prix saisi
-        prod.setIdEmploye(dlg.getEmployeId());  // R�cup�rer l'ID de l'employ� s�lectionn�
+        prod.setIdEmploye(dlg.getEmployeId());  // Récupérer l'ID de l'employé sélectionné
         prod.setMailClient(dlg.getMailClient());
         
-        // G�rer les dates
+        // Gérer les dates
         QDate dateCreation = QDate::fromString(dlg.getDateDebut(), "dd/MM/yyyy");
         QDate dateLivraison = QDate::fromString(dlg.getDateFin(), "dd/MM/yyyy");
         
@@ -3093,7 +3428,7 @@ void MainWindow::onCreerProduction()
         qDebug() << "Reference:" << prod.getReference();
         qDebug() << "Type:" << prod.getType();
         qDebug() << "Montant:" << prod.getMontant();
-        qDebug() << "ID Employe:" << prod.getIdEmploye();  // IMPORTANT: V�rifier l'ID
+        qDebug() << "ID Employe:" << prod.getIdEmploye();  // IMPORTANT: Vérifier l'ID
         qDebug() << "Date Creation:" << prod.getDateCreation().toString("yyyy-MM-dd");
         qDebug() << "Date Livraison:" << prod.getDateLivraisonPrevue().toString("yyyy-MM-dd");
         qDebug() << "Statut:" << prod.getStatut();
@@ -3101,12 +3436,12 @@ void MainWindow::onCreerProduction()
         
         ProductionDAO dao;
         if (dao.ajouter(prod)) {
-            qDebug() << "✅ Commande ajoutée avec succès";
-            NotificationWidget::show("Commande créée", prod.getReference() + " enregistrée.", NotificationWidget::Success);
-            QMessageBox::information(this, "Succès", "Commande ajoutée avec succès!");
+            qDebug() << "Commande ajoutee avec succes";
+            NotificationWidget::show("Commande creee", prod.getReference() + " enregistree.", NotificationWidget::Success);
+            QMessageBox::information(this, "Succes", "Commande ajoutee avec succes!");
             loadProductionData();
         } else {
-            qDebug() << "? �chec de l'ajout";
+            qDebug() << "Echec de l'ajout";
             QMessageBox::critical(this, "Erreur", "Erreur lors de l'ajout de la commande.");
         }
     }
@@ -3116,7 +3451,7 @@ void MainWindow::onModifierProduction()
 {
     int row = ui->productionTable->currentRow();
     if (row < 0) {
-        QMessageBox::warning(this, "Attention", "Veuillez s�lectionner une commande.");
+        QMessageBox::warning(this, "Attention", "Veuillez sélectionner une commande.");
         return;
     }
     
@@ -3133,11 +3468,11 @@ void MainWindow::onModifierProduction()
     refE.setReadOnly(true);
     refE.setStyleSheet("background-color: #F0EBE5; color: #888; border: 2px solid #BCAAA4; border-radius:6px; padding:8px;");
     
-    // Remplacer LineEdit par ComboBox pour l'employ�
+    // Remplacer LineEdit par ComboBox pour l'employé
     QComboBox employeC(&d);
     QMap<int, QString> employeMap;
     
-    // Charger les employ�s depuis la base de donn�es
+    // Charger les employés depuis la base de données
     QSqlQuery query(Connection::instance()->getDatabase());
     QString sql = "SELECT ID_EMPLOYE, NOM, PRENOM FROM EMPLOYES ORDER BY NOM, PRENOM";
     if (query.exec(sql)) {
@@ -3151,7 +3486,7 @@ void MainWindow::onModifierProduction()
         }
     }
     
-    // S�lectionner l'employ� actuel
+    // Sélectionner l'employé actuel
     QString employeActuel = cellText(ui->productionTable, row, 2);
     int indexEmploye = employeC.findText(employeActuel);
     if (indexEmploye >= 0) {
@@ -3166,9 +3501,9 @@ void MainWindow::onModifierProduction()
                 typeC.addItem(qa.value(0).toString(), qa.value(0).toString());
         }
         if (typeC.count() == 0)
-            typeC.addItems({"Sac � Main Cuir","Portefeuille","Ceinture","Sacoche","Porte-documents","Sac � Dos"});
+            typeC.addItems({"Sac à Main Cuir","Portefeuille","Ceinture","Sacoche","Porte-documents","Sac à Dos"});
     }
-    // Pr�-s�lectionner le produit actuel
+    // Pré-sélectionner le produit actuel
     for (int i = 0; i < typeC.count(); ++i) {
         if (typeC.itemData(i).toString() == cellText(ui->productionTable, row, 3)) {
             typeC.setCurrentIndex(i); break;
@@ -3198,23 +3533,23 @@ void MainWindow::onModifierProduction()
     dlE.setDisplayFormat("dd/MM/yyyy");
 
     QComboBox statC(&d);
-    statC.addItems({"En Attente", "Planifi�", "En Cours", "En Production", "Suspendu", "Termin�", "Annul�"});
+    statC.addItems({"En Attente", "Planifié", "En Cours", "En Production", "Suspendu", "Terminé", "Annulé"});
     statC.setCurrentText(cellText(ui->productionTable, row, 8));
 
     QComboBox prioC(&d);
     prioC.addItems({"Basse", "Normale", "Urgente"});
     prioC.setCurrentText(cellText(ui->productionTable, row, 9));
 
-    form.addRow("R�f�rence *:", &refE);
-    form.addRow("Employ� *:", &employeC);
-    form.addRow("Produit:", &typeC);
-    form.addRow("Montant HT *:", &montantE);
-    form.addRow("Date Cr�ation:", &dcE);
-    form.addRow("Date Livraison:", &dlE);
-    form.addRow("Statut:", &statC);
-    form.addRow("Priorit�:", &prioC);
+    form.addRow("Référence :", &refE);
+    form.addRow("Employé :", &employeC);
+    form.addRow("Produit :", &typeC);
+    form.addRow("Montant HT :", &montantE);
+    form.addRow("Date Création :", &dcE);
+    form.addRow("Date Livraison :", &dlE);
+    form.addRow("Statut :", &statC);
+    form.addRow("Priorité :", &prioC);
 
-    // ComboBox client charg� depuis la BD
+    // ComboBox client chargé depuis la BD
     QComboBox clientC(&d);
     clientC.addItem("-- Aucun client --", "");
     QString mailActuel = "";
@@ -3237,9 +3572,9 @@ void MainWindow::onModifierProduction()
     }
     form.addRow("Client :", &clientC);
 
-    // �tat paiement
+    // État paiement
     QComboBox paiementC(&d);
-    paiementC.addItems({"Non pay�e", "Pay�e"});
+    paiementC.addItems({"Non payée", "Payée"});
     {
         QSqlQuery qp(Connection::instance()->getDatabase());
         qp.prepare("SELECT ETAT FROM COMMANDES WHERE ID_COMMANDE = :id");
@@ -3250,7 +3585,7 @@ void MainWindow::onModifierProduction()
             if (idx >= 0) paiementC.setCurrentIndex(idx);
         }
     }
-    form.addRow("�tat Paiement :", &paiementC);
+    form.addRow("État Paiement :", &paiementC);
 
     lay.addLayout(&form);
 
@@ -3287,9 +3622,9 @@ void MainWindow::onModifierProduction()
         
         ProductionDAO dao;
         if (dao.modifier(prod)) {
-            NotificationWidget::show("Commande modifiée", prod.getReference() + " mise à jour.", NotificationWidget::Success);
-            QMessageBox::information(this, "Succès", "Commande modifiée avec succès!");
-            loadProductionData(); // Actualiser l'affichage
+            NotificationWidget::show("Commande modifiee", prod.getReference() + " mise a jour.", NotificationWidget::Success);
+            QMessageBox::information(this, "Succes", "Commande modifiee avec succes!");
+            loadProductionData();
         } else {
             QMessageBox::critical(this, "Erreur", "Erreur lors de la modification de la commande.");
         }
@@ -3299,7 +3634,7 @@ void MainWindow::onModifierProduction()
 void MainWindow::onSuiviProduction()
 {
     int row = ui->productionTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","S�lectionnez une commande."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Sélectionnez une commande."); return; }
     QString ref    = cellText(ui->productionTable,row,1);
     QString employe = cellText(ui->productionTable,row,2);
     QString statut = cellText(ui->productionTable,row,8);
@@ -3320,22 +3655,22 @@ void MainWindow::onSuiviProduction()
                 "<div class='status'>" + status + "</div>"
                 "<div class='desc'>" + desc + "</div></div>";
     };
-    step(dc,"? Commande cr��e","La commande a �t� enregistr�e dans le syst�me");
-    if (statut=="Planifi�"||statut=="En Production"||statut=="Termin�")
+    step(dc,"✅ Commande créée","La commande a été enregistrée dans le système");
+    if (statut=="Planifié"||statut=="En Production"||statut=="Terminé")
         step(QDate::fromString(dc,"dd/MM/yyyy").addDays(1).toString("dd/MM/yyyy"),
-             "? Planifi�e","La commande a �t� planifi�e pour la production");
-    if (statut=="En Production"||statut=="Termin�")
+             "? Planifiée","La commande a été planifiée pour la production");
+    if (statut=="En Production"||statut=="Terminé")
         step(QDate::fromString(dc,"dd/MM/yyyy").addDays(3).toString("dd/MM/yyyy"),
              "? En production","La commande est en cours de fabrication");
-    if (statut=="Termin�")
-        step(dl,"? Termin�e","La commande a �t� termin�e et livr�e avec succ�s");
+    if (statut=="Terminé")
+        step(dl,"? Terminée","La commande a été terminée et livrée avec succès");
     else
-        step(dl+" (Pr�vu)","? Livraison pr�vue","Date de livraison estim�e");
+        step(dl+" (Prévu)","? Livraison prévue","Date de livraison estimée");
     html += "</body></html>";
 
     QDialog dlg(this); dlg.setWindowTitle("Suivi - "+ref); dlg.setMinimumSize(650,600);
     QVBoxLayout lay(&dlg); lay.setContentsMargins(20,20,20,20);
-    auto *info = new QLabel(QString("<b>Ref:</b> %1 | <b>Employ�:</b> %2 | <b>Priorit�:</b> %3")
+    auto *info = new QLabel(QString("<b>Ref:</b> %1 | <b>Employé:</b> %2 | <b>Priorité:</b> %3")
                             .arg(ref,employe,prio));
     info->setStyleSheet("background:#F8F8F8;border-radius:6px;padding:10px;");
     lay.addWidget(info);
@@ -3359,7 +3694,7 @@ void MainWindow::onPlanificationProduction()
 void MainWindow::onFactureProduction()
 {
     int row = ui->productionTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","S�lectionnez une commande."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Sélectionnez une commande."); return; }
 
     QString id         = cellText(ui->productionTable, row, 0);
     QString ref        = cellText(ui->productionTable, row, 1);
@@ -3387,7 +3722,7 @@ void MainWindow::onFactureProduction()
 
     // -- Dialogue -------------------------------------------------------------
     QDialog dlg(this);
-    dlg.setWindowTitle("Facture � " + ref);
+    dlg.setWindowTitle("Facture é " + ref);
     dlg.setMinimumSize(780, 700);
     dlg.setStyleSheet("QDialog { background: #FBF5F0; }");
 
@@ -3405,7 +3740,7 @@ void MainWindow::onFactureProduction()
     lay->setContentsMargins(36, 32, 36, 32);
     lay->setSpacing(20);
 
-    // -- EN-T�TE --------------------------------------------------------------
+    // -- EN-TéTE --------------------------------------------------------------
     QHBoxLayout *hdr = new QHBoxLayout();
 
     QVBoxLayout *logoCol = new QVBoxLayout();
@@ -3422,7 +3757,7 @@ void MainWindow::onFactureProduction()
     QLabel *facLbl = new QLabel("FACTURE");
     facLbl->setStyleSheet("font-size:34px; font-weight:bold; color:#6B2737; letter-spacing:4px;");
     facLbl->setAlignment(Qt::AlignRight);
-    QLabel *numLbl = new QLabel("N� " + ref);
+    QLabel *numLbl = new QLabel("Né " + ref);
     numLbl->setStyleSheet("font-size:13px; color:#555;"); numLbl->setAlignment(Qt::AlignRight);
     QLabel *dateLbl = new QLabel("Date : " + QDate::currentDate().toString("dd MMMM yyyy"));
     dateLbl->setStyleSheet("font-size:12px; color:#888;"); dateLbl->setAlignment(Qt::AlignRight);
@@ -3430,7 +3765,7 @@ void MainWindow::onFactureProduction()
     hdr->addLayout(titleCol);
     lay->addLayout(hdr);
 
-    // S�parateur
+    // Séparateur
     auto makeSep = [&]() {
         QFrame *s = new QFrame(); s->setFrameShape(QFrame::HLine);
         s->setStyleSheet("color:#E0E0E0;"); return s;
@@ -3458,22 +3793,22 @@ void MainWindow::onFactureProduction()
     QHBoxLayout *infoRow = new QHBoxLayout();
     infoRow->addWidget(makeInfoBox("", {
         "<b>CUIREA Management</b>", "Zone Industrielle, Tunis, Tunisie",
-        "T�l : +216 71 000 000", "contact@cuirea.tn"
+        "Tél : +216 71 000 000", "contact@cuirea.tn"
     }));
     infoRow->addSpacing(20);
-    infoRow->addWidget(makeInfoBox("Factur� �", {
+    infoRow->addWidget(makeInfoBox("Facturé é", {
         mailClient.isEmpty() ? "Client interne" : mailClient,
-        "Livraison pr�vue : " + dl
+        "Livraison prévue : " + dl
     }));
     lay->addLayout(infoRow);
 
     // -- TABLEAU ARTICLES ------------------------------------------------------
-    QLabel *tblTitle = new QLabel("D�tail de la commande");
+    QLabel *tblTitle = new QLabel("Détail de la commande");
     tblTitle->setStyleSheet("font-size:11px; font-weight:bold; color:#6B2737; text-transform:uppercase; letter-spacing:1px;");
     lay->addWidget(tblTitle);
 
     QTableWidget *table = new QTableWidget(1, 4, page);
-    table->setHorizontalHeaderLabels({"Description", "Prix Unitaire", "Quantit�", "Total"});
+    table->setHorizontalHeaderLabels({"Description", "Prix Unitaire", "Quantité", "Total"});
     table->horizontalHeader()->setStyleSheet(
         "QHeaderView::section { background:#6B2737; color:white; font-weight:bold; "
         "font-size:12px; padding:10px; border:none; }");
@@ -3490,7 +3825,7 @@ void MainWindow::onFactureProduction()
         "QTableWidget { border:1px solid #E8D5C0; border-radius:6px; font-size:12px; }"
         "QTableWidget::item { padding:10px 12px; color:#333; }"
         "QTableWidget { alternate-background-color:#FBF5F0; }");
-    table->setItem(0,0, new QTableWidgetItem(type + " � R�f. " + ref));
+    table->setItem(0,0, new QTableWidgetItem(type + "  Réf. " + ref));
     table->setItem(0,1, new QTableWidgetItem(QString::number(ht,'f',2) + " DT"));
     table->setItem(0,2, new QTableWidgetItem("1"));
     table->setItem(0,3, new QTableWidgetItem(QString::number(ht,'f',2) + " DT"));
@@ -3500,13 +3835,13 @@ void MainWindow::onFactureProduction()
     // -- TOTAUX + QR -----------------------------------------------------------
     QHBoxLayout *totRow = new QHBoxLayout();
 
-    // QR code � gauche
+    // QR code à gauche
     QLabel *qrLabel = new QLabel("...");
     qrLabel->setFixedSize(110, 110);
     qrLabel->setAlignment(Qt::AlignCenter);
     qrLabel->setStyleSheet("border:2px solid #C4923A; border-radius:6px; background:white; font-size:10px; color:#888;");
 
-    // Requ�te DB pour enrichir l'URL avec les donn�es compl�tes de l'article
+    // Requéte DB pour enrichir l'URL avec les données complétes de l'article
     QString condUrl;
     {
         QString categoriePdf, couleurPdf, dimensionsPdf, prixPdf, statutArtPdf;
@@ -3541,9 +3876,9 @@ void MainWindow::onFactureProduction()
         }
         if (prixPdf.isEmpty())        prixPdf        = QString::number(ht, 'f', 2) + " DT";
         if (statutArtPdf.isEmpty())   statutArtPdf   = statut;
-        if (categoriePdf.isEmpty())   categoriePdf   = "�";
-        if (couleurPdf.isEmpty())     couleurPdf     = "�";
-        if (dimensionsPdf.isEmpty())  dimensionsPdf  = "�";
+        if (categoriePdf.isEmpty())   categoriePdf   = "é";
+        if (couleurPdf.isEmpty())     couleurPdf     = "é";
+        if (dimensionsPdf.isEmpty())  dimensionsPdf  = "é";
 
         condUrl = QString("https://willowy-halva-d44d1d.netlify.app"
                           "?ref=%1&produit=%2&commande=%3&categorie=%4&type=%5&couleur=%6&dimensions=%7&prix=%8&statut=%9")
@@ -3567,7 +3902,7 @@ void MainWindow::onFactureProduction()
     qrCol->addWidget(qrLink,  0, Qt::AlignCenter);
     totRow->addLayout(qrCol);
 
-    // G�n�rer le QR via API
+    // Générer le QR via API
     {
         QNetworkAccessManager *mgr = new QNetworkAccessManager(page);
         QString qrApiUrl = QString("https://api.qrserver.com/v1/create-qr-code/?size=110x110&ecc=M&data=%1")
@@ -3625,7 +3960,7 @@ void MainWindow::onFactureProduction()
     noteLay->setContentsMargins(14,10,14,10);
     QLabel *noteT = new QLabel("Note");
     noteT->setStyleSheet("font-weight:bold; font-size:11px; color:#C4923A;");
-    QLabel *noteV = new QLabel("Priorit� : " + priorite + "  |  Statut : " + statut + "  |  Cr��e le : " + dc);
+    QLabel *noteV = new QLabel("Priorité : " + priorite + "  |  Statut : " + statut + "  |  Créée le : " + dc);
     noteV->setStyleSheet("font-size:12px; color:#555;");
     noteLay->addWidget(noteT); noteLay->addWidget(noteV);
     lay->addWidget(noteBox);
@@ -3648,7 +3983,7 @@ void MainWindow::onFactureProduction()
     footer->addStretch();
     footer->addLayout(makeFooterCol("Paiement",   {"Virement bancaire", "IBAN : TN59 XXXX XXXX"}));
     footer->addStretch();
-    footer->addLayout(makeFooterCol("Conditions", {"Paiement sous 30 jours", "P�nalit�s : 1,5%/mois"}));
+    footer->addLayout(makeFooterCol("Conditions", {"Paiement sous 30 jours", "Pénalités : 1,5%/mois"}));
     lay->addLayout(footer);
 
     scroll->setWidget(page);
@@ -3674,13 +4009,13 @@ void MainWindow::onFactureProduction()
     btns->addStretch(); btns->addWidget(pdf); btns->addWidget(email); btns->addWidget(close);
     root->addLayout(btns);
 
-    // HTML pour export PDF � fid�le au design Qt affich�
+    // HTML pour export PDF fidèle au design Qt affiché
     QString htmlPdf = QString(R"(
 <html><head><meta charset='UTF-8'><style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: Arial, sans-serif; background: #FBF5F0; color: #3E1020; padding: 36px; }
 
-  /* EN-T�TE */
+  /* EN-TéTE */
   .header { display:table; width:100%%; margin-bottom:18px; }
   .header-left  { display:table-cell; vertical-align:top; }
   .header-right { display:table-cell; vertical-align:top; text-align:right; }
@@ -3738,7 +4073,7 @@ void MainWindow::onFactureProduction()
                       text-transform:uppercase; margin-bottom:4px; }
 </style></head><body>
 
-<!-- EN-T�TE -->
+<!-- EN-TéTE -->
 <div class='header'>
   <div class='header-left'>
     <div class='logo'>CUIREA</div>
@@ -3877,14 +4212,14 @@ void MainWindow::onFactureProduction()
         painter.end();
 
         QDesktopServices::openUrl(QUrl::fromLocalFile(fn));
-        QMessageBox::information(&dlg, "Succ�s", "Facture export�e :\n" + fn);
+        QMessageBox::information(&dlg, "Succès", "Facture exportée :\n" + fn);
     });
     //fonction mail client
     connect(email, &QPushButton::clicked, [&] {
 
         if (mailClient.isEmpty()) {
             QMessageBox::warning(&dlg, "Email manquant",
-                                 "? Aucun email client associ� � cette commande.");
+                                 "? Aucun email client associé à cette commande.");
             return;
         }
 
@@ -3905,29 +4240,29 @@ void MainWindow::onFactureProduction()
             "<p>Bonjour <b>" + mailClient+ "</b>,</p>"
 
             "<p>"
-            "Nous vous informons que votre commande a �t� trait�e avec succ�s."
+            "Nous vous informons que votre commande a été traitée avec succès."
             "</p>"
 
 
-            "<p><b>Employ� responsable :</b> " + employe + "</p>"
-            "<p><b>R�f�rence commande :</b> " + ref + "</p>"
+            "<p><b>Employé responsable :</b> " + employe + "</p>"
+            "<p><b>Référence commande :</b> " + ref + "</p>"
             "<p><b>Produit :</b> " + type + "</p>"
 
             "<hr>"
 
             "<p>"
-            "Votre facture officielle est disponible en pi�ce jointe de cet email."
+            "Votre facture officielle est disponible en piéce jointe de cet email."
             "</p>"
 
             "<br>"
 
             "<p>Cordialement,</p>"
-            "<p><b>L'�quipe CUIREA</b></p>"
+            "<p><b>L'équipe CUIREA</b></p>"
 
             "<hr>"
 
             "<p style='font-size:12px;color:gray;text-align:center;'>"
-            "Cet email est g�n�r� automatiquement suite � votre commande."
+            "Cet email est généré automatiquement suite à votre commande."
             "</p>"
 
             "</div>"
@@ -3942,7 +4277,7 @@ void MainWindow::onFactureProduction()
 
             "<b>Contact</b><br>"
             "Email : contact@cuirea.tn<br>"
-            "T�l : +216 71 000 000<br>"
+            "Tél : +216 71 000 000<br>"
 
             "</footer>"
 
@@ -3957,11 +4292,11 @@ void MainWindow::onFactureProduction()
         bool ok = mailer.sendEmail(mailClient, subject, body, attachmentPath);
 
         if (ok)
-            QMessageBox::information(&dlg, "Email envoy�",
-                                     "? Email envoy� � " + mailClient);
+            QMessageBox::information(&dlg, "Email envoyé",
+                                     "? Email envoyé é " + mailClient);
         else
             QMessageBox::critical(&dlg, "Erreur",
-                                  "? �chec de l'envoi � " + mailClient);
+                                  "? échec de l'envoi é " + mailClient);
 
     }); // FIN DU connect
     connect(close, &QPushButton::clicked, &dlg, &QDialog::accept);
@@ -3995,7 +4330,7 @@ void MainWindow::onRechercherProduction(const QString &text)
         int row = ui->productionTable->rowCount();
         ui->productionTable->insertRow(row);
 
-        // M�me mapping que loadProductionData()
+        // Même mapping que loadProductionData()
         // SQL: 0=ID_COMMANDE, 1=REFERENCE, 2=EMPLOYE, 3=TYPE,
         //      4=DATE_CREATION, 5=DATE_LIVRAISON, 6=STATUT, 7=PRIORITE, 8=MONTANT
 
@@ -4004,13 +4339,13 @@ void MainWindow::onRechercherProduction(const QString &text)
         ui->productionTable->setItem(row, 2, new QTableWidgetItem(model->data(model->index(i, 2)).toString()));
         ui->productionTable->setItem(row, 3, new QTableWidgetItem(model->data(model->index(i, 3)).toString()));
         ui->productionTable->setItem(row, 4, new QTableWidgetItem(QString::number(model->data(model->index(i, 8)).toDouble(), 'f', 2) + " DT"));
-        // Col 5 : �tat Paiement
+        // Col 5 : état Paiement
         {
             QString etat = model->data(model->index(i, 10)).toString();
-            if (etat.isEmpty()) etat = "Non pay�e";
+            if (etat.isEmpty()) etat = "Non payée";
             QTableWidgetItem *etatItem = new QTableWidgetItem(etat);
             etatItem->setTextAlignment(Qt::AlignCenter);
-            if (etat.toLower() == "pay�e" || etat.toLower() == "payee")
+            if (etat.toLower() == "payée" || etat.toLower() == "payee")
                 etatItem->setBackground(QColor("#27AE60")), etatItem->setForeground(Qt::white);
             else
                 etatItem->setBackground(QColor("#E74C3C")), etatItem->setForeground(Qt::white);
@@ -4041,7 +4376,7 @@ void MainWindow::onProductionTableContextMenu(const QPoint &pos)
     menu.addSeparator();
     auto *supp    = menu.addAction("Supprimer");
     menu.addSeparator();
-    auto *fact    = menu.addAction("G�n�rer facture");
+    auto *fact    = menu.addAction("Générer facture");
     auto *stats   = menu.addAction("Statistiques");
 
     auto *act = menu.exec(ui->productionTable->viewport()->mapToGlobal(pos));
@@ -4056,7 +4391,7 @@ void MainWindow::onSupprimerProduction()
 {
     int row = ui->productionTable->currentRow();
     if (row < 0) {
-        QMessageBox::warning(this, "Attention", "S�lectionnez une commande.");
+        QMessageBox::warning(this, "Attention", "Sélectionnez une commande.");
         return;
     }
     
@@ -4065,14 +4400,14 @@ void MainWindow::onSupprimerProduction()
     int id = cellText(ui->productionTable, row, 0).toInt();
     
     if (QMessageBox::question(this, "Confirmer",
-            QString("Supprimer la commande %1 de l'employ� %2 ?").arg(ref, employe),
+            QString("Supprimer la commande %1 de l'employe %2 ?").arg(ref, employe),
             QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes) {
         
         ProductionDAO dao;
         if (dao.supprimer(id)) {
-            NotificationWidget::show("Commande supprimée", "La commande a été supprimée.", NotificationWidget::Warning);
-            QMessageBox::information(this, "Succès", "Commande supprimée avec succès!");
-            loadProductionData(); // Actualiser l'affichage
+            NotificationWidget::show("Commande supprimee", "La commande a ete supprimee.", NotificationWidget::Warning);
+            QMessageBox::information(this, "Succes", "Commande supprimee avec succes!");
+            loadProductionData();
         } else {
             QMessageBox::critical(this, "Erreur", "Erreur lors de la suppression de la commande.");
         }
@@ -4094,13 +4429,13 @@ void MainWindow::afficherStatistiquesModernes()
     static const QString C_BORDURE      = "#E8DDD5";
 
     QSqlDatabase db = Connection::instance()->getDatabase();
-    if (!db.isOpen()) { QMessageBox::warning(this,"Erreur","Base de donn�es non connect�e."); return; }
+    if (!db.isOpen()) { QMessageBox::warning(this,"Erreur","Base de données non connectée."); return; }
 
     QSqlQuery query(db);
     query.exec("SELECT COUNT(*), NVL(SUM(MONTANT),0) FROM COMMANDES");
     int total = 0; double montantTotal = 0;
     if (query.next()) { total = query.value(0).toInt(); montantTotal = query.value(1).toDouble(); }
-    if (total == 0) { showInfo(this,"Statistiques","Aucune commande dans la base de donn�es."); return; }
+    if (total == 0) { showInfo(this,"Statistiques","Aucune commande dans la base de données."); return; }
 
     QMap<QString,int> statCnt, prioCnt;
     query.exec("SELECT STATUT, COUNT(*) FROM COMMANDES GROUP BY STATUT");
@@ -4109,14 +4444,14 @@ void MainWindow::afficherStatistiquesModernes()
     while (query.next()) prioCnt[query.value(0).toString()] = query.value(1).toInt();
 
     int enAttente  = statCnt.value("En Attente", 0);
-    int terminees  = statCnt.value("Termin�", 0);
+    int terminees  = statCnt.value("Terminé", 0);
     double taux    = total > 0 ? 100.0 * terminees / total : 0;
     double moyenne = total > 0 ? montantTotal / total : 0;
 
     // -- Dialogue -------------------------------------------------------------
     QDialog dlg(this);
     dlg.setWindowTitle("Statistiques de Production");
-    dlg.setMinimumSize(1000, 680);
+    dlg.setMinimumSize(1100, 750);
     dlg.setStyleSheet(QString("QDialog{background:%1;border-radius:10px;}").arg(C_CREME));
 
     QVBoxLayout *dlay = new QVBoxLayout(&dlg);
@@ -4135,7 +4470,7 @@ void MainWindow::afficherStatistiquesModernes()
     QLabel *dateLbl = new QLabel(QDate::currentDate().toString("dd/MM/yyyy") + "  |  Tous");
     dateLbl->setStyleSheet(QString("font-size:12px;color:%1;font-weight:bold;").arg(C_OR));
 
-    QPushButton *closeBtn = new QPushButton("?");
+    QPushButton *closeBtn = new QPushButton("✕");
     closeBtn->setFixedSize(32,32);
     closeBtn->setStyleSheet(
         "QPushButton{background:rgba(255,255,255,0.15);color:white;border:none;"
@@ -4197,22 +4532,27 @@ void MainWindow::afficherStatistiquesModernes()
     kpiLay->setSpacing(12);
     kpiLay->setContentsMargins(0,0,0,0);
 
-    kpiLay->addWidget(makeKPI("??",
+    double pctAttente = total > 0 ? 100.0 * enAttente / total : 0.0;
+    int enCours = statCnt.value("En Cours", 0) + statCnt.value("En Production", 0);
+    double pctEnCours = total > 0 ? 100.0 * enCours / total : 0.0;
+
+    kpiLay->addWidget(makeKPI("📦",
         QString::number(total),
         "Total commandes",
-        QString::number(enAttente) + " en attente"));
-    kpiLay->addWidget(makeKPI("??",
+        QString::number(enAttente) + " en attente ("
+            + QString::number(pctAttente,'f',1) + "%)"));
+    kpiLay->addWidget(makeKPI("💰",
         QLocale(QLocale::French).toString(montantTotal,'f',0) + " DT",
         "Chiffre d'affaires",
-        "+12% ce mois"));
-    kpiLay->addWidget(makeKPI("??",
-        QLocale(QLocale::French).toString(moyenne,'f',0) + " DT",
-        "Montant moyen",
-        "par commande"));
-    kpiLay->addWidget(makeKPI("?",
+        "Moy. " + QLocale(QLocale::French).toString(moyenne,'f',0) + " DT/cmd"));
+    kpiLay->addWidget(makeKPI("🔄",
+        QString::number(enCours),
+        "En cours de production",
+        QString::number(pctEnCours,'f',1) + "% du total"));
+    kpiLay->addWidget(makeKPI("✅",
         QString::number(taux,'f',1) + "%",
-        "Taux compl�tion",
-        QString::number(terminees) + " / " + QString::number(total) + " termin�es"));
+        "Taux complétion",
+        QString::number(terminees) + " / " + QString::number(total) + " terminées"));
     lay->addWidget(kpiRow);
 
     // -- GRAPHIQUES -----------------------------------------------------------
@@ -4240,42 +4580,136 @@ void MainWindow::afficherStatistiquesModernes()
         return card;
     };
 
-    // Camembert statuts
+    // ── Camembert statuts ─────────────────────────────────────────────────────
+    QWidget *pieCard = new QWidget();
+    pieCard->setStyleSheet(QString(
+        "QWidget{background:%1;border-radius:10px;border:0.5px solid %2;}").arg(C_BLANC, C_BORDURE));
+    QVBoxLayout *pieLay = new QVBoxLayout(pieCard);
+    pieLay->setContentsMargins(16,14,16,14);
+    pieLay->setSpacing(6);
+
+    QLabel *pieTitle = new QLabel("Répartition des statuts");
+    pieTitle->setAlignment(Qt::AlignCenter);
+    pieTitle->setStyleSheet(QString("font-size:14px;font-weight:bold;color:%1;border:none;").arg(C_BORDEAUX));
+    pieLay->addWidget(pieTitle);
+
     auto *pie = new QPieSeries();
-    pie->setHoleSize(0.45);
+    pie->setHoleSize(0.42);
     QMap<QString,QColor> statClrs;
     statClrs["En Attente"]    = QColor(C_OR);
     statClrs["Suspendu"]      = QColor(C_OR_PALE);
-    statClrs["Termin�"]       = QColor(C_BORDEAUX);
+    statClrs["Terminé"]       = QColor(C_BORDEAUX);
     statClrs["En Production"] = QColor(C_BORDEAUX_MID);
-    statClrs["Planifi�"]      = QColor("#B8956A");
-    statClrs["Annul�"]        = QColor("#7A3545");
+    statClrs["Planifié"]      = QColor("#B8956A");
+    statClrs["Annulé"]        = QColor("#7A3545");
+    statClrs["En Cours"]      = QColor("#8C5A6A");
+    statClrs["En livraison"]  = QColor("#6D8B74");
+
+    QLabel *clickLabel = new QLabel();
+    clickLabel->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    clickLabel->setStyleSheet(
+        "QLabel { background: transparent; border: none; padding: 2px 4px; }");
+    clickLabel->setWordWrap(false);
+    clickLabel->setTextFormat(Qt::RichText);
+    pieLay->addWidget(clickLabel); // ← en haut, juste sous le titre
+
     for (auto it = statCnt.begin(); it != statCnt.end(); ++it) {
-        auto *sl = pie->append(it.key(), it.value());
+        double pct = total > 0 ? 100.0 * it.value() / total : 0.0;
+        auto *sl = pie->append(QString("%1%").arg(pct, 0, 'f', 1), it.value());
         sl->setColor(statClrs.value(it.key(), QColor(C_GRIS)));
         sl->setBorderColor(QColor(C_BLANC));
+        sl->setLabelVisible(false);
+
+        // Hover : explode
         QObject::connect(sl, &QPieSlice::hovered, [sl](bool on){ sl->setExploded(on); });
+
+        // Clic : afficher "statut (XX.X%)" sous le graphique
+        QString statut = it.key();
+        QString pctStr = QString::number(pct, 'f', 1);
+        QColor  clr    = statClrs.value(statut, QColor(C_GRIS));
+        QObject::connect(sl, &QPieSlice::clicked, clickLabel,
+            [clickLabel, statut, pctStr, clr]() {
+                clickLabel->setText(
+                    QString("<span style='color:%1;text-decoration:underline;font-weight:bold;"
+                            "font-size:13px;'>%2 (%3%)</span>")
+                    .arg(clr.name()).arg(statut).arg(pctStr));
+                clickLabel->setStyleSheet(
+                    "QLabel { background: transparent; border: none; padding: 2px 4px; }");
+                clickLabel->setTextFormat(Qt::RichText);
+            });
     }
+
     auto *pc = new QChart();
     pc->addSeries(pie);
     pc->setBackgroundBrush(QColor(C_BLANC));
     pc->setBackgroundRoundness(0);
-    pc->setMargins(QMargins(0,0,0,0));
+    pc->setMargins(QMargins(4, 4, 4, 4));
     pc->setAnimationOptions(QChart::AllAnimations);
-    // Texte central du donut
-    QGraphicsTextItem *centerText = new QGraphicsTextItem(pc);
-    centerText->setHtml(QString("<div style='text-align:center;'>"
-        "<b style='color:%1;font-size:13px;'>Statuts</b><br/>"
-        "<span style='color:%2;font-size:11px;'>%3 types</span></div>")
-        .arg(C_BORDEAUX, C_GRIS).arg(statCnt.size()));
-    pc->legend()->setAlignment(Qt::AlignBottom);
-    pc->legend()->setFont(QFont("Arial", 9));
-    pc->legend()->setLabelColor(QColor(C_GRIS));
+    pc->legend()->setVisible(false);
+
     auto *pv = new QChartView(pc);
     pv->setRenderHint(QPainter::Antialiasing);
-    chartsLay->addWidget(wrapChart(pv, "R�partition des statuts"), 1);
+    pv->setFixedHeight(260);
+    pieLay->addWidget(pv);
 
-    // Barres priorit�s � 1 set par priorit�, 1 valeur chacun, cat�gories distinctes
+    // Tableau légende custom — toujours lisible, jamais tronqué
+    QWidget *legendTable = new QWidget();
+    legendTable->setStyleSheet("background:transparent;border:none;");
+    QGridLayout *legendGrid = new QGridLayout(legendTable);
+    legendGrid->setContentsMargins(4, 4, 4, 4);
+    legendGrid->setHorizontalSpacing(16);
+    legendGrid->setVerticalSpacing(6);
+
+    int col = 0, row = 0;
+    for (auto it = statCnt.begin(); it != statCnt.end(); ++it) {
+        double pct = total > 0 ? 100.0 * it.value() / total : 0.0;
+        QColor clr = statClrs.value(it.key(), QColor(C_GRIS));
+
+        QWidget *item = new QWidget();
+        item->setStyleSheet("background:transparent;border:none;");
+        QHBoxLayout *itemLay = new QHBoxLayout(item);
+        itemLay->setContentsMargins(0,0,0,0);
+        itemLay->setSpacing(6);
+
+        // Pastille couleur
+        QLabel *dot = new QLabel();
+        dot->setFixedSize(12, 12);
+        dot->setStyleSheet(QString(
+            "background:%1;border-radius:6px;border:none;").arg(clr.name()));
+
+        // Texte complet : "Statut — N (XX.X%)"
+        QLabel *txt = new QLabel(QString("%1 — %2 (%3%)")
+            .arg(it.key())
+            .arg(it.value())
+            .arg(pct, 0, 'f', 1));
+        txt->setStyleSheet(QString(
+            "color:%1;font-size:11px;font-weight:500;background:transparent;border:none;").arg(C_GRIS));
+        txt->setWordWrap(false);
+
+        itemLay->addWidget(dot);
+        itemLay->addWidget(txt);
+        itemLay->addStretch();
+
+        legendGrid->addWidget(item, row, col);
+        col++;
+        if (col >= 2) { col = 0; row++; }
+    }
+    pieLay->addWidget(legendTable);
+    chartsLay->addWidget(pieCard, 1);
+
+    // ── Barres priorités ──────────────────────────────────────────────────────
+    QWidget *barCard = new QWidget();
+    barCard->setStyleSheet(QString(
+        "QWidget{background:%1;border-radius:10px;border:0.5px solid %2;}").arg(C_BLANC, C_BORDURE));
+    QVBoxLayout *barLay = new QVBoxLayout(barCard);
+    barLay->setContentsMargins(16,14,16,14);
+    barLay->setSpacing(8);
+
+    QLabel *barTitle = new QLabel("Répartition des priorités");
+    barTitle->setAlignment(Qt::AlignCenter);
+    barTitle->setStyleSheet(QString("font-size:14px;font-weight:bold;color:%1;border:none;").arg(C_BORDEAUX));
+    barLay->addWidget(barTitle);
+
     QStringList prioOrder = {"Urgente","Haute","Normale","Basse"};
     QMap<QString,QColor> prioClrs;
     prioClrs["Urgente"] = QColor(C_BORDEAUX);
@@ -4283,65 +4717,105 @@ void MainWindow::afficherStatistiquesModernes()
     prioClrs["Normale"] = QColor(C_OR);
     prioClrs["Basse"]   = QColor(C_OR_PALE);
 
-    // Une s�rie par priorit� pr�sente, chacune avec 1 seule valeur
-    // et attach�e � sa propre cat�gorie via QBarCategoryAxis
     QStringList cats;
-    QList<QBarSet*> sets;
+    QList<int>  vals;
     for (const QString &p : prioOrder) {
         if (!prioCnt.contains(p)) continue;
         cats << p;
-        auto *set = new QBarSet(p);
-        set->setColor(prioClrs.value(p, QColor(C_GRIS)));
-        set->setLabelColor(Qt::white);
-        set->setBorderColor(Qt::transparent);
-        *set << prioCnt[p];
-        sets << set;
+        vals << prioCnt[p];
     }
 
-    // Utiliser une s�rie par set pour que chaque barre soit dans sa propre cat�gorie
+    int maxCnt = 0;
+    for (int v : vals) maxCnt = qMax(maxCnt, v);
+
     auto *bc = new QChart();
     bc->setBackgroundBrush(QColor(C_BLANC));
     bc->setBackgroundRoundness(0);
-    bc->setMargins(QMargins(0,0,0,0));
+    bc->setMargins(QMargins(4,4,4,4));
     bc->setAnimationOptions(QChart::SeriesAnimations);
+    bc->legend()->setVisible(false); // Légende Qt masquée — tableau custom en dessous
 
     auto *axX = new QBarCategoryAxis();
     axX->append(cats);
     axX->setLabelsColor(QColor(C_GRIS));
+    axX->setLabelsFont(QFont("Arial", 10));
     axX->setGridLineVisible(false);
     bc->addAxis(axX, Qt::AlignBottom);
 
     auto *axY = new QValueAxis();
+    axY->setRange(0, maxCnt + 1);
     axY->setLabelFormat("%d");
     axY->setLabelsColor(QColor(C_GRIS));
     axY->setGridLineColor(QColor(C_BORDURE));
+    axY->setTickCount(maxCnt + 2);
     bc->addAxis(axY, Qt::AlignLeft);
 
-    // Une QBarSeries par set � chaque s�rie a 1 set avec 1 valeur ? 1 barre par cat�gorie
-    for (int i = 0; i < sets.size(); ++i) {
-        auto *series = new QBarSeries();
-        series->setLabelsVisible(true);
-        series->setLabelsPosition(QAbstractBarSeries::LabelsCenter);
-        series->setLabelsFormat("@value");
-        // Remplir avec 0 pour les autres cat�gories, valeur r�elle pour la sienne
-        auto *set = new QBarSet(sets[i]->label());
-        set->setColor(sets[i]->color());
-        set->setLabelColor(Qt::white);
+    for (int i = 0; i < cats.size(); ++i) {
+        const QString &p   = cats[i];
+        int            cnt = vals[i];
+
+        auto *set = new QBarSet(p); // label court = juste le nom
+        set->setColor(prioClrs.value(p, QColor(C_GRIS)));
+        set->setLabelColor(QColor(C_BORDEAUX));
         set->setBorderColor(Qt::transparent);
         for (int j = 0; j < cats.size(); ++j)
-            *set << (j == i ? sets[i]->at(0) : 0);
+            *set << (j == i ? cnt : 0);
+
+        auto *series = new QBarSeries();
+        series->setLabelsVisible(true);
+        series->setLabelsPosition(QAbstractBarSeries::LabelsOutsideEnd);
+        series->setLabelsFormat("@value");
+        series->setBarWidth(0.5);
         series->append(set);
+
         bc->addSeries(series);
         series->attachAxis(axX);
         series->attachAxis(axY);
     }
-    bc->legend()->setAlignment(Qt::AlignBottom);
-    bc->legend()->setFont(QFont("Arial", 9));
-    bc->legend()->setLabelColor(QColor(C_GRIS));
+
     auto *bv = new QChartView(bc);
     bv->setRenderHint(QPainter::Antialiasing);
-    qDeleteAll(sets); // lib�rer les sets temporaires (les copies ont �t� faites dans chaque s�rie)
-    chartsLay->addWidget(wrapChart(bv, "R�partition des priorit�s"), 1);
+    bv->setFixedHeight(260);
+    barLay->addWidget(bv);
+
+    // Tableau légende custom priorités — toujours lisible
+    QWidget *prioLegend = new QWidget();
+    prioLegend->setStyleSheet("background:transparent;border:none;");
+    QGridLayout *prioGrid = new QGridLayout(prioLegend);
+    prioGrid->setContentsMargins(4,4,4,4);
+    prioGrid->setHorizontalSpacing(16);
+    prioGrid->setVerticalSpacing(6);
+
+    int pc2 = 0, pr2 = 0;
+    for (int i = 0; i < cats.size(); ++i) {
+        double pct = total > 0 ? 100.0 * vals[i] / total : 0.0;
+        QColor clr = prioClrs.value(cats[i], QColor(C_GRIS));
+
+        QWidget *item = new QWidget();
+        item->setStyleSheet("background:transparent;border:none;");
+        QHBoxLayout *itemLay = new QHBoxLayout(item);
+        itemLay->setContentsMargins(0,0,0,0);
+        itemLay->setSpacing(6);
+
+        QLabel *dot = new QLabel();
+        dot->setFixedSize(12, 12);
+        dot->setStyleSheet(QString("background:%1;border-radius:3px;border:none;").arg(clr.name()));
+
+        QLabel *txt = new QLabel(QString("%1 — %2 (%3%)")
+            .arg(cats[i]).arg(vals[i]).arg(pct, 0, 'f', 1));
+        txt->setStyleSheet(QString(
+            "color:%1;font-size:11px;font-weight:500;background:transparent;border:none;").arg(C_GRIS));
+
+        itemLay->addWidget(dot);
+        itemLay->addWidget(txt);
+        itemLay->addStretch();
+
+        prioGrid->addWidget(item, pr2, pc2);
+        pc2++;
+        if (pc2 >= 2) { pc2 = 0; pr2++; }
+    }
+    barLay->addWidget(prioLegend);
+    chartsLay->addWidget(barCard, 1);
 
     lay->addWidget(chartsRow);
     scroll->setWidget(inner);
@@ -4355,13 +4829,13 @@ void MainWindow::afficherStatistiquesModernes()
     btnRow->setContentsMargins(24,10,24,10);
     btnRow->setSpacing(10);
 
-    QPushButton *exportBtn = new QPushButton("?  Exporter CSV");
+    QPushButton *exportBtn = new QPushButton("⬇  Exporter CSV");
     exportBtn->setStyleSheet(QString(
         "QPushButton{background:%1;color:white;border:none;border-radius:6px;"
         "padding:9px 22px;font-size:13px;font-weight:bold;}"
         "QPushButton:hover{background:#A87730;}").arg(C_OR));
 
-    QPushButton *fermerBtn = new QPushButton("Fermer");
+    QPushButton *fermerBtn = new QPushButton("✖  Fermer");
     fermerBtn->setStyleSheet(QString(
         "QPushButton{background:%1;color:white;border:none;border-radius:6px;"
         "padding:9px 22px;font-size:13px;font-weight:bold;}"
@@ -4388,8 +4862,8 @@ void MainWindow::setupArticleTable()
 {
     ui->articleTable->setColumnCount(11);
     ui->articleTable->setHorizontalHeaderLabels({
-        "ID","R�f�rence","Nom","Cat�gorie","Type","Couleur",
-        "Dimensions","Prix Unitaire","Co�t Fabrication","Statut","Date Cr�ation"
+        "ID","Reference","Nom","Categorie","Type","Couleur",
+        "Dimensions","Prix Unitaire","Cout Fabrication","Statut","Date Creation"
     });
     ui->articleTable->setColumnHidden(0, true);
     ui->articleTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -4402,7 +4876,7 @@ void MainWindow::loadArticlesFromDB()
 {
     articles.clear();
     
-    // Charger les articles depuis la base de donn�es
+    // Charger les articles depuis la base de données
     QList<Article> articlesDB = Article::afficher();
     
     ui->articleTable->setRowCount(articlesDB.size());
@@ -4418,8 +4892,8 @@ void MainWindow::loadArticlesFromDB()
         ui->articleTable->setItem(i, 4, new QTableWidgetItem(a.getType()));
         ui->articleTable->setItem(i, 5, new QTableWidgetItem(a.getCouleur()));
         ui->articleTable->setItem(i, 6, new QTableWidgetItem(a.getDimensions()));
-        ui->articleTable->setItem(i, 7, new QTableWidgetItem(QString::number(a.getPrixUnitaire(), 'f', 2) + " �"));
-        ui->articleTable->setItem(i, 8, new QTableWidgetItem(QString::number(a.getCoutFabrication(), 'f', 2) + " �"));
+        ui->articleTable->setItem(i, 7, new QTableWidgetItem(QString::number(a.getPrixUnitaire(), 'f', 2) + " DT"));
+        ui->articleTable->setItem(i, 8, new QTableWidgetItem(QString::number(a.getCoutFabrication(), 'f', 2) + " DT"));
         ui->articleTable->setItem(i, 9, new QTableWidgetItem(a.getStatut()));
         ui->articleTable->setItem(i, 10, new QTableWidgetItem(a.getDateCreation().toString("yyyy-MM-dd")));
     }
@@ -4444,7 +4918,7 @@ void MainWindow::on_btnAddArticle_clicked()
     ArticleDialog dlg(this, ArticleDialog::AddMode);
     int nextId = articles.size() + 1;
     dlg.setArticleData(QString("ART-%1-%2").arg(QDate::currentDate().year()).arg(nextId,4,10,QChar('0')),
-                       "","Sacs","Sac � main","sac_a_main.obj",
+                       "","Sacs","Sac à main","sac_a_main.obj",
                        141,110,99, 30.0,25.0,10.0,
                        1.0,0.0,"disponible");
     
@@ -4466,7 +4940,7 @@ void MainWindow::on_btnAddArticle_clicked()
         article.setStatut(dlg.getStatut());
         article.setDateCreation(QDate::currentDate());
         
-        // Ajouter � la base de donn�es
+        // Ajouter à la base de données
         if (article.ajouter()) {
             // Sauvegarder l'image generee dans la BD
             QString photoPath = dlg.getPhotoPath();
@@ -4474,15 +4948,15 @@ void MainWindow::on_btnAddArticle_clicked()
                 Article::updateImagePath(article.getIdArticle(), photoPath);
             }
             QMessageBox::information(this, "Succes", "Article ajoute avec succes !");
-            refreshArticleTable(); // Rafra�chir l'affichage
+            refreshArticleTable(); // Rafraéchir l'affichage
         } else {
             QMessageBox::critical(this, "Erreur", 
                 "Impossible d'ajouter l'article.\n\n"
-                "V�rifiez que:\n"
-                "1. La table ARTICLES existe dans la base de donn�es\n"
-                "2. La connexion � la base de donn�es est active\n"
-                "3. La r�f�rence n'existe pas d�j�\n\n"
-                "Consultez 'Application Output' pour plus de d�tails.");
+                "Vérifiez que:\n"
+                "1. La table ARTICLES existe dans la base de données\n"
+                "2. La connexion à la base de données est active\n"
+                "3. La référence n'existe pas déjà\n\n"
+                "Consultez 'Application Output' pour plus de détails.");
         }
     }
 }
@@ -4490,9 +4964,9 @@ void MainWindow::on_btnAddArticle_clicked()
 void MainWindow::on_btnEditArticle_clicked()
 {
     int row = ui->articleTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"Attention","S�lectionnez un article."); return; }
+    if (row < 0) { QMessageBox::warning(this,"Attention","Selectionnez un article."); return; }
     
-    // R�cup�rer l'ID de l'article s�lectionn�
+    // Recuperer l'ID de l'article selectionne
     int idArticle = ui->articleTable->item(row, 0)->text().toInt();
     Article article = Article::rechercherParId(idArticle);
     
@@ -4524,7 +4998,7 @@ void MainWindow::on_btnEditArticle_clicked()
         article.setCoutFabrication(dlg.getCoutFabrication());
         article.setStatut(dlg.getStatut());
         
-        // Modifier dans la base de donn�es
+        // Modifier dans la base de données
         if (article.modifier()) {
             // Sauvegarder l'image generee dans la BD
             QString photoPath = dlg.getPhotoPath();
@@ -4532,7 +5006,7 @@ void MainWindow::on_btnEditArticle_clicked()
                 Article::updateImagePath(article.getIdArticle(), photoPath);
             }
             QMessageBox::information(this, "Succes", "Article modifie avec succes !");
-            refreshArticleTable(); // Rafra�chir l'affichage
+            refreshArticleTable(); // Rafraéchir l'affichage
         } else {
             QMessageBox::critical(this, "Erreur", "Impossible de modifier l'article.");
         }
@@ -4542,9 +5016,9 @@ void MainWindow::on_btnEditArticle_clicked()
 void MainWindow::on_btnDeleteArticle_clicked()
 {
     int row = ui->articleTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"Attention","S�lectionnez un article."); return; }
+    if (row < 0) { QMessageBox::warning(this,"Attention","Selectionnez un article."); return; }
     
-    // R�cup�rer l'ID de l'article s�lectionn�
+    // Recuperer l'ID de l'article selectionne
     int idArticle = ui->articleTable->item(row, 0)->text().toInt();
     Article article = Article::rechercherParId(idArticle);
     
@@ -4561,10 +5035,10 @@ void MainWindow::on_btnDeleteArticle_clicked()
                        article.getPrixUnitaire(), article.getCoutFabrication(), article.getStatut());
     
     if (dlg.exec() == QDialog::Accepted) {
-        // Supprimer de la base de donn�es
+        // Supprimer de la base de données
         if (article.supprimer()) {
             QMessageBox::information(this, "Succes", "Article supprime avec succes !");
-            refreshArticleTable(); // Rafra�chir l'affichage
+            refreshArticleTable(); // Rafraéchir l'affichage
         } else {
             QMessageBox::critical(this, "Erreur", "Impossible de supprimer l'article.");
         }
@@ -4574,7 +5048,7 @@ void MainWindow::on_btnDeleteArticle_clicked()
 void MainWindow::on_btnViewArticle_clicked()
 {
     int row = ui->articleTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","S�lectionnez un article."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Selectionnez un article."); return; }
     
     int idArticle = ui->articleTable->item(row, 0)->text().toInt();
     Article article = Article::rechercherParId(idArticle);
@@ -4593,7 +5067,7 @@ void MainWindow::on_btnViewArticle_clicked()
 void MainWindow::on_btnView3DArticle_clicked()
 {
     int row = ui->articleTable->currentRow();
-    if (row < 0) { QMessageBox::warning(this,"","S�lectionnez un article pour la vue 3D."); return; }
+    if (row < 0) { QMessageBox::warning(this,"","Selectionnez un article pour la vue 3D."); return; }
 
     QString nom     = ui->articleTable->item(row, 2)->text();
     QString type    = ui->articleTable->item(row, 4)->text();
@@ -4660,10 +5134,10 @@ void MainWindow::on_searchBoxArticle_textChanged(const QString &text)
         return;
     }
     
-    // Recherche par nom (col 2) ou r�f�rence (col 1) via la classe Article
+    // Recherche par nom (col 2) ou référence (col 1) via la classe Article
     QList<Article> resultats;
     if (text.trimmed().length() >= 2) {
-        // Recherche dans la BD via requ�tes pr�par�es
+        // Recherche dans la BD via requétes préparées
         QList<Article> parRef = Article::rechercherParReference(text.trimmed());
         QList<Article> parNom = Article::rechercherParNom(text.trimmed());
         
@@ -4672,7 +5146,7 @@ void MainWindow::on_searchBoxArticle_textChanged(const QString &text)
         for (const Article &a : parRef) { resultats.append(a); ids.insert(a.getIdArticle()); }
         for (const Article &a : parNom) { if (!ids.contains(a.getIdArticle())) resultats.append(a); }
         
-        // Filtrer la table selon les r�sultats
+        // Filtrer la table selon les résultats
         QSet<int> resultIds;
         for (const Article &a : resultats) resultIds.insert(a.getIdArticle());
         
@@ -4681,7 +5155,7 @@ void MainWindow::on_searchBoxArticle_textChanged(const QString &text)
             ui->articleTable->setRowHidden(i, !resultIds.contains(id));
         }
     } else {
-        // Recherche locale simple pour 1 caract�re
+        // Recherche locale simple pour 1 caractére
         for (int i = 0; i < ui->articleTable->rowCount(); ++i) {
             QString ref = ui->articleTable->item(i, 1)->text();
             QString nom = ui->articleTable->item(i, 2)->text();
@@ -4730,7 +5204,7 @@ void MainWindow::on_btnTriArticle_clicked()
     auto *statAZ = menuStatut->addAction("A - Z");
     auto *statZA = menuStatut->addAction("Z - A");
     
-    // Tri personnalis� : Disponibles d'abord
+    // Tri personnalisé : Disponibles d'abord
     connect(dispoDabord, &QAction::triggered, [this]() {
         std::sort(articles.begin(), articles.end(), [](const Article &a, const Article &b) {
             // Ordre: disponible (0) < en_production (1) < obsolete (2)
@@ -4744,7 +5218,7 @@ void MainWindow::on_btnTriArticle_clicked()
         refreshArticleTable();
     });
     
-    // Tri personnalis� : Non disponibles d'abord
+    // Tri personnalisé : Non disponibles d'abord
     connect(nonDispoDabord, &QAction::triggered, [this]() {
         std::sort(articles.begin(), articles.end(), [](const Article &a, const Article &b) {
             auto getPriority = [](const QString &s) {
@@ -4797,7 +5271,7 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
     mainLay->addWidget(titleLbl);
 
     // ----------------------------------------------------------------------
-    // 6 KPI PARTAG�S EN HAUT
+    // 6 KPI PARTAGéS EN HAUT
     // ----------------------------------------------------------------------
     int total=articles.size(), dispo=0, enProd=0, obs=0;
     double totalPrix=0, totalCout=0;
@@ -4843,7 +5317,7 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
     mainLay->addLayout(kpiLay);
 
     // ----------------------------------------------------------------------
-    // ONGLETS : Statistiques + Rentabilit�
+    // ONGLETS : Statistiques + Rentabilité
     // ----------------------------------------------------------------------
     auto *tabs = new QTabWidget();
     mainLay->addWidget(tabs, 1);
@@ -4856,15 +5330,17 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
 
     // Camembert statut
     {
-        QGroupBox *gb = new QGroupBox("  🥧  Répartition par Statut");
+        QGroupBox *gb = new QGroupBox("  Repartition par Statut");
         QVBoxLayout *l = new QVBoxLayout(gb);
         auto *pie = new QPieSeries();
         if (dispo>0) pie->append("Disponible", dispo)->setBrush(QColor("#558B2F"));
         if (enProd>0) pie->append("En Production", enProd)->setBrush(QColor("#EF6C00"));
-        if (obs>0) pie->append("Obsolète", obs)->setBrush(QColor("#C62828"));
+        if (obs>0) pie->append("Obsolete", obs)->setBrush(QColor("#C62828"));
         for (auto *sl : pie->slices()) {
-            sl->setLabelVisible(true); sl->setLabelColor(QColor("#3E2723"));
-            sl->setLabel(QString("%1\n%2%").arg(sl->label()).arg(sl->percentage()*100,0,'f',1));
+            sl->setLabelVisible(true);
+            sl->setLabelColor(QColor("#3E2723"));
+            // Afficher seulement le pourcentage sur le graphique
+            sl->setLabel(QString("%1%").arg(sl->percentage()*100, 0, 'f', 1));
         }
         auto *chart = new QChart(); chart->addSeries(pie);
         chart->setBackgroundBrush(QBrush(QColor("#FFFFFF")));
@@ -4877,7 +5353,7 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
 
     // Barres articles par catégorie
     {
-        QGroupBox *gb = new QGroupBox("  📊  Articles par Catégorie");
+        QGroupBox *gb = new QGroupBox("  Articles par Categorie");
         QVBoxLayout *l = new QVBoxLayout(gb);
         auto *bs = new QBarSet("Nb Articles"); bs->setColor(QColor("#8D6E63"));
         QStringList cats;
@@ -4897,10 +5373,10 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
 
     // Barres groupées prix vs coût par catégorie
     {
-        QGroupBox *gb = new QGroupBox("  💰  Prix vs Coût par Catégorie");
+        QGroupBox *gb = new QGroupBox("  Prix vs Cout par Categorie");
         QVBoxLayout *l = new QVBoxLayout(gb);
         auto *sPrix = new QBarSet("Prix Moyen"); sPrix->setColor(QColor("#8D6E63"));
-        auto *sCout = new QBarSet("Coût Moyen"); sCout->setColor(QColor("#D7CCC8"));
+        auto *sCout = new QBarSet("Cout Moyen"); sCout->setColor(QColor("#D7CCC8"));
         QStringList cats;
         for (auto it=nbParCat.begin(); it!=nbParCat.end(); ++it) {
             cats << it.key();
@@ -4924,7 +5400,7 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
     tabs->addTab(tab1, "Statistiques");
 
     // ------------------------------------------------------------------------
-    // ONGLET 2 : RENTABILIT�
+    // ONGLET 2 : RENTABILITé
     // ------------------------------------------------------------------------
     auto *tab2 = new QWidget();
     auto *t2Lay = new QHBoxLayout(tab2); t2Lay->setSpacing(10);
@@ -4968,7 +5444,7 @@ void MainWindow::on_btnStatistiquesArticle_clicked()
 
     // Camembert rentabilité
     {
-        QGroupBox *gb = new QGroupBox("  🥧  Répartition Rentabilité");
+        QGroupBox *gb = new QGroupBox("  Repartition Rentabilite");
         QVBoxLayout *l = new QVBoxLayout(gb);
         auto *pie = new QPieSeries();
         if (excRent>0) pie->append("Excellente ≥50%", excRent)->setBrush(QColor("#2E7D32"));
@@ -5465,10 +5941,10 @@ body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0;
 
 void MainWindow::on_btnAnalyseRentabilite_clicked()
 {
-    if (articles.isEmpty()) { QMessageBox::information(this,"","Aucun article � analyser."); return; }
+    if (articles.isEmpty()) { QMessageBox::information(this,"","Aucun article à analyser."); return; }
 
     QDialog dlg(this);
-    dlg.setWindowTitle("?? Analyse de Rentabilit� Avanc�e - CUIREA");
+    dlg.setWindowTitle("?? Analyse de Rentabilité Avancée - CUIREA");
     dlg.setMinimumSize(1150, 780);
     dlg.setStyleSheet(
         "QDialog{background:#1A1A2E;}"
@@ -5487,7 +5963,7 @@ void MainWindow::on_btnAnalyseRentabilite_clicked()
     mainLay->setContentsMargins(12,12,12,10); mainLay->setSpacing(8);
 
     // Titre
-    auto *titleLbl = new QLabel("??  ANALYSE DE RENTABILIT� AVANC�E  |  CUIREA Smart Factory");
+    auto *titleLbl = new QLabel("??  ANALYSE DE RENTABILITé AVANCéE  |  CUIREA Smart Factory");
     titleLbl->setAlignment(Qt::AlignCenter);
     titleLbl->setStyleSheet("font-size:14px;font-weight:bold;color:#FFCC80;padding:8px;"
                             "background:#0F3460;border-radius:10px;border:1px solid #8D6E63;");
@@ -5528,7 +6004,7 @@ void MainWindow::on_btnAnalyseRentabilite_clicked()
     kpiLay->addWidget(makeKPI(QString::number(totalMarge,'f',0)+" DT","Marge Totale","#1B5E20"));
     kpiLay->addWidget(makeKPI(QString::number(margeGlobale,'f',1)+"%","Marge Globale","#4A148C"));
     kpiLay->addWidget(makeKPI(QString::number(totalPrix/qMax((int)articles.size(),1),'f',0)+" DT","Prix Moyen","#006064"));
-    kpiLay->addWidget(makeKPI(QString::number(totalCout/qMax((int)articles.size(),1),'f',0)+" DT","Co�t Moyen","#BF360C"));
+    kpiLay->addWidget(makeKPI(QString::number(totalCout/qMax((int)articles.size(),1),'f',0)+" DT","Coét Moyen","#BF360C"));
     kpiLay->addWidget(makeKPI(QString::number(exc)+" ?","Excellente =50%","#1B5E20"));
     kpiLay->addWidget(makeKPI(QString::number(fai)+" ?","Faible <15%","#B71C1C"));
     mainLay->addLayout(kpiLay);
@@ -5536,12 +6012,12 @@ void MainWindow::on_btnAnalyseRentabilite_clicked()
     // -- Corps : tableau + graphiques ---------------------------------------
     QHBoxLayout *bodyLay = new QHBoxLayout(); bodyLay->setSpacing(8);
 
-    // Tableau d�taill�
-    QGroupBox *tblBox = new QGroupBox("  ??  D�tail par Article");
+    // Tableau détaillé
+    QGroupBox *tblBox = new QGroupBox("  ??  Détail par Article");
     QVBoxLayout *tblLay = new QVBoxLayout(tblBox);
     auto *tbl = new QTableWidget();
     tbl->setColumnCount(7);
-    tbl->setHorizontalHeaderLabels({"Nom","Cat�gorie","Co�t (DT)","Prix (DT)","Marge (DT)","Marge (%)","Niveau"});
+    tbl->setHorizontalHeaderLabels({"Nom","Categorie","Cout (DT)","Prix (DT)","Marge (DT)","Marge (%)","Niveau"});
     tbl->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     tbl->setAlternatingRowColors(true);
     tbl->verticalHeader()->setVisible(false);
@@ -5557,7 +6033,7 @@ void MainWindow::on_btnAnalyseRentabilite_clicked()
         else if (mp>=30){ ren="? Bonne";      col=QColor("#80CBC4"); }
         else if (mp>=15){ ren="~ Moyenne";     col=QColor("#FFE082"); }
         else if (mp> 0) { ren="? Faible";     col=QColor("#FFAB91"); }
-        else            { ren="? N�gative";    col=QColor("#EF9A9A"); }
+        else            { ren="? Négative";    col=QColor("#EF9A9A"); }
 
         tbl->setItem(i,0,new QTableWidgetItem(a.getNom()));
         tbl->setItem(i,1,new QTableWidgetItem(a.getCategorie()));
@@ -5576,12 +6052,12 @@ void MainWindow::on_btnAnalyseRentabilite_clicked()
     // Graphiques droite
     QVBoxLayout *rightLay = new QVBoxLayout(); rightLay->setSpacing(8);
 
-    // Barres group�es : prix vs co�t par cat�gorie
+    // Barres groupées : prix vs coét par catégorie
     {
-        QGroupBox *gb = new QGroupBox("  ??  Prix vs Co�t par Cat�gorie");
+        QGroupBox *gb = new QGroupBox("  ??  Prix vs Coét par Catégorie");
         QVBoxLayout *l = new QVBoxLayout(gb);
         auto *sPrix = new QBarSet("Prix Moyen"); sPrix->setColor(QColor("#FFCC80"));
-        auto *sCout = new QBarSet("Co�t Moyen"); sCout->setColor(QColor("#EF9A9A"));
+        auto *sCout = new QBarSet("Coét Moyen"); sCout->setColor(QColor("#EF9A9A"));
         QStringList cats;
         for (auto it=nbParCat.begin(); it!=nbParCat.end(); ++it) {
             cats << it.key();
@@ -6051,10 +6527,10 @@ void MainWindow::on_btnAideDecision_clicked()
 #ifdef Q_OS_WIN
 void MainWindow::initSAPI()
 {
-    // Utiliser le recognizer partag� Windows (d�j� configur� avec le micro syst�me)
+    // Utiliser le recognizer partagé Windows (déjà configuré avec le micro système)
     if (FAILED(CoCreateInstance(CLSID_SpSharedRecognizer, nullptr, CLSCTX_LOCAL_SERVER,
                                 IID_ISpRecognizer, (void**)&spRecognizer))) {
-        QMessageBox::critical(this, "Vocal", "Impossible d'initialiser SAPI.\nV�rifiez que la reconnaissance vocale Windows est activ�e.");
+        QMessageBox::critical(this, "Vocal", "Impossible d'initialiser SAPI.\nVérifiez que la reconnaissance vocale Windows est activée.");
         spRecognizer = nullptr;
         return;
     }
@@ -6081,7 +6557,7 @@ void MainWindow::stopSAPI()
 
 
 // ------------------------------------------------------------------------------
-// M�THODES DE GESTION DES PERMISSIONS ET AUTHENTIFICATION
+// MéTHODES DE GESTION DES PERMISSIONS ET AUTHENTIFICATION
 // ------------------------------------------------------------------------------
 
 void MainWindow::applyUserPermissions()
@@ -6095,10 +6571,10 @@ void MainWindow::applyUserPermissions()
     // Masquer/Afficher les onglets selon les permissions
     hideTabsBasedOnPermissions();
     
-    // Activer/D�sactiver les boutons CRUD
+    // Activer/Désactiver les boutons CRUD
     updateCRUDButtons();
     
-    // Personnaliser le menu - D�SACTIV�
+    // Personnaliser le menu - DéSACTIVé
     // customizeMenuBar();
 }
 
@@ -6114,7 +6590,7 @@ void MainWindow::hideTabsBasedOnPermissions()
     ui->btnProduction->setVisible(session.canAccessProduction());
     ui->btnProducts->setVisible(session.canAccessArticles());
     
-    // Rediriger vers la premi�re page accessible
+    // Rediriger vers la premiére page accessible
     if (!session.canAccessEmployees() && ui->stackedWidget->currentIndex() == 0) {
         if (session.canAccessClients()) {
             on_btnClients_clicked();
@@ -6134,7 +6610,7 @@ void MainWindow::updateCRUDButtons()
 {
     UserSession &session = UserSession::instance();
     
-    // Boutons Employ�s
+    // Boutons Employés
     if (ui->btnAdd) ui->btnAdd->setEnabled(session.canCreate() && session.canAccessEmployees());
     if (ui->btnEdit) ui->btnEdit->setEnabled(session.canEdit() && session.canAccessEmployees());
     if (ui->btnDelete) ui->btnDelete->setEnabled(session.canDelete() && session.canAccessEmployees());
@@ -6147,7 +6623,7 @@ void MainWindow::updateCRUDButtons()
     if (ui->btnDeleteClient) ui->btnDeleteClient->setEnabled(session.canDelete() && session.canAccessClients());
     if (ui->btnExportClient) ui->btnExportClient->setEnabled(session.canExport() && session.canAccessClients());
     
-    // Boutons Mati�res
+    // Boutons Matières
     if (ui->btnAddMatiere) ui->btnAddMatiere->setEnabled(session.canCreate() && session.canAccessMatieres());
     if (ui->btnEditMatiere) ui->btnEditMatiere->setEnabled(session.canEdit() && session.canAccessMatieres());
     if (ui->btnDeleteMatiere) ui->btnDeleteMatiere->setEnabled(session.canDelete() && session.canAccessMatieres());
@@ -6183,7 +6659,7 @@ void MainWindow::customizeMenuBar()
     // Ajouter un menu utilisateur
     QMenu *userMenu = menuBar()->addMenu(QString("?? %1").arg(session.getNomComplet()));
     
-    // Style pour le menu d�roulant
+    // Style pour le menu déroulant
     userMenu->setStyleSheet(
         "QMenu { "
         "    background-color: #FAF5F0; "
@@ -6216,7 +6692,7 @@ void MainWindow::customizeMenuBar()
     
     userMenu->addSeparator();
     
-    QAction *logoutAction = userMenu->addAction("?? D�connexion");
+    QAction *logoutAction = userMenu->addAction("?? Déconnexion");
     connect(logoutAction, &QAction::triggered, this, &MainWindow::logout);
 }
 
@@ -6236,8 +6712,8 @@ void MainWindow::showUserProfile()
         "<tr><td><b>Nom complet:</b></td><td>%2</td></tr>"
         "<tr><td><b>Email:</b></td><td>%3</td></tr>"
         "<tr><td><b>Poste:</b></td><td>%4</td></tr>"
-        "<tr><td><b>D�partement:</b></td><td>%5</td></tr>"
-        "<tr><td><b>R�le syst�me:</b></td><td><span style='color:#8D6E63;font-weight:bold;'>%6</span></td></tr>"
+        "<tr><td><b>Département:</b></td><td>%5</td></tr>"
+        "<tr><td><b>Rôle système:</b></td><td><span style='color:#8D6E63;font-weight:bold;'>%6</span></td></tr>"
         "</table>"
     ).arg(session.getMatricule())
      .arg(session.getNomComplet())
@@ -6254,15 +6730,15 @@ void MainWindow::showUserProfile()
 void MainWindow::changePassword()
 {
     QMessageBox::information(this, "Changer le mot de passe",
-                            "Fonctionnalit� � venir.\n"
+                            "Fonctionnalité à venir.\n"
                             "Contactez l'administrateur pour changer votre mot de passe.");
 }
 
 void MainWindow::logout()
 {
     QMessageBox msgBox(this);
-    msgBox.setWindowTitle("D�connexion");
-    msgBox.setText("�tes-vous s�r de vouloir vous d�connecter?");
+    msgBox.setWindowTitle("Déconnexion");
+    msgBox.setText("étes-vous sér de vouloir vous déconnecter?");
     msgBox.setIcon(QMessageBox::Question);
     msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
     msgBox.setStyleSheet(MSGBOX_STYLE);
@@ -6336,7 +6812,7 @@ void MainWindow::setupArduinoPointage()
     });
     m_timerAbsences->start(60000);
 
-    // Simulateur keypad Qt (inséré dans la page Production)
+    // Simulateur keypad Qt — inséré dans la page Production
     setupKeypadSimulator();
 }
 
@@ -6363,6 +6839,40 @@ void MainWindow::traiterMessageArduino(const QString &msg)
 {
     qDebug() << "Arduino msg:" << msg;
 
+    // ── TEMP:xx.x,yy.y — Données température (2 DHT11) ──────────────────
+    if (msg.startsWith("TEMP:")) {
+        // Transmettre à ArduinoMonitor pour traitement
+        if (m_arduinoMonitor) {
+            QStringList parts = msg.mid(5).split(',');
+            if (parts.size() == 2) {
+                bool ok1, ok2;
+                double tempMatiere = parts[0].toDouble(&ok1);
+                double tempAmbiance = parts[1].toDouble(&ok2);
+                if (ok1 && ok2) {
+                    // Appeler directement le slot de traitement
+                    QMetaObject::invokeMethod(m_arduinoMonitor, 
+                        "onTemperatureReceived",
+                        Qt::QueuedConnection,
+                        Q_ARG(double, tempMatiere),
+                        Q_ARG(double, tempAmbiance));
+                }
+            }
+        }
+        return;
+    }
+
+    // ── WEIGHT:xx.xx — Données poids (HX711) ────────────────────────────
+    if (msg.startsWith("WEIGHT:")) {
+        bool ok;
+        double weight = msg.mid(7).toDouble(&ok);
+        if (ok) {
+            // Émettre le signal weightStable via l'instance Arduino
+            emit m_arduino.weightStable(weight);
+            qDebug() << "Weight received:" << weight << "kg";
+        }
+        return;
+    }
+
     // ── INPUT:xxx — saisie en cours, miroir LCD ──────────────────────────
     if (msg.startsWith("INPUT:")) {
         QString saisi = msg.mid(6);
@@ -6375,103 +6885,65 @@ void MainWindow::traiterMessageArduino(const QString &msg)
     if (msg == "CLEAR") {
         m_keypadBuffer.clear();
         if (m_lcdLigne1) m_lcdLigne1->setText("Systeme pret");
-        if (m_lcdLigne2) m_lcdLigne2->setText("Saisir ID + #");
+        if (m_lcdLigne2) m_lcdLigne2->setText("Saisir Ref + #");
         return;
     }
 
     // ── '1' — confirmation servos (ignorer) ─────────────────────────────
     if (msg == "1") return;
 
-    // ── ID:xxx — marquer Terminé en BDD, attendre clic Expédier pour les moteurs
+    // ── ID:xxx — chercher en BDD et mettre à jour statut ────────────────────
     if (msg.startsWith("ID:")) {
         QString id = msg.mid(3).trimmed();
+        if (m_lcdLigne1) m_lcdLigne1->setText("Recherche...");
+        if (m_lcdLigne2) m_lcdLigne2->setText(id);
 
         QSqlQuery q(Connection::instance()->getDatabase());
-        q.prepare("SELECT STATUT FROM COMMANDES "
+        q.prepare("SELECT ID_COMMANDE FROM COMMANDES "
                   "WHERE REFERENCE = :id OR TO_CHAR(ID_COMMANDE) = :id2");
         q.bindValue(":id",  id);
         q.bindValue(":id2", id);
 
-        bool found = q.exec() && q.next();
-        QString statutActuel = found ? q.value("STATUT").toString() : "";
-        qDebug() << "[Arduino] Statut BDD pour" << id << ":" << statutActuel;
+        if (q.exec() && q.next()) {
+            // Trouvé → marquer Terminé + date livraison + envoyer '1' aux servos
+            QString dateAuj = QDate::currentDate().toString("dd/MM/yyyy");
+            QSqlQuery upd(Connection::instance()->getDatabase());
+            upd.prepare("UPDATE COMMANDES SET STATUT = 'Termin\u00e9', "
+                        "DATE_LIVRAISON = TO_DATE(:dl, 'DD/MM/YYYY') "
+                        "WHERE REFERENCE = :id OR TO_CHAR(ID_COMMANDE) = :id2");
+            upd.bindValue(":dl",  dateAuj);
+            upd.bindValue(":id",  id);
+            upd.bindValue(":id2", id);
+            upd.exec();
 
-        if (!found) {
-            // ID introuvable → répondre immédiatement
             if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino("2");
-            if (m_lcdLigne1) m_lcdLigne1->setText("ID invalide");
-            if (m_lcdLigne2) m_lcdLigne2->setText("Ressaisir + D");
-            return;
-        }
+                m_arduino.write_to_arduino("1");
 
-        // ID trouvé → UPDATE STATUT = 'Terminé' (sauf si déjà En livraison/Annulé)
-        if (statutActuel.contains("livraison", Qt::CaseInsensitive) ||
-            statutActuel.contains("Annul",     Qt::CaseInsensitive)) {
-            // Commande déjà expédiée → invalide pour une nouvelle expédition
-            qDebug() << "[Arduino] Statut" << statutActuel << "— déjà expédié";
-            if (m_serialArduino && m_serialArduino->isOpen())
-                m_arduino.write_to_arduino("2");
-            if (m_lcdLigne1) m_lcdLigne1->setText("Deja expedie");
+            loadProductionData();
+            m_keypadBuffer.clear();
+
+            // LCD "Commande terminee" → retour home après 3s
+            if (m_lcdLigne1) m_lcdLigne1->setText("Commande terminee");
             if (m_lcdLigne2) m_lcdLigne2->setText(id);
-            return;
-        }
 
-        QSqlQuery upd(Connection::instance()->getDatabase());
-        upd.prepare("UPDATE COMMANDES SET STATUT = 'Termin\u00e9' "
-                    "WHERE REFERENCE = :id OR TO_CHAR(ID_COMMANDE) = :id2");
-        upd.bindValue(":id",  id);
-        upd.bindValue(":id2", id);
-        if (!upd.exec())
-            qDebug() << "[Arduino] UPDATE échoué:" << upd.lastError().text();
-        else
-            qDebug() << "[Arduino] UPDATE OK — lignes:" << upd.numRowsAffected();
+            QTimer::singleShot(3000, this, [this]() {
+                if (m_lcdLigne1) m_lcdLigne1->setText("Systeme pret");
+                if (m_lcdLigne2) m_lcdLigne2->setText("Saisir ID + #");
+            });
 
-        // Si port fermé → tenter reconnexion avant d'envoyer '3'
-        if (!m_serialArduino || !m_serialArduino->isOpen()) {
-            qDebug() << "[Arduino] Port fermé — tentative reconnexion...";
-            int ret = m_arduino.connection()->connect_arduino();
-            if (ret == 0) {
-                m_serialArduino = m_arduino.connection()->getSerial();
-                connect(m_serialArduino, &QSerialPort::readyRead,
-                        this, &MainWindow::recevoir_donnee);
-                m_arduinoIndicator->setText("● Arduino connecté");
-                m_arduinoIndicator->setStyleSheet(
-                    "QLabel { border-radius:12px; font-size:11px; font-weight:bold; "
-                    "color:white; background:#27AE60; }");
-                qDebug() << "[Arduino] Reconnecté sur" << m_arduino.connection()->getPortName();
-            }
-        }
-
-        // Envoyer '3' → Arduino "ID OK - Cliquer Expedier"
-        if (m_serialArduino && m_serialArduino->isOpen()) {
-            m_arduino.write_to_arduino("3");
-            qDebug() << "[Arduino] '3' envoyé pour" << id;
+            NotificationWidget::show(
+                "✅ Commande terminée",
+                "Référence " + id + " marquée Terminé — " + dateAuj,
+                NotificationWidget::Success
+            );
         } else {
-            qDebug() << "[Arduino] ⚠️ Port toujours fermé — '3' non envoyé !";
+            // Invalide → envoyer '2', rester en attente
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino("2");
+
+            if (m_lcdLigne1) m_lcdLigne1->setText("ID invalide");
+            if (m_lcdLigne2) m_lcdLigne2->setText("Ressaisir + #");
         }
-
-        // Mettre à jour miroir LCD Qt
-        if (m_lcdLigne1) m_lcdLigne1->setText("ID OK");
-        if (m_lcdLigne2) m_lcdLigne2->setText("Cliquer Expedier");
-
-        loadProductionData();
-        m_keypadBuffer.clear();
-
-        // Sélectionner automatiquement la ligne dans le tableau
-        for (int r = 0; r < ui->productionTable->rowCount(); ++r) {
-            if (cellText(ui->productionTable, r, 1) == id ||
-                cellText(ui->productionTable, r, 0) == id) {
-                ui->productionTable->selectRow(r);
-                break;
-            }
-        }
-
-        NotificationWidget::show(
-            "✅ Commande prête",
-            "Référence " + id + " — statut Terminé. Cliquez Expédier pour lancer les moteurs.",
-            NotificationWidget::Success
-        );
         return;
     }
 
@@ -6479,20 +6951,57 @@ void MainWindow::traiterMessageArduino(const QString &msg)
     if (msg.contains("UID:")) {
         QString uid = msg.section("UID:", -1).trimmed();
         bool ok = m_pointage.marquerPresent(uid);
+        
         if (ok && !m_pointage.estDejaPointe()) {
-            QMessageBox::information(this, "✅ Pointage",
-                QString("Bonjour %1 %2 !\nPointage enregistré.")
-                    .arg(m_pointage.getDernierPrenom())
-                    .arg(m_pointage.getDernierNom()));
+            // Pointage reussi - Envoyer nom a Arduino
+            QString prenom = m_pointage.getDernierPrenom();
+            QString nom = m_pointage.getDernierNom();
+            QString heure = QTime::currentTime().toString("HH:mm");
+            
+            // Envoyer "OK:Prenom Nom" a Arduino
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino(QString("OK:%1 %2").arg(prenom).arg(nom).toUtf8().constData());
+            
+            SystemNotification::instance().show(
+                "Pointage CUIREA",
+                QString("%1 %2 est arrive(e) a %3").arg(prenom).arg(nom).arg(heure),
+                NotificationWidget::Success,
+                5000
+            );
+            
             populateEmployeeTable();
+            
         } else if (ok && m_pointage.estDejaPointe()) {
-            QMessageBox::information(this, "ℹ️ Déjà pointé",
-                QString("%1 %2 a déjà pointé aujourd'hui.")
-                    .arg(m_pointage.getDernierPrenom())
-                    .arg(m_pointage.getDernierNom()));
+            // Deja pointe aujourd'hui - sortie
+            QString prenom = m_pointage.getDernierPrenom();
+            QString nom = m_pointage.getDernierNom();
+            QString heure = QTime::currentTime().toString("HH:mm");
+            
+            // Envoyer "BYE:Prenom Nom" a Arduino
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino(QString("BYE:%1 %2").arg(prenom).arg(nom).toUtf8().constData());
+            
+            SystemNotification::instance().show(
+                "Pointage CUIREA",
+                QString("%1 %2 a quitte a %3").arg(prenom).arg(nom).arg(heure),
+                NotificationWidget::Info,
+                5000
+            );
+            
         } else {
-            QMessageBox::warning(this, "❌ Badge inconnu",
-                "Badge non reconnu dans le système.");
+            // Badge inconnu - Envoyer '2' a Arduino (refuser)
+            if (m_serialArduino && m_serialArduino->isOpen())
+                m_arduino.write_to_arduino("NO");
+            
+            QString heure = QTime::currentTime().toString("HH:mm");
+            
+            // Notification Windows native - Alerte
+            SystemNotification::instance().show(
+                "Alerte Securite CUIREA",
+                QString("Tentative d'acces refusee a %1 - Carte inconnue (UID: %2)").arg(heure).arg(uid),
+                NotificationWidget::Critical,
+                8000
+            );
         }
     }
 }
@@ -6572,7 +7081,7 @@ void MainWindow::expedierActionArduino()
 
     QTimer::singleShot(2000, this, [this]() {
         if (m_lcdLigne1) m_lcdLigne1->setText("Systeme pret");
-        if (m_lcdLigne2) m_lcdLigne2->setText("Saisir ID + #");
+        if (m_lcdLigne2) m_lcdLigne2->setText("Saisir Ref + #");
     });
 
     QMessageBox::information(this, "Expédition lancée",
@@ -6581,30 +7090,14 @@ void MainWindow::expedierActionArduino()
             .arg(ref, mail.isEmpty() ? "—" : mail, dateAujourdhui));
 }
 
-// ── Simulateur Keypad Qt ──────────────────────────────────────────────────
+// ── Miroir LCD Qt (overlay sous l'indicateur Arduino) ────────────────────
 void MainWindow::setupKeypadSimulator()
 {
     if (m_lcdLigne1 != nullptr) return; // guard anti-doublon
 
-    // Trouver le parent direct du productionTable pour insérer le simulateur juste au-dessus
-    QWidget *prodTable = ui->productionTable;
-    QWidget *parent = prodTable->parentWidget();
-    if (!parent) return;
-    QVBoxLayout *pageLayout = qobject_cast<QVBoxLayout*>(parent->layout());
-    if (!pageLayout) return;
-
-    // GroupBox conteneur
-    QGroupBox *grp = new QGroupBox("Simulateur Keypad Arduino", parent);
-    grp->setStyleSheet(
-        "QGroupBox { border:2px solid #8D6E63; border-radius:8px; margin-top:8px; "
-        "font-weight:bold; color:#8D6E63; }"
-        "QGroupBox::title { subcontrol-origin:margin; left:10px; padding:0 4px; }");
-    QHBoxLayout *grpLay = new QHBoxLayout(grp);
-    grpLay->setSpacing(12);
-
-    // Miroir LCD (fond noir, texte vert)
-    QFrame *lcd = new QFrame(grp);
-    lcd->setFixedSize(220, 56);
+    // LCD comme overlay — enfant de la MainWindow, positionné sous m_arduinoIndicator
+    QFrame *lcd = new QFrame(this);
+    lcd->setFixedSize(240, 56);
     lcd->setStyleSheet("background:#000; border:2px solid #333; border-radius:4px;");
     QVBoxLayout *lcdLay = new QVBoxLayout(lcd);
     lcdLay->setContentsMargins(8, 4, 8, 4);
@@ -6613,54 +7106,19 @@ void MainWindow::setupKeypadSimulator()
     m_lcdLigne1 = new QLabel("Systeme pret", lcd);
     m_lcdLigne1->setStyleSheet(
         "color:#00FF00; font-family:'Courier New'; font-size:12px; font-weight:bold;");
-    m_lcdLigne2 = new QLabel("Saisir ID + #", lcd);
+    m_lcdLigne2 = new QLabel("Saisir Ref + #", lcd);
     m_lcdLigne2->setStyleSheet(
         "color:#00FF00; font-family:'Courier New'; font-size:12px;");
     lcdLay->addWidget(m_lcdLigne1);
     lcdLay->addWidget(m_lcdLigne2);
-    grpLay->addWidget(lcd);
 
-    // Grille 4x4 keypad
-    QGridLayout *grid = new QGridLayout();
-    grid->setSpacing(4);
-    const QStringList keys = {"1","2","3","A","4","5","6","B",
-                               "7","8","9","C","*","0","#","D"};
-    QString btnStyle =
-        "QPushButton { background:#5D4037; color:white; border:none; border-radius:4px; "
-        "font-size:13px; font-weight:bold; min-width:32px; min-height:32px; }"
-        "QPushButton:hover { background:#8D6E63; }"
-        "QPushButton:pressed { background:#3E2723; }";
-
-    for (int i = 0; i < 16; ++i) {
-        QPushButton *btn = new QPushButton(keys[i], grp);
-        btn->setStyleSheet(btnStyle);
-        const QString key = keys[i];
-        connect(btn, &QPushButton::clicked, this, [this, key]() {
-            if (key == "#") {
-                traiterMessageArduino("ID:" + m_keypadBuffer);
-                m_keypadBuffer.clear();
-            } else if (key == "*") {
-                traiterMessageArduino("CLEAR");
-            } else {
-                m_keypadBuffer += key;
-                traiterMessageArduino("INPUT:" + m_keypadBuffer);
-            }
-        });
-        grid->addWidget(btn, i / 4, i % 4);
-    }
-    grpLay->addLayout(grid);
-    grpLay->addStretch();
-
-    // Trouver l'index de productionTable dans le layout et insérer juste avant
-    int insertPos = 0;
-    for (int i = 0; i < pageLayout->count(); ++i) {
-        QLayoutItem *item = pageLayout->itemAt(i);
-        if (item && item->widget() == ui->productionTable) {
-            insertPos = i;
-            break;
-        }
-    }
-    pageLayout->insertWidget(insertPos, grp);
+    // Position initiale : sous l'indicateur Arduino
+    int indY = m_arduinoIndicator
+        ? (m_bell ? m_bell->height() + 10 : 6) + m_arduinoIndicator->height() + 6
+        : 50;
+    lcd->move(width() - lcd->width() - 12, indY);
+    lcd->setVisible(false); // visible seulement sur la page Production
+    lcd->raise();
 }
 
 // ── Ouvrir calendrier pointage ────────────────────────────────────────────

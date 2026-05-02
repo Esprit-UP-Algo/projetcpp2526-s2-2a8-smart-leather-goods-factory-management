@@ -4,6 +4,7 @@
 #include <QGridLayout>
 #include <QMessageBox>
 #include <QRegularExpressionValidator>
+#include <QTimer>
 
 FournisseurDialog::FournisseurDialog(QWidget *parent, DialogMode mode)
     : QDialog(parent), m_mode(mode)
@@ -126,6 +127,31 @@ void FournisseurDialog::setupUI()
     lblDeleteWarning->setWordWrap(true);
     lblDeleteWarning->setVisible(false);
     mainLayout->addWidget(lblDeleteWarning);
+    
+    // Section pesée livraison
+    QHBoxLayout *weightLayout = new QHBoxLayout();
+    weightLayout->addWidget(new QLabel("Poids attendu (kg):", this));
+    txtExpectedWeight = new QLineEdit(this);
+    txtExpectedWeight->setPlaceholderText("Ex: 50.5");
+    txtExpectedWeight->setMaximumWidth(150);
+    weightLayout->addWidget(txtExpectedWeight);
+    
+    btnWeighDelivery = new QPushButton("⚖ Peser", this);
+    btnWeighDelivery->setStyleSheet(
+        "QPushButton { background-color: #4CAF50; color: white; border: none; border-radius: 8px; "
+        "padding: 10px 20px; font-size: 13px; font-weight: bold; }"
+        "QPushButton:hover { background-color: #66BB6A; }"
+        "QPushButton:pressed { background-color: #388E3C; }"
+    );
+    connect(btnWeighDelivery, &QPushButton::clicked, this, &FournisseurDialog::onWeighDelivery);
+    weightLayout->addWidget(btnWeighDelivery);
+    
+    lblWeight = new QLabel("Poids: -- kg", this);
+    lblWeight->setStyleSheet("font-size: 14px; font-weight: bold; color: #4CAF50;");
+    weightLayout->addWidget(lblWeight);
+    weightLayout->addStretch();
+    
+    mainLayout->addLayout(weightLayout);
     
     mainLayout->addStretch();
     
@@ -389,4 +415,74 @@ void FournisseurDialog::onDeleteConfirmed()
         QMessageBox::information(this, "Supprimé", "Le fournisseur a été supprimé avec succès.");
         accept();
     }
+}
+
+void FournisseurDialog::onWeighDelivery()
+{
+    QString expectedStr = txtExpectedWeight->text().trimmed();
+    if (expectedStr.isEmpty()) {
+        QMessageBox::warning(this, "Erreur", "Veuillez entrer le poids attendu (kg)");
+        return;
+    }
+    
+    bool ok;
+    double expectedWeight = expectedStr.toDouble(&ok);
+    if (!ok || expectedWeight <= 0) {
+        QMessageBox::warning(this, "Erreur", "Poids invalide. Veuillez entrer un nombre positif.");
+        return;
+    }
+    
+    // Afficher l'état de mesure en cours
+    lblWeight->setText("⏳ Mesure en cours... Placez la livraison sur la balance");
+    lblWeight->setStyleSheet("font-size: 13px; font-weight: bold; color: #FF9800;");
+    
+    // TODO: Connecter à Arduino pour lecture réelle
+    // Pour l'instant, simuler une lecture après 1 seconde
+    QTimer::singleShot(1000, this, [this]() {
+        // Valeur simulée - à remplacer par Arduino::requestWeight()
+        double simulatedWeight = 0.21; // Cette valeur devrait venir de l'Arduino
+        onWeightReceived(simulatedWeight);
+    });
+}
+
+void FournisseurDialog::onWeightReceived(double kg)
+{
+    QString expectedStr = txtExpectedWeight->text().trimmed();
+    if (expectedStr.isEmpty()) {
+        // Pas de poids attendu, juste afficher le poids mesuré
+        lblWeight->setText(QString("Poids mesuré: %1 kg").arg(kg, 0, 'f', 2));
+        lblWeight->setStyleSheet("font-size: 13px; font-weight: bold; color: #4CAF50;");
+        return;
+    }
+    
+    bool ok;
+    double expected = expectedStr.toDouble(&ok);
+    if (!ok || expected <= 0) {
+        lblWeight->setText(QString("Poids mesuré: %1 kg").arg(kg, 0, 'f', 2));
+        lblWeight->setStyleSheet("font-size: 13px; font-weight: bold; color: #4CAF50;");
+        return;
+    }
+    
+    double diff = qAbs(kg - expected);
+    double diffPct = (diff / expected) * 100.0;
+    
+    QString statusText;
+    QString styleSheet;
+    
+    if (diffPct <= 5.0) {
+        // Conforme
+        statusText = QString("Poids: %1 kg ✓ Conforme (écart: %2%)")
+            .arg(kg, 0, 'f', 2)
+            .arg(diffPct, 0, 'f', 1);
+        styleSheet = "font-size: 13px; font-weight: bold; color: #4CAF50;";
+    } else {
+        // Non conforme
+        statusText = QString("Poids: %1 kg ✗ Écart: %2%")
+            .arg(kg, 0, 'f', 2)
+            .arg(diffPct, 0, 'f', 1);
+        styleSheet = "font-size: 13px; font-weight: bold; color: #F44336;";
+    }
+    
+    lblWeight->setText(statusText);
+    lblWeight->setStyleSheet(styleSheet);
 }

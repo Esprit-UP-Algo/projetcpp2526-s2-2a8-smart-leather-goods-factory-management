@@ -424,7 +424,7 @@ void ArticleDialog::onSave()
     }
     if (dialogMode == DeleteMode) {
         auto reply = QMessageBox::question(this, "Confirmation",
-            "├ètes-vous s├╗r de vouloir supprimer cet article ?",
+            "Etes-vous sur de vouloir supprimer cet article ?",
             QMessageBox::Yes | QMessageBox::No);
         if (reply == QMessageBox::Yes) accept();
     } else {

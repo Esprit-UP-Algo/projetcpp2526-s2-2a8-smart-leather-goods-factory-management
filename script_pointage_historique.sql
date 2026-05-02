@@ -1,0 +1,25 @@
+-- ============================================================
+-- SCRIPT: Table historique des pointages
+-- Execute ce script dans SQL Developer
+-- ============================================================
+
+-- 1. Creer la sequence (si pas deja fait)
+-- CREATE SEQUENCE CUIREA.SEQ_POINTAGE_HIST START WITH 1 INCREMENT BY 1;
+
+-- 2. Creer la table (sans DEFAULT sur sequence)
+CREATE TABLE CUIREA.POINTAGE_HISTORIQUE (
+    ID_POINTAGE NUMBER PRIMARY KEY,
+    ID_EMPLOYE NUMBER NOT NULL,
+    DATE_POINTAGE DATE NOT NULL,
+    HEURE_ARRIVEE TIMESTAMP,
+    HEURE_DEPART TIMESTAMP,
+    STATUT VARCHAR2(20) DEFAULT 'PRESENT',
+    CONSTRAINT FK_POINTAGE_HIST_EMP FOREIGN KEY (ID_EMPLOYE) 
+        REFERENCES CUIREA.EMPLOYES(ID_EMPLOYE)
+);
+
+-- 3. Index
+CREATE INDEX IDX_POINTAGE_EMP_DATE ON CUIREA.POINTAGE_HISTORIQUE(ID_EMPLOYE, DATE_POINTAGE);
+
+-- 4. Verifier
+SELECT * FROM CUIREA.POINTAGE_HISTORIQUE;

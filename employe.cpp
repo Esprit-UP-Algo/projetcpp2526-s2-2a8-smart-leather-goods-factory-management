@@ -21,10 +21,10 @@ bool Employe::ajouter()
     
     query.prepare("INSERT INTO CUIREA.EMPLOYES (ID_EMPLOYE, MATRICULE, NOM, PRENOM, CIN, DATE_NAISSANCE, "
                   "SEXE, ADRESSE, TELEPHONE, EMAIL, POSTE, DEPARTEMENT, "
-                  "DATE_EMBAUCHE, PHOTO_URL, RFID_UID, MOT_DE_PASSE, ROLE_SYSTEME, ACTIF) "
+                  "DATE_EMBAUCHE, PHOTO_URL, UID_CARTE, MOT_DE_PASSE, ROLE_SYSTEME, ACTIF) "
                   "VALUES (SEQ_EMPLOYE.NEXTVAL, :matricule, :nom, :prenom, :cin, :dateNaissance, "
                   ":sexe, :adresse, :telephone, :email, :poste, "
-                  ":departement, :dateEmbauche, :photoUrl, :rfidUid, :motDePasse, :roleSysteme, :actif)");
+                  ":departement, :dateEmbauche, :photoUrl, :uidCarte, :motDePasse, :roleSysteme, :actif)");
     
     query.bindValue(":matricule", matricule);
     query.bindValue(":nom", nom);
@@ -39,7 +39,7 @@ bool Employe::ajouter()
     query.bindValue(":departement", departement);
     query.bindValue(":dateEmbauche", dateEmbauche);
     query.bindValue(":photoUrl", photoPath);
-    query.bindValue(":rfidUid", rfidUid.isEmpty() ? QVariant(QVariant::String) : rfidUid);
+    query.bindValue(":uidCarte", rfidUid.isEmpty() ? QVariant(QVariant::String) : rfidUid.toUpper().trimmed());
     query.bindValue(":motDePasse", motDePasse);
     query.bindValue(":roleSysteme", roleSysteme);
     query.bindValue(":actif", actif ? 1 : 0);
@@ -66,7 +66,7 @@ bool Employe::modifier()
                   "CIN = :cin, DATE_NAISSANCE = :dateNaissance, SEXE = :sexe, "
                   "ADRESSE = :adresse, TELEPHONE = :telephone, EMAIL = :email, "
                   "POSTE = :poste, DEPARTEMENT = :departement, "
-                  "DATE_EMBAUCHE = :dateEmbauche, PHOTO_URL = :photoUrl, RFID_UID = :rfidUid, "
+                  "DATE_EMBAUCHE = :dateEmbauche, PHOTO_URL = :photoUrl, UID_CARTE = :uidCarte, "
                   "MOT_DE_PASSE = :motDePasse, ROLE_SYSTEME = :roleSysteme, ACTIF = :actif "
                   "WHERE ID_EMPLOYE = :id");
     
@@ -84,7 +84,7 @@ bool Employe::modifier()
     query.bindValue(":departement", departement);
     query.bindValue(":dateEmbauche", dateEmbauche);
     query.bindValue(":photoUrl", photoPath);
-    query.bindValue(":rfidUid", rfidUid.isEmpty() ? QVariant(QVariant::String) : rfidUid);
+    query.bindValue(":uidCarte", rfidUid.isEmpty() ? QVariant(QVariant::String) : rfidUid.toUpper().trimmed());
     query.bindValue(":motDePasse", motDePasse);
     query.bindValue(":roleSysteme", roleSysteme);
     query.bindValue(":actif", actif ? 1 : 0);

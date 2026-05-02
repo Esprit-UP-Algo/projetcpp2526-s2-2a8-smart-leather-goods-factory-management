@@ -42,6 +42,10 @@ private:
     bool    m_visible   = false;
     bool    m_listening = false;
 
+    // Position mémorisée — équivalent de position:fixed (reste fixe par rapport à la fenêtre)
+    QPoint  m_savedPosition;
+    bool    m_positionInitialized = false;
+
     QWidget     *m_panel;
     QTextEdit   *m_chatDisplay;
     QLineEdit   *m_inputField;

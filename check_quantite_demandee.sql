@@ -1,0 +1,34 @@
+-- Vérifier les données de quantité commandée dans MATIERES_PREMIERES
+SELECT 
+    MODULE,
+    REFERENCE,
+    TYPE,
+    QUANTITE_ACTUELLE,
+    QUANTITE_COMMANDEE,
+    SEUIL
+FROM MATIERES_PREMIERES
+ORDER BY MODULE, REFERENCE;
+
+-- Mettre à jour quelques valeurs de test pour la quantité commandée
+-- (Ajustez selon vos besoins réels)
+UPDATE MATIERES_PREMIERES 
+SET QUANTITE_COMMANDEE = 500 
+WHERE MODULE = 'cuir1' AND REFERENCE = 'peau';
+
+UPDATE MATIERES_PREMIERES 
+SET QUANTITE_COMMANDEE = 300 
+WHERE MODULE = 'cuir3' AND REFERENCE = 'peau de veau';
+
+COMMIT;
+
+-- Vérifier après mise à jour
+SELECT 
+    MODULE,
+    REFERENCE,
+    TYPE,
+    QUANTITE_ACTUELLE AS "QTÉ STOCK",
+    QUANTITE_COMMANDEE AS "QTÉ DEMANDÉE",
+    SEUIL
+FROM MATIERES_PREMIERES
+WHERE QUANTITE_COMMANDEE > 0
+ORDER BY MODULE, REFERENCE;
