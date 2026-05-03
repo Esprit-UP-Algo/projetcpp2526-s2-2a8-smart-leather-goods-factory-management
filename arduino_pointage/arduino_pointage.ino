@@ -19,6 +19,7 @@ Servo servo;
 
 void setup() {
   Serial.begin(9600);
+  Serial.println("ROLE:POINTAGE");  // Identification automatique multi-cartes
   
   SPI.begin();
   rfid.PCD_Init();

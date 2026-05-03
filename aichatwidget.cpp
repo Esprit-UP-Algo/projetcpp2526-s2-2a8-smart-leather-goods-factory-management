@@ -170,18 +170,24 @@ void AIChatWidget::toggleChat()
 {
     m_visible = !m_visible;
     if (m_visible) {
-        // Positionner juste après la sidebar (180px), ancré en bas à gauche
         if (parentWidget()) {
-            int x = 190;
-            int y = parentWidget()->height() - 540;
-            move(x, y);
+            // Position fixe par rapport à la fenêtre :
+            // Si jamais initialisée → calculer la position par défaut (coin bas gauche)
+            // Sinon → restaurer la position mémorisée (comme position:fixed)
+            if (!m_positionInitialized) {
+                m_savedPosition = QPoint(190, parentWidget()->height() - 540);
+                m_positionInitialized = true;
+            }
+            move(m_savedPosition);
             resize(380, 520);
         }
         m_panel->resize(this->size());
         show();
-        raise();                   // Passer au premier plan
-        m_inputField->setFocus();  // Prêt à saisir immédiatement
+        raise();
+        m_inputField->setFocus();
     } else {
+        // Mémoriser la position avant de masquer
+        m_savedPosition = pos();
         hide();
     }
 }

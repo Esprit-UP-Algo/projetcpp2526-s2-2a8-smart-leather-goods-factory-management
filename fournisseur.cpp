@@ -81,16 +81,36 @@ bool FournisseurData::modifier()
 
 bool FournisseurData::supprimer(const QString &id)
 {
-    QSqlQuery query(Connection::instance()->getDatabase());
+    QSqlDatabase db = Connection::instance()->getDatabase();
+    
+    // Commencer une transaction
+    db.transaction();
+    
+    // D'abord, supprimer les livraisons associées (si la table existe)
+    QSqlQuery queryLivraisons(db);
+    queryLivraisons.prepare("DELETE FROM ARDUINO_DELIVERIES WHERE ID_FOURNISSEUR = :id");
+    queryLivraisons.bindValue(":id", id);
+    
+    if (!queryLivraisons.exec()) {
+        qDebug() << "⚠️ Avertissement suppression livraisons:" << queryLivraisons.lastError().text();
+        // Continuer même si cette table n'existe pas
+    }
+    
+    // Ensuite, supprimer le fournisseur
+    QSqlQuery query(db);
     query.prepare("DELETE FROM FOURNISSEURS WHERE ID_FOURNISSEUR = :id");
     query.bindValue(":id", id);
     
     if (!query.exec()) {
         qDebug() << "❌ Erreur suppression fournisseur:" << query.lastError().text();
+        db.rollback();
         return false;
     }
     
-    qDebug() << "✅ Fournisseur supprimé avec succès";
+    // Valider la transaction
+    db.commit();
+    
+    qDebug() << "✅ Fournisseur supprimé avec succès (ID:" << id << ")";
     return true;
 }
 
@@ -99,11 +119,12 @@ QSqlQueryModel* FournisseurData::afficher()
     QSqlQueryModel* model = new QSqlQueryModel();
     model->setQuery("SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
                     "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT, ADRESSE, "
-                    "NVL(QTE_COMMANDEE, 0) AS QTE_COMMANDEE, NVL(QTE_MESUREE, 0) AS QTE_MESUREE "
+                    "NVL(QUANTITE_COMMANDEE, 0) AS QTE_COMMANDEE, NVL(QUANTITE_MESUREE, 0) AS QTE_MESUREE "
                     "FROM FOURNISSEURS ORDER BY NOM_ENTREPRISE",
                     Connection::instance()->getDatabase());
 
     if (model->lastError().isValid()) {
+        qDebug() << "❌ Erreur affichage fournisseurs:" << model->lastError().text();
         delete model;
         return nullptr;
     }

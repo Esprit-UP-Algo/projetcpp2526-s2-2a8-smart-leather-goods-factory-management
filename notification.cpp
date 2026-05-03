@@ -28,7 +28,6 @@
 
 // ── Statics ──────────────────────────────────────────────────────────────────
 QList<NotificationWidget*> NotificationWidget::s_active;
-bool                       NotificationWidget::s_toastsEnabled = false;
 NotificationAI*            NotificationAI::s_instance          = nullptr;
 
 // ===============================================================
@@ -120,22 +119,12 @@ void NotificationWidget::show(const QString &title, const QString &message, Type
                                const QString &action2Label, std::function<void()> action2,
                                int durationMs, bool aiGenerated)
 {
+    // Ajout à l'historique interne (cloche)
     NotificationHistory::instance().add({title, message, type,
                                          QDateTime::currentDateTime(), false, aiGenerated});
 
-    // Notification systeme native OS
+    // Notification système native OS uniquement
     SystemNotification::instance().show(title, message, type, durationMs);
-
-    if (!s_toastsEnabled) return;
-
-    if (s_active.size() >= MAX_TOASTS && !s_active.isEmpty())
-        s_active.first()->fadeOut();
-
-    NotificationSound::play(type);
-    s_active.append(new NotificationWidget(title, message, type,
-                                           action1Label, action1,
-                                           action2Label, action2,
-                                           durationMs, aiGenerated));
 }
 
 void NotificationWidget::closeAll()

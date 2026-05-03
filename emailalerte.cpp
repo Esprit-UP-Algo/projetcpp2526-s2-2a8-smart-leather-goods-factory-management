@@ -11,8 +11,7 @@
 // Utilisez des variables d'environnement en production
 const QString EmailAlerte::API_KEY      = "YOUR_BREVO_API_KEY_HERE"; // À remplacer par votre clé
 const QString EmailAlerte::SENDER_EMAIL = "your-email@example.com";
-const QString EmailAlerte::SENDER_NAME  = "CUIREA - Alerte Stock
-
+const QString EmailAlerte::SENDER_NAME  = "CUIREA - Alerte Stock";
 
 EmailAlerte::EmailAlerte(QObject *parent)
     : QObject(parent)

@@ -12,6 +12,7 @@ TEMPLATE = app
 SOURCES += \
     arduino.cpp \
     arduinoconnection.cpp \
+    arduinomanager.cpp \
     arduinomonitor.cpp \
     emailalerte.cpp \
     aichatwidget.cpp \
@@ -53,6 +54,7 @@ SOURCES += \
 HEADERS += \
     arduino.h \
     arduinoconnection.h \
+    arduinomanager.h \
     arduinomonitor.h \
     emailalerte.h \
     aichatwidget.h \

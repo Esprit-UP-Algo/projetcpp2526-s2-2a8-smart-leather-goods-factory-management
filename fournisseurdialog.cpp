@@ -138,16 +138,16 @@ void FournisseurDialog::setupUI()
     
     btnWeighDelivery = new QPushButton("⚖ Peser", this);
     btnWeighDelivery->setStyleSheet(
-        "QPushButton { background-color: #4CAF50; color: white; border: none; border-radius: 8px; "
+        "QPushButton { background-color: #8D6E63; color: white; border: none; border-radius: 8px; "
         "padding: 10px 20px; font-size: 13px; font-weight: bold; }"
-        "QPushButton:hover { background-color: #66BB6A; }"
-        "QPushButton:pressed { background-color: #388E3C; }"
+        "QPushButton:hover { background-color: #A0826D; }"
+        "QPushButton:pressed { background-color: #6D4C41; }"
     );
     connect(btnWeighDelivery, &QPushButton::clicked, this, &FournisseurDialog::onWeighDelivery);
     weightLayout->addWidget(btnWeighDelivery);
     
     lblWeight = new QLabel("Poids: -- kg", this);
-    lblWeight->setStyleSheet("font-size: 14px; font-weight: bold; color: #4CAF50;");
+    lblWeight->setStyleSheet("font-size: 14px; font-weight: bold; color: #8D6E63;");
     weightLayout->addWidget(lblWeight);
     weightLayout->addStretch();
     

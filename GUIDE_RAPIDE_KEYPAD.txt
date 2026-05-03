@@ -1,0 +1,176 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║   ⌨️  GUIDE RAPIDE : Keypad 4x4 ne fonctionne pas                           ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TEST RAPIDE EN 3 ÉTAPES                                                      │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─ ÉTAPE 1 : Vérifier la bibliothèque ───────────────────────────────────┐
+  │                                                                         │
+  │  1. Ouvrir Arduino IDE                                                  │
+  │  2. Croquis → Inclure une bibliothèque → Gérer les bibliothèques       │
+  │  3. Rechercher "Keypad"                                                 │
+  │  4. Installer "Keypad" by Mark Stanley                                  │
+  │                                                                         │
+  │  ✅ Si déjà installée → Passer à l'étape 2                             │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─ ÉTAPE 2 : Test isolé du keypad ───────────────────────────────────────┐
+  │                                                                         │
+  │  1. Ouvrir : arduino_sketch/test_keypad/test_keypad.ino                │
+  │  2. Téléverser sur la carte LIVRAISON                                   │
+  │  3. Ouvrir le Moniteur Série (9600 bauds)                               │
+  │  4. Appuyer sur les touches du keypad                                   │
+  │                                                                         │
+  │  ✅ Vous devriez voir :                                                 │
+  │     Touche appuyee : 1                                                  │
+  │     Touche appuyee : 5                                                  │
+  │     etc.                                                                │
+  │                                                                         │
+  │  ❌ Si rien ne s'affiche → Passer à l'étape 3                          │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─ ÉTAPE 3 : Vérifier le câblage ────────────────────────────────────────┐
+  │                                                                         │
+  │  Le keypad 4x4 a 8 pins :                                               │
+  │                                                                         │
+  │  Pin Keypad  →  Pin Arduino                                             │
+  │  ─────────────────────────────                                          │
+  │  R1 (Ligne 1) → A0                                                      │
+  │  R2 (Ligne 2) → A1                                                      │
+  │  R3 (Ligne 3) → A2                                                      │
+  │  R4 (Ligne 4) → A3                                                      │
+  │  C1 (Col 1)   → A4                                                      │
+  │  C2 (Col 2)   → A5                                                      │
+  │  C3 (Col 3)   → D2                                                      │
+  │  C4 (Col 4)   → D3                                                      │
+  │                                                                         │
+  │  ⚠️  Vérifiez que :                                                     │
+  │     • Les câbles sont bien enfoncés                                     │
+  │     • Pas de faux contact                                               │
+  │     • Les pins correspondent exactement                                 │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ SCHÉMA DE CÂBLAGE                                                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Keypad 4x4          Arduino Uno
+  ┌─────────┐         ┌─────────┐
+  │ R1 ●────┼────────→│ A0      │
+  │ R2 ●────┼────────→│ A1      │
+  │ R3 ●────┼────────→│ A2      │
+  │ R4 ●────┼────────→│ A3      │
+  │ C1 ●────┼────────→│ A4      │
+  │ C2 ●────┼────────→│ A5      │
+  │ C3 ●────┼────────→│ D2      │
+  │ C4 ●────┼────────→│ D3      │
+  └─────────┘         └─────────┘
+
+  Disposition des touches :
+  ┌───┬───┬───┬───┐
+  │ 1 │ 2 │ A │ 3 │  ← Ligne 1 (R1)
+  ├───┼───┼───┼───┤
+  │ 4 │ 5 │ B │ 6 │  ← Ligne 2 (R2)
+  ├───┼───┼───┼───┤
+  │ 7 │ 8 │ C │ 9 │  ← Ligne 3 (R3)
+  ├───┼───┼───┼───┤
+  │ * │ 0 │ D │ # │  ← Ligne 4 (R4)
+  └───┴───┴───┴───┘
+    ↑   ↑   ↑   ↑
+   C1  C2  C3  C4
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ PROBLÈMES FRÉQUENTS ET SOLUTIONS                                             │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ❌ Aucune touche ne répond
+     → Vérifier que la bibliothèque Keypad est installée
+     → Vérifier le câblage avec le test isolé
+
+  ❌ Certaines touches fonctionnent, d'autres non
+     → Faux contact sur les câbles
+     → Vérifier que tous les câbles sont bien enfoncés
+
+  ❌ Mauvaises touches détectées (appuyer sur 1 donne 4)
+     → Les pins rows et cols sont inversées
+     → Inverser rowPins et colPins dans le code
+
+  ❌ Touches aléatoires détectées
+     → Interférences électriques
+     → Éloigner les câbles du keypad des servos et du LCD
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ SOLUTION SI ROWS/COLS INVERSÉES                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Si votre keypad a les pins inversées, modifiez le sketch :
+
+  // AVANT
+  byte rowPins[ROWS] = {A0, A1, A2, A3};
+  byte colPins[COLS] = {A4, A5, 2, 3};
+
+  // APRÈS (inversé)
+  byte rowPins[ROWS] = {A4, A5, 2, 3};
+  byte colPins[COLS] = {A0, A1, A2, A3};
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ PINS UTILISÉES PAR CHAQUE COMPOSANT                                          │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ┌────────────────┬─────────────────────────────────────────────────────┐
+  │ Composant      │ Pins utilisées                                      │
+  ├────────────────┼─────────────────────────────────────────────────────┤
+  │ LCD 16x2       │ RS=12, EN=11, D4=6, D5=7, D6=8, D7=4               │
+  ├────────────────┼─────────────────────────────────────────────────────┤
+  │ Servo Bras     │ 9                                                   │
+  ├────────────────┼─────────────────────────────────────────────────────┤
+  │ Servo Barrière │ 10                                                  │
+  ├────────────────┼─────────────────────────────────────────────────────┤
+  │ Keypad 4x4     │ A0, A1, A2, A3, A4, A5, 2, 3                       │
+  └────────────────┴─────────────────────────────────────────────────────┘
+
+  ⚠️  Pas de conflit de pins détecté
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TEST MANUEL AVEC MULTIMÈTRE                                                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Si vous avez un multimètre :
+
+  1. Mettre en mode continuité (bip)
+  2. Identifier les pins du keypad (8 pins au total)
+  3. Appuyer sur une touche (ex: touche "1")
+  4. Tester la continuité entre chaque paire de pins
+  5. Vous devriez trouver continuité entre R1 et C1
+
+  Cela permet d'identifier quelles pins sont les rows et lesquelles sont les cols
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ FICHIERS DE RÉFÉRENCE                                                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  📄 DIAGNOSTIC_KEYPAD.md                → Diagnostic complet
+  🔧 arduino_sketch/test_keypad/         → Sketch de test isolé
+  📄 arduino_sketch/arduino_sketch.ino   → Sketch complet
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ BESOIN D'AIDE ?                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Ouvrir DIAGNOSTIC_KEYPAD.md pour un guide complet avec :
+  • Tests de diagnostic détaillés
+  • Sketches de test avec debug
+  • Solutions pour tous les cas de figure
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║  ✅ Après avoir suivi ces étapes, votre keypad devrait fonctionner !        ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝

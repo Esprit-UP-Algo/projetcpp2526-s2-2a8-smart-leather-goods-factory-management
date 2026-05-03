@@ -46,7 +46,8 @@ public:
     static void closeAll();
     static int  activeCount() { return s_active.size(); }
     static void repositionAll();
-    static void setToastsEnabled(bool enabled) { s_toastsEnabled = enabled; }
+    // Toasts désactivés — notifications système uniquement
+    static void setToastsEnabled(bool /*enabled*/) {}
 
 signals:
     void clicked();
@@ -91,7 +92,6 @@ private:
 
     static constexpr int MAX_TOASTS = 5;
     static QList<NotificationWidget*> s_active;
-    static bool s_toastsEnabled;
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════

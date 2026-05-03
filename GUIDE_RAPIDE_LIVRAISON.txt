@@ -1,0 +1,142 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║   🚚 GUIDE RAPIDE : Carte LIVRAISON non détectée                            ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ PROBLÈME                                                                     │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ❌ Message d'erreur : "Carte d'expédition non connectée"
+  ✅ La carte est bien branchée en USB
+  ❓ Pourquoi n'est-elle pas détectée ?
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ CAUSE                                                                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Le système attend que chaque carte envoie un message "ROLE:LIVRAISON" au
+  démarrage pour s'identifier. Si ce message n'est pas envoyé, la carte n'est
+  pas reconnue.
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ SOLUTION EN 4 ÉTAPES                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─ ÉTAPE 1 : Vérifier le sketch ─────────────────────────────────────────┐
+  │                                                                         │
+  │  1. Ouvrir Arduino IDE                                                  │
+  │  2. Outils → Moniteur Série (Ctrl+Shift+M)                             │
+  │  3. Régler la vitesse : 9600 bauds                                      │
+  │  4. Sélectionner le port COM de la carte LIVRAISON                      │
+  │  5. Débrancher et rebrancher la carte USB                               │
+  │                                                                         │
+  │  ✅ Vous devriez voir :                                                 │
+  │     ROLE:LIVRAISON                                                      │
+  │     Systeme pret                                                        │
+  │     Saisir ID + D                                                       │
+  │                                                                         │
+  │  ❌ Si vous ne voyez PAS "ROLE:LIVRAISON" → Passer à l'étape 2         │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─ ÉTAPE 2 : Téléverser le bon sketch ───────────────────────────────────┐
+  │                                                                         │
+  │  1. Dans Arduino IDE :                                                  │
+  │     Fichier → Ouvrir → arduino_sketch/arduino_sketch.ino               │
+  │                                                                         │
+  │  2. Sélectionner le port COM :                                          │
+  │     Outils → Port → COMx (votre carte LIVRAISON)                       │
+  │                                                                         │
+  │  3. Téléverser :                                                        │
+  │     Cliquer sur le bouton → (Téléverser)                               │
+  │     Attendre "Téléversement terminé"                                    │
+  │                                                                         │
+  │  4. Vérifier dans le Moniteur Série :                                   │
+  │     Vous devez maintenant voir "ROLE:LIVRAISON"                         │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─ ÉTAPE 3 : Redémarrer l'application Qt ─────────────────────────────────┐
+  │                                                                         │
+  │  1. Fermer l'application CUIREA                                         │
+  │  2. Lancer : debug\CUIREA_Management.exe                                │
+  │  3. Aller sur la page Production                                        │
+  │  4. Vérifier l'indicateur Arduino en haut à droite :                    │
+  │                                                                         │
+  │     ● 3 Arduino connectés  (VERT)   → ✅ Tout fonctionne               │
+  │     ● 2/3 Arduino          (ORANGE) → ⚠️  LIVRAISON manquante          │
+  │     ● Non connecté         (ROUGE)  → ❌ Aucune carte                  │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+  ┌─ ÉTAPE 4 : Tester l'expédition ─────────────────────────────────────────┐
+  │                                                                         │
+  │  1. Sélectionner une commande avec statut "Terminé"                     │
+  │  2. Cliquer sur le bouton "🚚 Expédier"                                 │
+  │  3. Si tout fonctionne :                                                │
+  │     → Les servos se déclenchent                                         │
+  │     → Le LCD affiche "Expedition OK"                                    │
+  │     → Le statut passe à "En livraison"                                  │
+  │                                                                         │
+  └─────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ TABLEAU DES SKETCHES                                                         │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ┌────────────────┬─────────────────────────────────┬──────────────────────┐
+  │ Carte          │ Sketch à téléverser             │ Message ROLE         │
+  ├────────────────┼─────────────────────────────────┼──────────────────────┤
+  │ TEMP_BALANCE   │ cuirea_arduino/                 │ ROLE:TEMP_BALANCE    │
+  │                │ cuirea_arduino.ino              │                      │
+  ├────────────────┼─────────────────────────────────┼──────────────────────┤
+  │ LIVRAISON      │ arduino_sketch/                 │ ROLE:LIVRAISON       │
+  │                │ arduino_sketch.ino              │                      │
+  ├────────────────┼─────────────────────────────────┼──────────────────────┤
+  │ POINTAGE       │ arduino_pointage/               │ ROLE:POINTAGE        │
+  │                │ arduino_pointage.ino            │                      │
+  └────────────────┴─────────────────────────────────┴──────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ CAUSES FRÉQUENTES                                                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  ❌ Mauvais sketch téléversé
+     → Téléverser arduino_sketch.ino sur la carte LIVRAISON
+
+  ❌ Sketch non téléversé du tout
+     → Téléverser arduino_sketch.ino
+
+  ❌ Port COM utilisé par Arduino IDE
+     → Fermer Arduino IDE avant de lancer l'application Qt
+
+  ❌ Câble USB défectueux
+     → Essayer un autre câble USB
+
+  ❌ Timeout trop court (rare)
+     → Augmenter ROLE_TIMEOUT_MS à 5000 dans arduinomanager.h
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ FICHIERS DE RÉFÉRENCE                                                        │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  📄 SOLUTION_CARTE_LIVRAISON.md  → Solutions détaillées
+  📄 DIAGNOSTIC_LIVRAISON.md      → Diagnostic complet
+  📄 arduino_multi_cartes.md      → Architecture multi-cartes
+  🔧 test_arduino_livraison.bat   → Script de test
+
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ BESOIN D'AIDE ?                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+  Ouvrir SOLUTION_CARTE_LIVRAISON.md pour un guide complet avec captures
+  d'écran et explications détaillées.
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║  ✅ Après avoir suivi ces étapes, votre carte LIVRAISON devrait être        ║
+║     détectée et l'expédition devrait fonctionner correctement !             ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
