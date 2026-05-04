@@ -83,10 +83,18 @@ void Arduino::ledOff()             { write_to_arduino("LED_OFF\n"); }
 // ─── Traitement données ───────────────────────────────────────────────────────
 void Arduino::onDataReceived()
 {
-    QByteArray data = read_from_arduino();
-    if (!data.isEmpty()) {
-        QString message = QString::fromUtf8(data).trimmed();
-        processArduinoData(message);
+    QSerialPort* serial = m_connection->getSerial();
+    if (!serial) return;
+
+    m_readBuffer += serial->readAll();
+
+    // Traiter toutes les lignes complètes (terminées par \n)
+    while (m_readBuffer.contains('\n')) {
+        int idx = m_readBuffer.indexOf('\n');
+        QString line = QString::fromUtf8(m_readBuffer.left(idx)).trimmed();
+        m_readBuffer.remove(0, idx + 1);
+        if (!line.isEmpty())
+            processArduinoData(line);
     }
 }
 
@@ -105,7 +113,7 @@ void Arduino::processArduinoData(const QString &data)
                 emit temperatureReceived(tempMatiere, tempAmbiance);
         }
     }
-    // Format: WEIGHT:45.67
+    // Format: WEIGHT:45678900 (valeur brute HX711)
     else if (data.startsWith("WEIGHT:")) {
         bool ok;
         double weight = data.mid(7).toDouble(&ok);

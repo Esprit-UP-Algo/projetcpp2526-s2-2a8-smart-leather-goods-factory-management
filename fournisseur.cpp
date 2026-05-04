@@ -119,9 +119,18 @@ QSqlQueryModel* FournisseurData::afficher()
     QSqlQueryModel* model = new QSqlQueryModel();
     model->setQuery("SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
                     "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT, ADRESSE, "
-                    "NVL(QUANTITE_COMMANDEE, 0) AS QTE_COMMANDEE, NVL(QUANTITE_MESUREE, 0) AS QTE_MESUREE "
+                    "NVL(QTE_COMMANDEE, 0) AS QTE_COMMANDEE, NVL(QTE_MESUREE, 0) AS QTE_MESUREE "
                     "FROM FOURNISSEURS ORDER BY NOM_ENTREPRISE",
                     Connection::instance()->getDatabase());
+
+    if (model->lastError().isValid()) {
+        // Fallback si les colonnes QTE_* n'existent pas encore
+        model->setQuery("SELECT ID_FOURNISSEUR, NOM_ENTREPRISE, EMAIL, TELEPHONE, MATRICULE_FISCAL, "
+                        "TYPE_PRODUIT, CONDITION_PAIEMENT, STATUT, ADRESSE, "
+                        "0 AS QTE_COMMANDEE, 0 AS QTE_MESUREE "
+                        "FROM FOURNISSEURS ORDER BY NOM_ENTREPRISE",
+                        Connection::instance()->getDatabase());
+    }
 
     if (model->lastError().isValid()) {
         qDebug() << "❌ Erreur affichage fournisseurs:" << model->lastError().text();

@@ -216,9 +216,19 @@ void ArduinoMonitor::onWeightStable(double kg)
 void ArduinoMonitor::saveTemperatureReading(double tempMatiere, double tempAmbiance, bool isAlert)
 {
     QSqlQuery q(Connection::instance()->getDatabase());
+
+    // Créer la séquence si elle n'existe pas encore
+    QSqlQuery seqCheck(Connection::instance()->getDatabase());
+    seqCheck.exec("SELECT COUNT(*) FROM USER_SEQUENCES WHERE SEQUENCE_NAME = 'SEQ_ARDUINO_TEMP'");
+    if (seqCheck.next() && seqCheck.value(0).toInt() == 0) {
+        QSqlQuery createSeq(Connection::instance()->getDatabase());
+        createSeq.exec("CREATE SEQUENCE SEQ_ARDUINO_TEMP START WITH 1 INCREMENT BY 1 NOCACHE");
+        qDebug() << "✅ Séquence SEQ_ARDUINO_TEMP créée";
+    }
+
     q.prepare("INSERT INTO ARDUINO_TEMP_READINGS "
-              "(ID_MATIERE, TEMP_MATIERE, TEMP_AMBIANTE, IS_ALERT) "
-              "VALUES (3, :tmat, :tamb, :alert)");
+              "(ID_READING, ID_MATIERE, TEMP_MATIERE, TEMP_AMBIANTE, IS_ALERT) "
+              "VALUES (SEQ_ARDUINO_TEMP.NEXTVAL, 3, :tmat, :tamb, :alert)");
     q.bindValue(":tmat",  tempMatiere);
     q.bindValue(":tamb",  tempAmbiance);
     q.bindValue(":alert", isAlert ? 1 : 0);

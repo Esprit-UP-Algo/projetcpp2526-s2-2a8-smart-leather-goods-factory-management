@@ -229,7 +229,7 @@ void VerificationLivraison::onWeightReceived(double kg)
     m_measuredWeight = kg;
     m_isValid = (diffPct <= 5.0);
     
-    QString msg = QString("✓ Poids mesuré : %1 kg\n").arg(kg, 0, 'f', 2);
+    QString msg = QString("✓ Poids mesuré : %1 kg\n").arg(kg, 0, 'f', 3);
     msg += QString("Commandé : %1 kg\n").arg(qteCommandee, 0, 'f', 2);
     
     if (m_isValid) {

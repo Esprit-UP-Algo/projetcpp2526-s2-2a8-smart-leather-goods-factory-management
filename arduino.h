@@ -67,6 +67,7 @@ private:
 
     ArduinoConnection* m_connection;
     QByteArray         m_data;
+    QByteArray         m_readBuffer;   // buffer d'accumulation pour les lectures fragmentées
     QString            m_role;   // "TEMP_BALANCE" | "LIVRAISON" | "POINTAGE"
 };
 
