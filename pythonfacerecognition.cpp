@@ -72,11 +72,13 @@ bool PythonFaceRecognition::isAvailable()
         return false;
     }
     
-    // Vérifier si face_recognition est installé
-    process.start(pythonCmd, QStringList() << "-c" << "import face_recognition");
-    process.waitForFinished(3000);
+    // Vérifier si face_recognition est installé via le script
+    QProcess checkProcess;
+    checkProcess.start(pythonCmd, QStringList() << pythonScriptPath << "check");
+    checkProcess.waitForFinished(5000);
     
-    if (process.exitCode() != 0) {
+    QString checkOutput = checkProcess.readAllStandardOutput().trimmed();
+    if (!checkOutput.contains("AVAILABLE")) {
         qDebug() << "❌ Module face_recognition non installé";
         return false;
     }
@@ -190,18 +192,24 @@ int PythonFaceRecognition::recognizeFace(const QImage &faceImage)
     QFile::remove(tempPath);
     
     if (process.exitCode() == 0 && output.contains("RECOGNIZED:")) {
-        // Extraire l'ID de l'employé
-        QStringList parts = output.split(":");
+        // Format: RECOGNIZED:<id>:<confidence>
+        QStringList parts = output.trimmed().split(":");
         if (parts.size() >= 2) {
             int employeeId = parts[1].trimmed().toInt();
-            emit recognitionProgress(QString("✅ Employé reconnu: ID %1").arg(employeeId));
+            int confidence = (parts.size() >= 3) ? parts[2].trimmed().toInt() : 0;
+            emit recognitionProgress(QString("✅ Employé reconnu (confiance: %1%)").arg(confidence));
             emit recognitionCompleted(employeeId);
             return employeeId;
         }
     } else if (output.contains("NO_FACE")) {
+        emit recognitionProgress("⚠ Aucun visage détecté — repositionnez-vous");
         emit recognitionFailed("Aucun visage détecté");
     } else if (output.contains("UNKNOWN")) {
-        emit recognitionFailed("Visage non reconnu");
+        emit recognitionProgress("❌ Visage non reconnu");
+        emit recognitionFailed("Visage non reconnu dans la base");
+    } else if (output.contains("ERROR:")) {
+        QString errDetail = output.trimmed().split(":").value(1, "inconnue");
+        emit recognitionFailed("Erreur: " + errDetail);
     } else {
         emit recognitionFailed("Erreur lors de la reconnaissance");
     }

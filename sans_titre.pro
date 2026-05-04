@@ -107,3 +107,9 @@ RESOURCES += \
 qnx: target.path = /tmp/${TARGET}/bin
 else: unix:!android: target.path = /opt/${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+# Copier le script Python de reconnaissance faciale dans le dossier de build
+win32 {
+    QMAKE_POST_LINK += copy /Y \"$$shell_path($$PWD/face_recognizer.py)\" \"$$shell_path($$OUT_PWD/debug/face_recognizer.py)\" &
+    QMAKE_POST_LINK += copy /Y \"$$shell_path($$PWD/face_recognizer.py)\" \"$$shell_path($$OUT_PWD/release/face_recognizer.py)\"
+}

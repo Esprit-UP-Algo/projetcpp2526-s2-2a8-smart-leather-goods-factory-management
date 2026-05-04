@@ -28,6 +28,11 @@ public:
     static QString get(const QString &key) {
         return QString::fromUtf8(qgetenv(key.toUtf8()));
     }
+
+    static QString get(const QString &key, const QString &defaultValue) {
+        QByteArray val = qgetenv(key.toUtf8());
+        return val.isEmpty() ? defaultValue : QString::fromUtf8(val);
+    }
 };
 
 #endif // ENVLOADER_H

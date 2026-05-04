@@ -7502,7 +7502,7 @@ void MainWindow::traiterMessageArduino(const QString &msg)
 
         if (q.exec() && q.next()) {
             QString refTrouvee = q.value(1).toString();
-            // Trouvé → marquer Terminé + date livraison + envoyer '1' aux servos
+            // Trouvé → marquer Terminé + date livraison
             QString dateAuj = QDate::currentDate().toString("dd/MM/yyyy");
             QSqlQuery upd(Connection::instance()->getDatabase());
             upd.prepare("UPDATE COMMANDES SET STATUT = 'Termin\u00e9', "
@@ -7512,25 +7512,21 @@ void MainWindow::traiterMessageArduino(const QString &msg)
             upd.bindValue(":ref", refTrouvee);
             upd.exec();
 
-            // Envoyer '1' à la carte LIVRAISON (servos)
+            // Envoyer '3' → Arduino affiche "Cliquer Expédier" et attend
+            // Les servos ne tournent QUE quand l'opérateur clique btnExpédier (qui envoie '1')
             if (m_arduinoLivraison && m_arduinoLivraison->isConnected())
-                m_arduinoLivraison->write_to_arduino("1");
+                m_arduinoLivraison->write_to_arduino("3");
 
             loadProductionData();
             m_keypadBuffer.clear();
 
-            // LCD "Commande terminee" → retour home après 3s
-            if (m_lcdLigne1) m_lcdLigne1->setText("Commande terminee");
-            if (m_lcdLigne2) m_lcdLigne2->setText(refTrouvee);
-
-            QTimer::singleShot(3000, this, [this]() {
-                if (m_lcdLigne1) m_lcdLigne1->setText("Systeme pret");
-                if (m_lcdLigne2) m_lcdLigne2->setText("Saisir ID + #");
-            });
+            // LCD Qt : refléter l'état d'attente
+            if (m_lcdLigne1) m_lcdLigne1->setText("ID OK - Termine");
+            if (m_lcdLigne2) m_lcdLigne2->setText("Cliquer Expedier");
 
             NotificationWidget::show(
                 "✅ Commande terminée",
-                "Référence " + refTrouvee + " marquée Terminé — " + dateAuj,
+                "Référence " + refTrouvee + " marquée Terminé — cliquez Expédier pour lancer les servos",
                 NotificationWidget::Success
             );
         } else {

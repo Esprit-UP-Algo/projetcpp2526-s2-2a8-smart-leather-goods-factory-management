@@ -1,4 +1,5 @@
 #include "smsfournisseurdialog.h"
+#include "envloader.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -10,12 +11,10 @@
 #include <QUrl>
 #include <QUrlQuery>
 #include <QByteArray>
-
-// ── Configuration Twilio ─────────────────────────────────────
-// Remplace ces 3 valeurs par tes infos depuis console.twilio.com
-static const QString TWILIO_ACCOUNT_SID = "AXXXXXXXX";
-static const QString TWILIO_AUTH_TOKEN  = "";
-static const QString TWILIO_FROM_NUMBER = "+1"; // Ton numéro Twilio
+// ── Configuration Twilio (chargée depuis .env) ────────────────
+static const QString TWILIO_ACCOUNT_SID = EnvLoader::get("TWILIO_ACCOUNT_SID", "AC6f730358c45660014261118c80cd611e");
+static const QString TWILIO_AUTH_TOKEN  = EnvLoader::get("TWILIO_AUTH_TOKEN",  "b56b3a4da2956177eeb41a9b9f92af37");
+static const QString TWILIO_FROM_NUMBER = EnvLoader::get("TWILIO_FROM_NUMBER", "+15076981452");
 // ─────────────────────────────────────────────────────────────
 
 SmsFournisseurDialog::SmsFournisseurDialog(const QString &nomEntreprise,

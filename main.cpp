@@ -12,6 +12,15 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
+    // Style global — force le texte des QMessageBox en noir
+    a.setStyleSheet(
+        "QMessageBox { background-color: #FAF5F0; }"
+        "QMessageBox QLabel { color: #000000; font-size: 12px; font-weight: normal; }"
+        "QMessageBox QPushButton { background-color: #8D6E63; color: white; border: none; "
+        "border-radius: 6px; padding: 8px 20px; font-size: 11px; font-weight: bold; min-width: 80px; }"
+        "QMessageBox QPushButton:hover { background-color: #A0826D; }"
+    );
+
     // Charger les variables d'environnement depuis .env
     // Cherche d'abord à côté de l'exécutable, puis dans le répertoire source
     QString envPath = QCoreApplication::applicationDirPath() + "/.env";

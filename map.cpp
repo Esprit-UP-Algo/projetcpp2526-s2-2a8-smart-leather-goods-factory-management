@@ -12,7 +12,7 @@ Map::Map(QObject *parent) : QObject(parent)
 }
 void Map::geocodeAddress(const QString &address)
 {
-    QString apiKey = "";
+    QString apiKey = "56677253ce37437ea0e166d0f5f0197d";
 
     QString baseUrl = "https://api.opencagedata.com/geocode/v1/json";
 

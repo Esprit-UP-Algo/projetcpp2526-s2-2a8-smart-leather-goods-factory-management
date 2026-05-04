@@ -1,4 +1,5 @@
 #include "email.h"
+#include "envloader.h"
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QJsonDocument>
@@ -21,7 +22,7 @@ bool Mail::sendEmail(const QString &recipient,
 {
     QNetworkRequest request(QUrl("https://api.brevo.com/v3/smtp/email"));
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-    request.setRawHeader("api-key", ""); // your key
+    request.setRawHeader("api-key", EnvLoader::get("BREVO_API_KEY").toUtf8());
 
     QJsonObject senderObj;
     senderObj["email"] = "aporiaaaaa1@gmail.com";

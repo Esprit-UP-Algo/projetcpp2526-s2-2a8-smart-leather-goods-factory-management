@@ -452,6 +452,14 @@ QPushButton#btnRawMaterials:pressed, QPushButton#btnSuppliers:pressed, QPushButt
     font-size: 22px;
     font-weight: bold;
 }
+
+/* QMessageBox — texte toujours en noir */
+QMessageBox QLabel {
+    color: #000000;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    font-weight: normal;
+}
    </string>
   </property>
   <widget class="QWidget" name="centralwidget">
