@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conditions de Conservation - CUIREA</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #FBF5F0, #F0E6DA);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(107,39,55,0.15);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #6B2737, #C4923A);
+            color: white;
+            padding: 28px 30px;
+            text-align: center;
+        }
+        .logo { font-size: 26px; font-weight: bold; letter-spacing: 3px; }
+        .header h1 { font-size: 18px; margin-top: 8px; opacity: 0.9; }
+        .article-info {
+            background: #FBF5F0;
+            border-left: 4px solid #C4923A;
+            margin: 20px;
+            padding: 14px 18px;
+            border-radius: 6px;
+        }
+        .article-info p { font-size: 13px; color: #555; margin: 3px 0; }
+        .article-info strong { color: #6B2737; }
+        .conditions { padding: 10px 20px 24px; }
+        .conditions h2 {
+            font-size: 14px;
+            color: #6B2737;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #F0E6DA;
+        }
+        .condition-card {
+            display: flex;
+            align-items: flex-start;
+            background: #FBF5F0;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #C4923A;
+        }
+        .condition-icon {
+            font-size: 24px;
+            margin-right: 14px;
+            min-width: 32px;
+            text-align: center;
+        }
+        .condition-content h3 {
+            font-size: 13px;
+            font-weight: bold;
+            color: #6B2737;
+            margin-bottom: 4px;
+        }
+        .condition-content p {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.5;
+        }
+        .footer {
+            text-align: center;
+            padding: 16px;
+            background: #FBF5F0;
+            font-size: 11px;
+            color: #999;
+            border-top: 1px solid #F0E6DA;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">CUIREA</div>
+        <h1>Conditions de Conservation & d'Entretien</h1>
+    </div>
+
+    <div class="article-info">
+        <p><strong>Référence :</strong> <span id="ref">—</span></p>
+        <p><strong>Produit :</strong> <span id="produit">—</span></p>
+        <p><strong>Commande :</strong> <span id="commande">—</span></p>
+    </div>
+
+    <div class="conditions">
+        <h2>Caractéristiques de l'article</h2>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;">
+            <div style="background:#FBF5F0;border-radius:8px;padding:12px 14px;border-left:3px solid #6B2737;">
+                <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:1px;">Catégorie</div>
+                <div style="font-size:14px;font-weight:bold;color:#6B2737;margin-top:4px;" id="categorie">—</div>
+            </div>
+            <div style="background:#FBF5F0;border-radius:8px;padding:12px 14px;border-left:3px solid #6B2737;">
+                <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:1px;">Nom</div>
+                <div style="font-size:14px;font-weight:bold;color:#6B2737;margin-top:4px;" id="type">—</div>
+            </div>
+            <div style="background:#FBF5F0;border-radius:8px;padding:12px 14px;border-left:3px solid #C4923A;">
+                <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:1px;">Couleur</div>
+                <div style="font-size:14px;font-weight:bold;color:#6B2737;margin-top:4px;" id="couleur">—</div>
+            </div>
+            <div style="background:#FBF5F0;border-radius:8px;padding:12px 14px;border-left:3px solid #C4923A;">
+                <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:1px;">Dimensions</div>
+                <div style="font-size:14px;font-weight:bold;color:#6B2737;margin-top:4px;" id="dimensions">—</div>
+            </div>
+            <div style="background:#FBF5F0;border-radius:8px;padding:12px 14px;border-left:3px solid #6B2737;">
+                <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:1px;">Prix Unitaire</div>
+                <div style="font-size:14px;font-weight:bold;color:#6B2737;margin-top:4px;" id="prix">—</div>
+            </div>
+            <div style="background:#FBF5F0;border-radius:8px;padding:12px 14px;border-left:3px solid #6B2737;">
+                <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:1px;">Statut</div>
+                <div style="font-size:14px;font-weight:bold;color:#6B2737;margin-top:4px;" id="statut">—</div>
+            </div>
+        </div>
+
+        <h2>Conditions de Conservation & d'Entretien</h2>
+
+        <div class="condition-card">
+            <div class="condition-icon">🌡️</div>
+            <div class="condition-content">
+                <h3>Température et Humidité</h3>
+                <p>Conserver entre <strong>15°C et 25°C</strong> avec une humidité relative de <strong>40% à 60%</strong>. Éviter les environnements trop secs ou trop humides qui peuvent déformer ou craqueler le cuir.</p>
+            </div>
+        </div>
+
+        <div class="condition-card">
+            <div class="condition-icon">☀️</div>
+            <div class="condition-content">
+                <h3>Protection contre la Lumière</h3>
+                <p>Protéger de l'exposition directe au soleil et aux sources lumineuses intenses. La lumière UV décolore et fragilise les articles en cuir. Utiliser une housse de protection opaque si nécessaire.</p>
+            </div>
+        </div>
+
+        <div class="condition-card">
+            <div class="condition-icon">💨</div>
+            <div class="condition-content">
+                <h3>Aération</h3>
+                <p>Stocker dans un endroit bien aéré. Ne pas emballer hermétiquement dans du plastique. Utiliser des sacs en tissu respirant pour permettre la circulation de l'air et éviter les moisissures.</p>
+            </div>
+        </div>
+
+        <div class="condition-card">
+            <div class="condition-icon">🧴</div>
+            <div class="condition-content">
+                <h3>Entretien Régulier</h3>
+                <p>Nettoyer régulièrement avec un chiffon doux légèrement humide. Appliquer une crème nourrissante pour cuir tous les <strong>3 à 6 mois</strong>. Ne jamais utiliser de produits chimiques agressifs ou d'alcool.</p>
+            </div>
+        </div>
+
+        <div class="condition-card">
+            <div class="condition-icon">🔥</div>
+            <div class="condition-content">
+                <h3>Éloignement des Sources de Chaleur</h3>
+                <p>Tenir éloigné des radiateurs, cheminées, sèche-cheveux et autres sources de chaleur directe. La chaleur excessive assèche le cuir, provoque des craquelures et altère la forme de l'article.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ODD Section -->
+    <div class="conditions" style="border-top:2px solid #F0E6DA;padding-top:10px;">
+        <h2>🌍 Objectifs de Développement Durable (ODD)</h2>
+        <p style="font-size:12px;color:#888;margin-bottom:16px;">CUIREA s'engage à respecter les ODD des Nations Unies dans sa production.</p>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+
+            <div style="background:#E8F5E9;border-left:4px solid #2E7D32;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;">
+                <div style="font-size:28px;">⚙️</div>
+                <div>
+                    <div style="font-weight:bold;color:#2E7D32;font-size:13px;">ODD 8 — Travail décent</div>
+                    <div style="font-size:11px;color:#555;margin-top:4px;">Emplois stables, conditions de travail équitables et rémunération juste pour tous les employés.</div>
+                </div>
+            </div>
+
+            <div style="background:#E3F2FD;border-left:4px solid #1565C0;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;">
+                <div style="font-size:28px;">🏭</div>
+                <div>
+                    <div style="font-weight:bold;color:#1565C0;font-size:13px;">ODD 9 — Industrie durable</div>
+                    <div style="font-size:11px;color:#555;margin-top:4px;">Infrastructure résiliente et industrialisation inclusive favorisant l'innovation responsable.</div>
+                </div>
+            </div>
+
+            <div style="background:#F3E5F5;border-left:4px solid #6A1B9A;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;">
+                <div style="font-size:28px;">♻️</div>
+                <div>
+                    <div style="font-weight:bold;color:#6A1B9A;font-size:13px;">ODD 12 — Consommation responsable</div>
+                    <div style="font-size:11px;color:#555;margin-top:4px;">Utilisation optimale des matières premières, réduction des déchets et production éco-responsable.</div>
+                </div>
+            </div>
+
+            <div style="background:#E0F7FA;border-left:4px solid #00695C;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;">
+                <div style="font-size:28px;">🌱</div>
+                <div>
+                    <div style="font-weight:bold;color:#00695C;font-size:13px;">ODD 13 — Action climatique</div>
+                    <div style="font-size:11px;color:#555;margin-top:4px;">Réduction de l'empreinte carbone et adoption de pratiques respectueuses de l'environnement.</div>
+                </div>
+            </div>
+
+            <div style="background:#FFF8E1;border-left:4px solid #F57F17;border-radius:10px;padding:14px 16px;display:flex;align-items:flex-start;gap:12px;grid-column:span 2;">
+                <div style="font-size:28px;">🤝</div>
+                <div>
+                    <div style="font-weight:bold;color:#F57F17;font-size:13px;">ODD 17 — Partenariats pour les objectifs</div>
+                    <div style="font-size:11px;color:#555;margin-top:4px;">Collaboration avec fournisseurs et partenaires partageant les mêmes valeurs de durabilité et d'éthique.</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="footer">
+        CUIREA — Smart Leather Goods Factory &nbsp;|&nbsp; contact@cuirea.tn
+    </div>
+</div>
+
+<script>
+    window.onload = function() {
+        const p = new URLSearchParams(window.location.search);
+        const set = (id, key) => { if (p.get(key)) document.getElementById(id).textContent = decodeURIComponent(p.get(key)); };
+        set('ref',        'ref');
+        set('produit',    'produit');
+        set('commande',   'commande');
+        set('categorie',  'categorie');
+        set('type',       'type');
+        set('couleur',    'couleur');
+        set('dimensions', 'dimensions');
+        set('prix',       'prix');
+        set('statut',     'statut');
+    };
+</script>
+</body>
+</html>
