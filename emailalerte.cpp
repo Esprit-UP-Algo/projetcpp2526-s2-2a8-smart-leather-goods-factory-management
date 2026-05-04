@@ -1,4 +1,5 @@
 #include "emailalerte.h"
+#include "envloader.h"
 #include <QNetworkRequest>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -7,10 +8,9 @@
 #include <QDebug>
 
 // ── Configuration Brevo ───────────────────────────────────────────────────────
-// IMPORTANT: Ne jamais commiter de vraies clés API!
-// Utilisez des variables d'environnement en production
-const QString EmailAlerte::API_KEY      = "YOUR_BREVO_API_KEY_HERE"; // À remplacer par votre clé
-const QString EmailAlerte::SENDER_EMAIL = "your-email@example.com";
+// Clé API chargée depuis .env (variable BREVO_API_KEY)
+const QString EmailAlerte::API_KEY      = EnvLoader::get("BREVO_API_KEY", "");
+const QString EmailAlerte::SENDER_EMAIL = "omardridi123466@gmail.com";
 const QString EmailAlerte::SENDER_NAME  = "CUIREA - Alerte Stock";
 
 EmailAlerte::EmailAlerte(QObject *parent)
